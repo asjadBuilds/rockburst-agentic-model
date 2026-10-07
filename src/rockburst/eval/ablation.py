@@ -317,17 +317,18 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
             fusion = ReliabilityFusion()
             if R_tr:
                 fusion.fit(np.asarray(R_tr), np.asarray(ycorr_tr))
-                if R_cal and fusion.is_fit:
-                    r_vals = [fusion.r_final(r) for r in R_cal]
-                    thr = select_decision_thresholds(
-                        np.asarray(r_vals), np.asarray(ycorr_cal)
-                    )
-                else:
-                    r_vals = [fusion.r_final(r) for r in R_tr]
-                    thr = select_decision_thresholds(
-                        np.asarray(r_vals), np.asarray(ycorr_tr)
-                    )
-                fusion.set_decision_thresholds(thr)
+                if fusion.is_fit:
+                    if R_cal:
+                        r_vals = [fusion.r_final(r) for r in R_cal]
+                        thr = select_decision_thresholds(
+                            np.asarray(r_vals), np.asarray(ycorr_cal)
+                        )
+                    else:
+                        r_vals = [fusion.r_final(r) for r in R_tr]
+                        thr = select_decision_thresholds(
+                            np.asarray(r_vals), np.asarray(ycorr_tr)
+                        )
+                    fusion.set_decision_thresholds(thr)
             fpath = resolve_path(cfg, "models") / "fusion_fold_tmp.joblib"
             fusion.save(fpath)
             fold_cfg = {
