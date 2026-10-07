@@ -4,7 +4,7 @@ Physics-guided multi-agent system for rockburst grade (0–3) assessment with re
 
 **Design rule:** the planner (rules or Gemini) only chooses the next action. All numbers come from deterministic Python tools. Fusion decides trust and abstention.
 
-**Headline (nested-unbiased M1):** QWK **0.621**, accuracy **0.567**. Rules planner is the default (no API key). See [`reports/technical_report.md`](reports/technical_report.md) and [`reports/design_decisions_log.md`](reports/design_decisions_log.md).
+**Headline (nested-unbiased M1, final-hardening @ 5% near-dup):** QWK **0.689**, accuracy **0.613** (`rf__median`). Rules planner is the default (no API key). See [`reports/technical_report.md`](reports/technical_report.md) and [`reports/design_decisions_log.md`](reports/design_decisions_log.md).
 
 ## Setup
 

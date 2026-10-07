@@ -106,3 +106,9 @@ Written **after** seeing routing/Critic design, **before** final-hardening full 
 ## Item 7 — Fusion cross-fit (final-hardening step 4)
 
 Written **before** final full run: ECE / Brier / mean R_final / risk-coverage computed only from held-out fold scores after fitting stacker+calibrator+thresholds on other folds' OOF. Production `fusion.joblib` still fitted on all OOF for serving.
+
+## Item 8 — Verification (final-hardening step 8, after seeing results)
+
+- Second clean checkout (detached worktree at same commit): `make pipeline` + `item4_metrics`; `scripts/diff_headline_metrics.py` → **no differences** in headline keys.
+- `pytest -q`: 32 passed.
+- Secrets: `git log --all -S"AIza"` hits historical commit `fe8265f` only. Working-tree grep under `artifacts/`, `reports/`, `logs/` finds only documentation mentions in `audit_log.md` (no live key values). `.env` gitignored.
