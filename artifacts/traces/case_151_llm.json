@@ -1,0 +1,40 @@
+{
+  "predicted_grade": 3,
+  "prediction_probability": 1.0,
+  "prediction_set": [
+    3
+  ],
+  "physics_consistency": 0.85,
+  "input_reliability": 0.555384493231607,
+  "ood_status": "Yes",
+  "prediction_stability": "high",
+  "agent_disagreement": "low",
+  "final_system_confidence": 0.8792166033987683,
+  "decision": "Prediction accepted; routine monitoring recommended.",
+  "recommended_action": "accept",
+  "probabilities": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "route_trace": [
+    "llm:data_quality",
+    "fallback:geomechanics",
+    "fallback:predict",
+    "fallback:uncertainty",
+    "fallback:critic",
+    "fallback:data_quality",
+    "fallback:critic",
+    "fallback:finalize"
+  ],
+  "abstained": false,
+  "r_vector": {
+    "r_data": 0.555384493231607,
+    "r_physics": 0.85,
+    "r_model": 1.0,
+    "r_uncertainty": 0.9999999999641231,
+    "r_stability": 0.9875980317308154,
+    "r_final": 0.8792166033987683
+  }
+}

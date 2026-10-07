@@ -1,0 +1,41 @@
+{
+  "predicted_grade": 1,
+  "prediction_probability": 0.6369462950305299,
+  "prediction_set": [
+    1,
+    2
+  ],
+  "physics_consistency": 1.0,
+  "input_reliability": 0.7881670874469215,
+  "ood_status": "No",
+  "prediction_stability": "high",
+  "agent_disagreement": "low",
+  "final_system_confidence": 0.7708728431765091,
+  "decision": "High rockburst potential; engineering verification recommended.",
+  "recommended_action": "engineering_verification",
+  "probabilities": [
+    0.10084017993353774,
+    0.6369462950305299,
+    0.24665796031445109,
+    0.01555556472148131
+  ],
+  "route_trace": [
+    "rules:data_quality",
+    "rules:geomechanics",
+    "rules:predict",
+    "rules:uncertainty",
+    "rules:finalize"
+  ],
+  "abstained": false,
+  "r_vector": {
+    "r_data": 0.7881670874469215,
+    "r_physics": 1.0,
+    "r_model": 0.6369462950305299,
+    "r_uncertainty": 0.5980594270099635,
+    "r_stability": 0.9761579497687468,
+    "r_final": 0.7708728431765091
+  },
+  "example_protocol": "held-out fold model: case was in outer test fold; pipeline fit only on fold train/fit indices",
+  "fold_model": "catboost__knn",
+  "true_grade": 1
+}

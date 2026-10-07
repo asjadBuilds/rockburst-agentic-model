@@ -1,0 +1,291 @@
+{
+  "n_rows": 344,
+  "d_missing": 131,
+  "grade_counts": {
+    "0": 50,
+    "1": 98,
+    "2": 123,
+    "3": 73
+  },
+  "n_dup_groups": 319,
+  "n_groups_with_duplicates": 24,
+  "group_size_distribution": {
+    "1": 295,
+    "2": 23,
+    "3": 1
+  },
+  "n_conflicting_label_groups": 18,
+  "conflicting_label_pairs": [
+    {
+      "dup_group_id": 0,
+      "no_a": 1,
+      "grade_a": 2,
+      "no_b": 327,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 1,
+      "no_a": 2,
+      "grade_a": 1,
+      "no_b": 324,
+      "grade_b": 2
+    },
+    {
+      "dup_group_id": 2,
+      "no_a": 3,
+      "grade_a": 1,
+      "no_b": 344,
+      "grade_b": 2
+    },
+    {
+      "dup_group_id": 3,
+      "no_a": 4,
+      "grade_a": 2,
+      "no_b": 336,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 4,
+      "no_a": 5,
+      "grade_a": 2,
+      "no_b": 82,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 4,
+      "no_a": 5,
+      "grade_a": 2,
+      "no_b": 325,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 5,
+      "no_a": 6,
+      "grade_a": 2,
+      "no_b": 315,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 6,
+      "no_a": 7,
+      "grade_a": 1,
+      "no_b": 341,
+      "grade_b": 2
+    },
+    {
+      "dup_group_id": 7,
+      "no_a": 8,
+      "grade_a": 2,
+      "no_b": 322,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 10,
+      "no_a": 11,
+      "grade_a": 2,
+      "no_b": 320,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 11,
+      "no_a": 12,
+      "grade_a": 2,
+      "no_b": 318,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 12,
+      "no_a": 13,
+      "grade_a": 2,
+      "no_b": 317,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 13,
+      "no_a": 14,
+      "grade_a": 2,
+      "no_b": 316,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 14,
+      "no_a": 15,
+      "grade_a": 0,
+      "no_b": 329,
+      "grade_b": 1
+    },
+    {
+      "dup_group_id": 16,
+      "no_a": 17,
+      "grade_a": 0,
+      "no_b": 326,
+      "grade_b": 1
+    },
+    {
+      "dup_group_id": 17,
+      "no_a": 18,
+      "grade_a": 0,
+      "no_b": 338,
+      "grade_b": 2
+    },
+    {
+      "dup_group_id": 227,
+      "no_a": 233,
+      "grade_a": 2,
+      "no_b": 339,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 228,
+      "no_a": 234,
+      "grade_a": 2,
+      "no_b": 340,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 229,
+      "no_a": 235,
+      "grade_a": 2,
+      "no_b": 319,
+      "grade_b": 3
+    }
+  ],
+  "label_noise_ceiling_note": "Conflicting labels are kept (not silently resolved). Groups stay in one fold via StratifiedGroupKFold. Conflicting pairs imply a label-noise ceiling on achievable accuracy of at least 19 disagreeing row-pairs.",
+  "n_cases_with_physics_issues": 22,
+  "physics_issue_examples": [
+    {
+      "no": 20,
+      "issues": [
+        "b1 inconsistency: observed=0.15, expected=14.73"
+      ],
+      "r_physics": 0.6166666666666666
+    },
+    {
+      "no": 21,
+      "issues": [
+        "b1 inconsistency: observed=0.15, expected=14.75"
+      ],
+      "r_physics": 0.6166666666666666
+    },
+    {
+      "no": 24,
+      "issues": [
+        "b1 inconsistency: observed=11.4, expected=14.78"
+      ],
+      "r_physics": 0.6166666666666666
+    },
+    {
+      "no": 96,
+      "issues": [
+        "b1 inconsistency: observed=31.4, expected=40.45"
+      ],
+      "r_physics": 0.6166666666666666
+    },
+    {
+      "no": 97,
+      "issues": [
+        "b1 inconsistency: observed=28.1, expected=34.15"
+      ],
+      "r_physics": 0.6166666666666666
+    },
+    {
+      "no": 98,
+      "issues": [
+        "b1 inconsistency: observed=27.9, expected=31.21"
+      ],
+      "r_physics": 0.6166666666666666
+    },
+    {
+      "no": 146,
+      "issues": [
+        "SCF OOD (> 2.0): 2.61"
+      ],
+      "r_physics": 0.85
+    },
+    {
+      "no": 147,
+      "issues": [
+        "SCF OOD (> 2.0): 3.69"
+      ],
+      "r_physics": 0.85
+    },
+    {
+      "no": 148,
+      "issues": [
+        "SCF OOD (> 2.0): 2.27"
+      ],
+      "r_physics": 0.85
+    },
+    {
+      "no": 149,
+      "issues": [
+        "SCF OOD (> 2.0): 2.47"
+      ],
+      "r_physics": 0.85
+    },
+    {
+      "no": 150,
+      "issues": [
+        "SCF OOD (> 2.0): 3.18"
+      ],
+      "r_physics": 0.85
+    },
+    {
+      "no": 151,
+      "issues": [
+        "SCF OOD (> 2.0): 4.49"
+      ],
+      "r_physics": 0.85
+    },
+    {
+      "no": 152,
+      "issues": [
+        "SCF OOD (> 2.0): 2.77"
+      ],
+      "r_physics": 0.85
+    },
+    {
+      "no": 153,
+      "issues": [
+        "SCF OOD (> 2.0): 3"
+      ],
+      "r_physics": 0.85
+    },
+    {
+      "no": 154,
+      "issues": [
+        "SCF OOD (> 2.0): 3.45"
+      ],
+      "r_physics": 0.85
+    }
+  ],
+  "known_problem_rows": {
+    "bad_b1_rows": [
+      20,
+      21,
+      244
+    ],
+    "ood_scf_block": [
+      146,
+      147,
+      148,
+      149,
+      150,
+      151,
+      152,
+      153,
+      154,
+      155,
+      156,
+      157
+    ]
+  },
+  "near_dup_features": [
+    "sigma_theta",
+    "sigma_c",
+    "sigma_t",
+    "wet",
+    "d"
+  ],
+  "near_dup_rel_tol": 0.01
+}

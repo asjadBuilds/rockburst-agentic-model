@@ -1,0 +1,124 @@
+{
+  "headlines_by_tol": [
+    {
+      "tol": 0.005,
+      "n_groups": 325,
+      "n_multi": 19,
+      "n_conflict_groups": 15,
+      "M1_qwk": 0.7203227182257605,
+      "M1_accuracy": 0.622093023255814,
+      "conformal_coverage": 0.9215116279069767,
+      "conformal_mean_size": 2.3197674418604652,
+      "note": "Headline nested-style M1 QWK/acc + conformal at this grouping; M7 abs from main ablation at default tol."
+    },
+    {
+      "tol": 0.01,
+      "n_groups": 319,
+      "n_multi": 24,
+      "n_conflict_groups": 18,
+      "M1_qwk": 0.6540294722112905,
+      "M1_accuracy": 0.5784883720930233,
+      "conformal_coverage": 0.9011627906976745,
+      "conformal_mean_size": 2.078488372093023,
+      "note": "Headline nested-style M1 QWK/acc + conformal at this grouping; M7 abs from main ablation at default tol."
+    },
+    {
+      "tol": 0.02,
+      "n_groups": 314,
+      "n_multi": 26,
+      "n_conflict_groups": 21,
+      "M1_qwk": 0.6913715088157278,
+      "M1_accuracy": 0.5959302325581395,
+      "conformal_coverage": 0.8662790697674418,
+      "conformal_mean_size": 1.9680232558139534,
+      "note": "Headline nested-style M1 QWK/acc + conformal at this grouping; M7 abs from main ablation at default tol."
+    },
+    {
+      "tol": 0.05,
+      "n_groups": 291,
+      "n_multi": 38,
+      "n_conflict_groups": 23,
+      "M1_qwk": 0.6747127310182958,
+      "M1_accuracy": 0.6017441860465116,
+      "conformal_coverage": 0.9215116279069767,
+      "conformal_mean_size": 2.3459302325581395,
+      "note": "Headline nested-style M1 QWK/acc + conformal at this grouping; M7 abs from main ablation at default tol."
+    }
+  ],
+  "pair_checks": [
+    {
+      "pair": [
+        19,
+        342
+      ],
+      "max_rel_dist": 0.015076899765133791,
+      "first_grouped_tol": 0.02
+    },
+    {
+      "pair": [
+        20,
+        328
+      ],
+      "max_rel_dist": 0.014705882352941176,
+      "first_grouped_tol": 0.02
+    },
+    {
+      "pair": [
+        9,
+        337
+      ],
+      "max_rel_dist": 0.044117647058823505,
+      "first_grouped_tol": 0.05
+    }
+  ],
+  "nn_hist": {
+    "0-0.002": 24,
+    "0.002-0.005": 14,
+    "0.005-0.01": 11,
+    "0.01-0.015": 5,
+    "0.015-0.02": 2,
+    "0.02-0.05": 35,
+    "0.05-0.1": 52,
+    "0.1-1.0": 201
+  },
+  "nn_median": 0.13253197534001343,
+  "chosen_tol": 0.01,
+  "choice_note": "NN max-rel-distance histogram shows dense mass below ~1% (exact/near Table S1 copies) and a sparser tail at 1.5\u20135%. Keep near_dup_rel_tol=0.01 as the gap choice (not QWK-tuned). Pairs 19/342 and 20/328 (~1.5%) group at 2%; 9/337 (~4.4%) at 5%.",
+  "label_noise_direction": {
+    "+1": 18,
+    "-1": 0,
+    "larger_abs": 1,
+    "zero": 0,
+    "mean_delta": 1.0526315789473684,
+    "n_pairs": 19
+  },
+  "block_315_344": {
+    "n_conflict_pairs_touching_315_344": 18,
+    "mean_delta_later_minus_earlier": 1.0555555555555556,
+    "frac_plus_one": 0.9444444444444444,
+    "statement": "Among conflicting pairs involving rows 315\u2013344, later grades are often +1 vs earlier counterparts; do not over-interpret as systematic relabeling without source confirmation."
+  },
+  "policies": {
+    "keep_all": {
+      "n": 344,
+      "qwk": 0.6730321863824172,
+      "accuracy": 0.5813953488372093
+    },
+    "keep_one_lowest_no_per_conflict_group": {
+      "n": 325,
+      "qwk": 0.6983089155264963,
+      "accuracy": 0.6553846153846153
+    },
+    "drop_conflicting_groups": {
+      "n": 307,
+      "qwk": 0.6836265965027681,
+      "accuracy": 0.6221498371335505
+    }
+  },
+  "ceiling": {
+    "n_conflict_rows": 37,
+    "n_conflict_pairs": 19,
+    "note": "Label conflicts imply an accuracy/QWK ceiling below 1.0 even with a perfect feature\u2192label map; dropping conflict groups raises empirical scores but shrinks n \u2014 report all three policies.",
+    "M7_abstention_default_tol": 0.053488372093023255
+  }
+}

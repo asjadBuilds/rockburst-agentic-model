@@ -1,0 +1,29 @@
+# Dependencies / envs
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Heavy / generated artefacts (keep out of agent context)
+artifacts/
+**/artifacts/**
+*.joblib
+*.pkl
+*.pickle
+*.pt
+*.onnx
+mlruns/
+wandb/
+.ipynb_checkpoints/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# OS noise
+.DS_Store
+Thumbs.db

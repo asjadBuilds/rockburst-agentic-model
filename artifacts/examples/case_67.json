@@ -1,0 +1,39 @@
+{
+  "predicted_grade": 0,
+  "prediction_probability": 0.9658770401526185,
+  "prediction_set": [
+    0
+  ],
+  "physics_consistency": 1.0,
+  "input_reliability": 0.7509010150613369,
+  "ood_status": "No",
+  "prediction_stability": "high",
+  "agent_disagreement": "low",
+  "final_system_confidence": 0.9297879644630139,
+  "decision": "Prediction accepted; routine monitoring recommended.",
+  "recommended_action": "accept",
+  "probabilities": [
+    0.9658770401526185,
+    0.021933938202443444,
+    0.007909465522471182,
+    0.0042795561224668165
+  ],
+  "route_trace": [
+    "rules:data_quality",
+    "rules:geomechanics",
+    "rules:predict",
+    "rules:uncertainty",
+    "rules:finalize"
+  ],
+  "abstained": false,
+  "r_vector": {
+    "r_data": 0.7509010150613369,
+    "r_physics": 1.0,
+    "r_model": 0.9658770401526185,
+    "r_uncertainty": 0.9225553057998579,
+    "r_stability": 0.9959351168431331,
+    "r_final": 0.9297879644630139
+  },
+  "trace_path": "/home/leviathan/Workspace/agentic-rockburst-model/artifacts/traces/case_67.json",
+  "example_protocol": "production model, case seen in training (full-data refit of best_baseline.joblib)"
+}

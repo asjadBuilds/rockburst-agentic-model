@@ -1,0 +1,42 @@
+{
+  "predicted_grade": 3,
+  "prediction_probability": 0.5127708846026489,
+  "prediction_set": [
+    1,
+    2,
+    3
+  ],
+  "physics_consistency": 1.0,
+  "input_reliability": 0.7991749873096115,
+  "ood_status": "No",
+  "prediction_stability": "high",
+  "agent_disagreement": "low",
+  "final_system_confidence": 0.6979392027111886,
+  "decision": "High rockburst potential; engineering verification recommended.",
+  "recommended_action": "engineering_verification",
+  "probabilities": [
+    0.009941738863765736,
+    0.15746280552068434,
+    0.31982457101290107,
+    0.5127708846026489
+  ],
+  "route_trace": [
+    "rules:data_quality",
+    "rules:geomechanics",
+    "rules:predict",
+    "rules:uncertainty",
+    "rules:critic",
+    "rules:finalize"
+  ],
+  "abstained": false,
+  "r_vector": {
+    "r_data": 0.7991749873096115,
+    "r_physics": 1.0,
+    "r_model": 0.5127708846026489,
+    "r_uncertainty": 0.5481438338217482,
+    "r_stability": 0.9714032742178191,
+    "r_final": 0.6979392027111886
+  },
+  "trace_path": "/home/leviathan/Workspace/agentic-rockburst-model/artifacts/traces/case_1.json",
+  "example_protocol": "production model, case seen in training (full-data refit of best_baseline.joblib)"
+}

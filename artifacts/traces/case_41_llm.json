@@ -1,0 +1,37 @@
+{
+  "predicted_grade": 0,
+  "prediction_probability": 0.7823732361419627,
+  "prediction_set": [
+    0
+  ],
+  "physics_consistency": 1.0,
+  "input_reliability": 0.8042726650739807,
+  "ood_status": "No",
+  "prediction_stability": "high",
+  "agent_disagreement": "low",
+  "final_system_confidence": 0.8362018104167787,
+  "decision": "Prediction accepted; routine monitoring recommended.",
+  "recommended_action": "accept",
+  "probabilities": [
+    0.7823732361419627,
+    0.13787065364546275,
+    0.06136800668593078,
+    0.018388103526643884
+  ],
+  "route_trace": [
+    "llm:data_quality",
+    "llm:geomechanics",
+    "llm:predict",
+    "llm:uncertainty",
+    "llm:finalize"
+  ],
+  "abstained": false,
+  "r_vector": {
+    "r_data": 0.8042726650739807,
+    "r_physics": 1.0,
+    "r_model": 0.7823732361419627,
+    "r_uncertainty": 0.6927298737350471,
+    "r_stability": 0.9413866241298824,
+    "r_final": 0.8362018104167787
+  }
+}

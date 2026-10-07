@@ -1,0 +1,273 @@
+{
+  "before": {
+    "fusion_coef": [
+      [
+        0.0,
+        0.0,
+        2.245075659067594,
+        1.8159343310899823,
+        0.0
+      ]
+    ],
+    "fusion_r_final_ece": 0.14144744011455912,
+    "fusion_mean_r_final": 0.7129026287852824,
+    "fusion_oof_accuracy_of_base": 0.5668604651162791,
+    "decision_thresholds": {
+      "abstain_r_final": 0.6500000000000001,
+      "accept_with_caution": 0.7000000000000001,
+      "accept_r_final": 0.75,
+      "engineering_verification": 0.9
+    }
+  },
+  "after": {
+    "fusion_coef": [
+      0.0,
+      0.0,
+      4.433461395038012,
+      0.0,
+      0.0
+    ],
+    "fusion_intercept": -2.495957757578134,
+    "fusion_feature_report": {
+      "corr": [
+        [
+          1.0,
+          0.19597866929980245,
+          -0.2929587524255388,
+          -0.3272344645043563,
+          -0.17377323908476713
+        ],
+        [
+          0.19597866929980243,
+          1.0,
+          -0.027116344680042488,
+          -0.05221388316244568,
+          -0.05217884994465897
+        ],
+        [
+          -0.2929587524255388,
+          -0.027116344680042488,
+          0.9999999999999999,
+          0.952686415675177,
+          0.535854065309475
+        ],
+        [
+          -0.3272344645043563,
+          -0.05221388316244567,
+          0.952686415675177,
+          1.0,
+          0.4205627780485479
+        ],
+        [
+          -0.17377323908476713,
+          -0.05217884994465897,
+          0.535854065309475,
+          0.42056277804854797,
+          1.0
+        ]
+      ],
+      "vif": {
+        "r_data": 1.1709263317351097,
+        "r_physics": 1.0488775712303915,
+        "r_model": 14.500232898000414,
+        "r_uncertainty": 12.849362461061984,
+        "r_stability": 1.617990480936761
+      },
+      "pair": {
+        "r_model_r_uncertainty_corr": 0.952686415675177
+      },
+      "names": [
+        "r_data",
+        "r_physics",
+        "r_model",
+        "r_uncertainty",
+        "r_stability"
+      ],
+      "collinearity_action": {
+        "dropped": [
+          "r_uncertainty"
+        ],
+        "auc_r_model": 0.7061966965346,
+        "auc_r_uncertainty": 0.7046043398467018,
+        "reason": "corr=0.953, vif_m=14.50, vif_u=12.85"
+      },
+      "drop_one_logloss": {
+        "full": 0.614069663330808,
+        "drop_r_data": 0.6140696633346249,
+        "drop_r_physics": 0.6140696633681239,
+        "drop_r_model": 0.6728157079772737,
+        "drop_r_stability": 0.6140696795431654
+      },
+      "feature_mask": [
+        true,
+        true,
+        true,
+        false,
+        true
+      ],
+      "zero_weight_flags": [
+        "r_data",
+        "r_physics",
+        "r_stability"
+      ]
+    },
+    "fusion_zero_weight_flags": [
+      "r_data",
+      "r_physics",
+      "r_stability"
+    ],
+    "fusion_coef_bootstrap": {
+      "coef_mean": [
+        0.09382265964213685,
+        0.17753667569018766,
+        4.576638993120605,
+        0.0,
+        0.09942714038917312
+      ],
+      "coef_ci": [
+        [
+          0.0,
+          1.4585839781617433
+        ],
+        [
+          0.0,
+          1.8439358140029556
+        ],
+        [
+          2.9567161558331554,
+          6.219831569776124
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.041654214565633
+        ]
+      ],
+      "intercept_mean": -2.920718504875509,
+      "intercept_ci": [
+        -5.120617520674862,
+        -1.7598866531508437
+      ],
+      "names": [
+        "r_data",
+        "r_physics",
+        "r_model",
+        "r_uncertainty",
+        "r_stability"
+      ]
+    },
+    "decision_thresholds": {
+      "abstain_r_final": 0.45,
+      "engineering_verification": 0.55,
+      "accept_with_caution": 0.6500000000000001,
+      "accept_r_final": 0.6500000000000001
+    },
+    "fusion_r_final_ece": 0.042496466521106946,
+    "fusion_r_final_ece_inner_val": 9.010505707102719e-17,
+    "fusion_brier": 0.21731481065452113,
+    "fusion_mean_r_final": 0.571517910493118,
+    "fusion_oof_accuracy_of_base": 0.5668604651162791,
+    "fusion_calibrated": true,
+    "feature_names": [
+      "r_data",
+      "r_physics",
+      "r_model",
+      "r_uncertainty",
+      "r_stability"
+    ],
+    "fusion_reliability_diagram": [
+      {
+        "bin": [
+          0.1,
+          0.2
+        ],
+        "mean_r_final": 0.20000000000000004,
+        "empirical_correct": 0.35714285714285715,
+        "n": 14
+      },
+      {
+        "bin": [
+          0.2,
+          0.30000000000000004
+        ],
+        "mean_r_final": 0.24743432521775657,
+        "empirical_correct": 1.0,
+        "n": 1
+      },
+      {
+        "bin": [
+          0.30000000000000004,
+          0.4
+        ],
+        "mean_r_final": 0.3374369713974872,
+        "empirical_correct": 0.35294117647058826,
+        "n": 34
+      },
+      {
+        "bin": [
+          0.4,
+          0.5
+        ],
+        "mean_r_final": 0.4409778878417586,
+        "empirical_correct": 0.45751633986928103,
+        "n": 153
+      },
+      {
+        "bin": [
+          0.5,
+          0.6000000000000001
+        ],
+        "mean_r_final": 0.5590275139165699,
+        "empirical_correct": 1.0,
+        "n": 2
+      },
+      {
+        "bin": [
+          0.6000000000000001,
+          0.7000000000000001
+        ],
+        "mean_r_final": 0.6455089817917724,
+        "empirical_correct": 0.3333333333333333,
+        "n": 3
+      },
+      {
+        "bin": [
+          0.7000000000000001,
+          0.8
+        ],
+        "mean_r_final": 0.7646782157852663,
+        "empirical_correct": 0.6886792452830188,
+        "n": 106
+      },
+      {
+        "bin": [
+          0.8,
+          0.9
+        ],
+        "mean_r_final": 0.8486177428832964,
+        "empirical_correct": 1.0,
+        "n": 2
+      },
+      {
+        "bin": [
+          0.9,
+          1.0
+        ],
+        "mean_r_final": 0.9932601615482054,
+        "empirical_correct": 1.0,
+        "n": 29
+      }
+    ]
+  },
+  "missing_d_drop": {
+    "n_observed_d_cases": 213,
+    "mean_r_obs": 0.8825076401579461,
+    "mean_r_masked": 0.8112228903067107,
+    "mean_drop": 0.0712847498512354,
+    "frac_drop_positive": 0.7652582159624414,
+    "note": "Positive drop means R_final falls when D is masked. If mean_drop\u22480, R_data/R_physics may have zero fusion weight."
+  }
+}

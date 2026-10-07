@@ -1,0 +1,94 @@
+{
+  "source": "/home/leviathan/Workspace/agentic-rockburst-model/sustainability-2534712-supplementary.pdf",
+  "method": "pdfplumber+text",
+  "fused_row_pairs_checked": [
+    [
+      38,
+      39
+    ],
+    [
+      81,
+      82
+    ],
+    [
+      124,
+      125
+    ],
+    [
+      210,
+      211
+    ],
+    [
+      253,
+      254
+    ],
+    [
+      296,
+      297
+    ],
+    [
+      339,
+      340
+    ]
+  ],
+  "warnings": [],
+  "fused_row_status": [
+    {
+      "pair": [
+        38,
+        39
+      ],
+      "present": true
+    },
+    {
+      "pair": [
+        81,
+        82
+      ],
+      "present": true
+    },
+    {
+      "pair": [
+        124,
+        125
+      ],
+      "present": true
+    },
+    {
+      "pair": [
+        210,
+        211
+      ],
+      "present": true
+    },
+    {
+      "pair": [
+        253,
+        254
+      ],
+      "present": true
+    },
+    {
+      "pair": [
+        296,
+        297
+      ],
+      "present": true
+    },
+    {
+      "pair": [
+        339,
+        340
+      ],
+      "present": true
+    }
+  ],
+  "n_rows": 344,
+  "d_missing": 131,
+  "grade_counts": {
+    "0": 50,
+    "1": 98,
+    "2": 123,
+    "3": 73
+  }
+}

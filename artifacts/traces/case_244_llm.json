@@ -1,0 +1,38 @@
+{
+  "predicted_grade": 1,
+  "prediction_probability": 0.715541361685023,
+  "prediction_set": [
+    1
+  ],
+  "physics_consistency": 0.3333333333333333,
+  "input_reliability": 0.8512113588149215,
+  "ood_status": "No",
+  "prediction_stability": "high",
+  "agent_disagreement": "low",
+  "final_system_confidence": 0.6853032148305658,
+  "decision": "High rockburst potential; engineering verification recommended.",
+  "recommended_action": "engineering_verification",
+  "probabilities": [
+    0.03261506863046536,
+    0.715541361685023,
+    0.17971607308632584,
+    0.07212749659818553
+  ],
+  "route_trace": [
+    "llm:data_quality",
+    "fallback:geomechanics",
+    "fallback:predict",
+    "fallback:uncertainty",
+    "fallback:critic",
+    "fallback:finalize"
+  ],
+  "abstained": false,
+  "r_vector": {
+    "r_data": 0.8512113588149215,
+    "r_physics": 0.3333333333333333,
+    "r_model": 0.715541361685023,
+    "r_uncertainty": 0.6324371045863106,
+    "r_stability": 0.9534767670826463,
+    "r_final": 0.6853032148305658
+  }
+}

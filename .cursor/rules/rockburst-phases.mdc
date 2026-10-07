@@ -1,0 +1,16 @@
+---
+description: Rockburst phased build — default to Phase 0+1; do not jump ahead
+alwaysApply: true
+---
+
+# Rockburst build phases
+
+Default first slice: **Phase 0 + Phase 1 only** (scaffold, CSV extract/audit, physics tests, one-row CLI). No baselines, agents, LangGraph, or Gemini until the user asks for a later phase.
+
+| Phase | Do | Do not |
+|-------|----|--------|
+| 0 | package, configs, seeds, `.env.example`, pytest smoke | ML / agents |
+| 1 | PDF→CSV, audit, formula tests | train models |
+| 2+ | only when user requests that phase | — |
+
+Later-phase LLM: Gemini Flash / Flash-Lite for planning/routing only; all numbers via deterministic Python tools.

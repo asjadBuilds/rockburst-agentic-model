@@ -1,0 +1,187 @@
+{
+  "tolerances": [
+    {
+      "rel_tol": 0.005,
+      "n_dup_groups": 325,
+      "n_groups_with_duplicates": 19,
+      "group_size_distribution": {
+        "1": 306,
+        "2": 19
+      },
+      "n_conflicting_label_groups": 15,
+      "n_conflicting_pairs": 15
+    },
+    {
+      "rel_tol": 0.01,
+      "n_dup_groups": 319,
+      "n_groups_with_duplicates": 24,
+      "group_size_distribution": {
+        "1": 295,
+        "2": 23,
+        "3": 1
+      },
+      "n_conflicting_label_groups": 18,
+      "n_conflicting_pairs": 19
+    },
+    {
+      "rel_tol": 0.02,
+      "n_dup_groups": 314,
+      "n_groups_with_duplicates": 26,
+      "group_size_distribution": {
+        "1": 288,
+        "2": 22,
+        "3": 4
+      },
+      "n_conflicting_label_groups": 21,
+      "n_conflicting_pairs": 25
+    }
+  ],
+  "justification": "Default near_dup_rel_tol=0.01 (1%): Table S1 near-copies differ by ~0.1\u20130.2% on \u03c3\u03b8; 1% catches that block while sensitivity at 0.5%/2% shows grouping stability.",
+  "default_rel_tol": 0.01,
+  "default_audit": {
+    "n_dup_groups": 319,
+    "n_groups_with_duplicates": 24,
+    "group_size_distribution": {
+      "1": 295,
+      "2": 23,
+      "3": 1
+    },
+    "n_conflicting_label_groups": 18,
+    "conflicting_label_pairs": [
+      {
+        "dup_group_id": 0,
+        "no_a": 1,
+        "grade_a": 2,
+        "no_b": 327,
+        "grade_b": 3
+      },
+      {
+        "dup_group_id": 1,
+        "no_a": 2,
+        "grade_a": 1,
+        "no_b": 324,
+        "grade_b": 2
+      },
+      {
+        "dup_group_id": 2,
+        "no_a": 3,
+        "grade_a": 1,
+        "no_b": 344,
+        "grade_b": 2
+      },
+      {
+        "dup_group_id": 3,
+        "no_a": 4,
+        "grade_a": 2,
+        "no_b": 336,
+        "grade_b": 3
+      },
+      {
+        "dup_group_id": 4,
+        "no_a": 5,
+        "grade_a": 2,
+        "no_b": 82,
+        "grade_b": 3
+      },
+      {
+        "dup_group_id": 4,
+        "no_a": 5,
+        "grade_a": 2,
+        "no_b": 325,
+        "grade_b": 3
+      },
+      {
+        "dup_group_id": 5,
+        "no_a": 6,
+        "grade_a": 2,
+        "no_b": 315,
+        "grade_b": 3
+      },
+      {
+        "dup_group_id": 6,
+        "no_a": 7,
+        "grade_a": 1,
+        "no_b": 341,
+        "grade_b": 2
+      },
+      {
+        "dup_group_id": 7,
+        "no_a": 8,
+        "grade_a": 2,
+        "no_b": 322,
+        "grade_b": 3
+      },
+      {
+        "dup_group_id": 10,
+        "no_a": 11,
+        "grade_a": 2,
+        "no_b": 320,
+        "grade_b": 3
+      },
+      {
+        "dup_group_id": 11,
+        "no_a": 12,
+        "grade_a": 2,
+        "no_b": 318,
+        "grade_b": 3
+      },
+      {
+        "dup_group_id": 12,
+        "no_a": 13,
+        "grade_a": 2,
+        "no_b": 317,
+        "grade_b": 3
+      },
+      {
+        "dup_group_id": 13,
+        "no_a": 14,
+        "grade_a": 2,
+        "no_b": 316,
+        "grade_b": 3
+      },
+      {
+        "dup_group_id": 14,
+        "no_a": 15,
+        "grade_a": 0,
+        "no_b": 329,
+        "grade_b": 1
+      },
+      {
+        "dup_group_id": 16,
+        "no_a": 17,
+        "grade_a": 0,
+        "no_b": 326,
+        "grade_b": 1
+      },
+      {
+        "dup_group_id": 17,
+        "no_a": 18,
+        "grade_a": 0,
+        "no_b": 338,
+        "grade_b": 2
+      },
+      {
+        "dup_group_id": 227,
+        "no_a": 233,
+        "grade_a": 2,
+        "no_b": 339,
+        "grade_b": 3
+      },
+      {
+        "dup_group_id": 228,
+        "no_a": 234,
+        "grade_a": 2,
+        "no_b": 340,
+        "grade_b": 3
+      },
+      {
+        "dup_group_id": 229,
+        "no_a": 235,
+        "grade_a": 2,
+        "no_b": 319,
+        "grade_b": 3
+      }
+    ],
+    "label_noise_ceiling_note": "Conflicting labels are kept (not silently resolved). Groups stay in one fold via StratifiedGroupKFold. Conflicting pairs imply a label-noise ceiling on achievable accuracy of at least 19 disagreeing row-pairs."
+  }
+}

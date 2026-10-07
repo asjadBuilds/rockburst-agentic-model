@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rockburst"
+version = "0.1.0"
+description = "Physics-guided agentic AI for rockburst intensity assessment"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "pdfplumber",
+  "pandas",
+  "numpy",
+  "scipy",
+  "scikit-learn",
+  "xgboost",
+  "lightgbm",
+  "catboost",
+  "mord",
+  "optuna",
+  "pydantic",
+  "pyyaml",
+  "python-dotenv",
+  "matplotlib",
+  "seaborn",
+  "shap",
+  "google-genai",
+  "langgraph",
+  "langchain-core",
+  "imbalanced-learn",
+  "joblib",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+rockburst = "rockburst.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

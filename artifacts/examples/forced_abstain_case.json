@@ -1,0 +1,37 @@
+{
+  "predicted_grade": 2,
+  "prediction_probability": 0.789930536244047,
+  "prediction_set": [
+    2
+  ],
+  "physics_consistency": 1.0,
+  "input_reliability": 0.7551384837774189,
+  "ood_status": "No",
+  "prediction_stability": "high",
+  "agent_disagreement": "moderate",
+  "final_system_confidence": 0.7903946455562756,
+  "decision": "Forced stop at loop limit; abstain pending review.",
+  "recommended_action": "abstain",
+  "probabilities": [
+    0.003925060573580097,
+    0.07513873822029703,
+    0.789930536244047,
+    0.1310056649620759
+  ],
+  "route_trace": [
+    "rules:data_quality",
+    "rules:geomechanics",
+    "rules:predict",
+    "rules:uncertainty",
+    "forced_finalize"
+  ],
+  "abstained": true,
+  "r_vector": {
+    "r_data": 0.7551384837774189,
+    "r_physics": 1.0,
+    "r_model": 0.789930536244047,
+    "r_uncertainty": 0.5772123349582554,
+    "r_stability": 0.8429456516541931,
+    "r_final": 0.7903946455562756
+  }
+}
