@@ -22,7 +22,7 @@ def main() -> None:
     if not raw.exists():
         raise SystemExit(f"Missing {raw}; run extract first")
     df = pd.read_csv(raw)
-    sens = dup_sensitivity(df, tols=(0.005, 0.01, 0.02))
+    sens = dup_sensitivity(df, tols=(0.005, 0.01, 0.02, 0.05))
     _, audit = process_raw(df, cfg)
     out = {
         **sens,

@@ -79,10 +79,10 @@ Require `abstain_t < eng_t < caution_t ≤ accept_t`. Thresholds selected on inn
 
 - Decision bands as in Item 1 table; select four cutoffs on **inner** data per outer fold.
 - Headline conformal method: **`marginal_split`** a priori (simplest finite-sample guarantee). Mondrian and CV+ reported side-by-side; not chosen by closeness to 0.90.
-## Item 5 — Near-dup tolerance (locked before Item 5 measure)
+## Item 5 — Near-dup tolerance
 
-- Choose `near_dup_rel_tol` from NN max-rel-distance gap (dense mass below ~1%, sparse 1.5–5% tail), **not** by maximizing QWK.
-- Final choice: **0.01 (1%)** — documented after NN histogram; pairs 19/342 & 20/328 (~1.5%) first group at 2%; 9/337 (~4.4%) at 5%.
+- **Before results (original):** Choose from NN gap; locked at **0.01 (1%)**.
+- **After seeing results (final-hardening):** Primary **0.05 (5%)** because 1% left known near-copies ungrouped (19–342, 20–328 @2%; 9–337 @5%). Earlier headlines used 1%. Sensitivity at 0.5/1/2/5% with fixed `catboost__knn`, ≥5 repeats.
 
 ## Item 6 — Hand-set decision-path constants (assumption + sensitivity; after seeing routing design)
 

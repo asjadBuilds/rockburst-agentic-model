@@ -142,7 +142,7 @@ def process_raw(df: pd.DataFrame, cfg: dict[str, Any]) -> tuple[pd.DataFrame, di
 
 def dup_sensitivity(
     df: pd.DataFrame,
-    tols: tuple[float, ...] = (0.005, 0.01, 0.02),
+    tols: tuple[float, ...] = (0.005, 0.01, 0.02, 0.05),
 ) -> dict[str, Any]:
     """Group counts / sizes at several relative tolerances."""
     rows = []

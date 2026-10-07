@@ -7,14 +7,16 @@
     "2": 123,
     "3": 73
   },
-  "n_dup_groups": 319,
-  "n_groups_with_duplicates": 24,
+  "n_dup_groups": 291,
+  "n_groups_with_duplicates": 38,
   "group_size_distribution": {
-    "1": 295,
-    "2": 23,
-    "3": 1
+    "1": 253,
+    "2": 28,
+    "3": 8,
+    "5": 1,
+    "6": 1
   },
-  "n_conflicting_label_groups": 18,
+  "n_conflicting_label_groups": 23,
   "conflicting_label_pairs": [
     {
       "dup_group_id": 0,
@@ -31,6 +33,20 @@
       "grade_b": 2
     },
     {
+      "dup_group_id": 1,
+      "no_a": 2,
+      "grade_a": 1,
+      "no_b": 331,
+      "grade_b": 2
+    },
+    {
+      "dup_group_id": 2,
+      "no_a": 3,
+      "grade_a": 1,
+      "no_b": 292,
+      "grade_b": 2
+    },
+    {
       "dup_group_id": 2,
       "no_a": 3,
       "grade_a": 1,
@@ -40,6 +56,13 @@
     {
       "dup_group_id": 3,
       "no_a": 4,
+      "grade_a": 2,
+      "no_b": 336,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 3,
+      "no_a": 284,
       "grade_a": 2,
       "no_b": 336,
       "grade_b": 3
@@ -66,8 +89,22 @@
       "grade_b": 3
     },
     {
+      "dup_group_id": 5,
+      "no_a": 289,
+      "grade_a": 2,
+      "no_b": 315,
+      "grade_b": 3
+    },
+    {
       "dup_group_id": 6,
       "no_a": 7,
+      "grade_a": 1,
+      "no_b": 341,
+      "grade_b": 2
+    },
+    {
+      "dup_group_id": 6,
+      "no_a": 290,
       "grade_a": 1,
       "no_b": 341,
       "grade_b": 2
@@ -77,6 +114,20 @@
       "no_a": 8,
       "grade_a": 2,
       "no_b": 322,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 7,
+      "no_a": 8,
+      "grade_a": 2,
+      "no_b": 332,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 8,
+      "no_a": 9,
+      "grade_a": 2,
+      "no_b": 337,
       "grade_b": 3
     },
     {
@@ -108,6 +159,13 @@
       "grade_b": 3
     },
     {
+      "dup_group_id": 13,
+      "no_a": 285,
+      "grade_a": 2,
+      "no_b": 316,
+      "grade_b": 3
+    },
+    {
       "dup_group_id": 14,
       "no_a": 15,
       "grade_a": 0,
@@ -129,28 +187,140 @@
       "grade_b": 2
     },
     {
-      "dup_group_id": 227,
+      "dup_group_id": 18,
+      "no_a": 19,
+      "grade_a": 2,
+      "no_b": 328,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 18,
+      "no_a": 19,
+      "grade_a": 2,
+      "no_b": 342,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 18,
+      "no_a": 20,
+      "grade_a": 2,
+      "no_b": 328,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 18,
+      "no_a": 20,
+      "grade_a": 2,
+      "no_b": 342,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 18,
+      "no_a": 23,
+      "grade_a": 2,
+      "no_b": 328,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 18,
+      "no_a": 23,
+      "grade_a": 2,
+      "no_b": 342,
+      "grade_b": 3
+    },
+    {
+      "dup_group_id": 30,
+      "no_a": 34,
+      "grade_a": 2,
+      "no_b": 198,
+      "grade_b": 1
+    },
+    {
+      "dup_group_id": 30,
+      "no_a": 34,
+      "grade_a": 2,
+      "no_b": 199,
+      "grade_b": 1
+    },
+    {
+      "dup_group_id": 30,
+      "no_a": 36,
+      "grade_a": 2,
+      "no_b": 198,
+      "grade_b": 1
+    },
+    {
+      "dup_group_id": 30,
+      "no_a": 36,
+      "grade_a": 2,
+      "no_b": 199,
+      "grade_b": 1
+    },
+    {
+      "dup_group_id": 30,
+      "no_a": 198,
+      "grade_a": 1,
+      "no_b": 200,
+      "grade_b": 2
+    },
+    {
+      "dup_group_id": 30,
+      "no_a": 198,
+      "grade_a": 1,
+      "no_b": 201,
+      "grade_b": 2
+    },
+    {
+      "dup_group_id": 30,
+      "no_a": 199,
+      "grade_a": 1,
+      "no_b": 200,
+      "grade_b": 2
+    },
+    {
+      "dup_group_id": 30,
+      "no_a": 199,
+      "grade_a": 1,
+      "no_b": 201,
+      "grade_b": 2
+    },
+    {
+      "dup_group_id": 35,
+      "no_a": 40,
+      "grade_a": 2,
+      "no_b": 42,
+      "grade_b": 1
+    },
+    {
+      "dup_group_id": 211,
       "no_a": 233,
       "grade_a": 2,
       "no_b": 339,
       "grade_b": 3
     },
     {
-      "dup_group_id": 228,
+      "dup_group_id": 212,
       "no_a": 234,
       "grade_a": 2,
       "no_b": 340,
       "grade_b": 3
     },
     {
-      "dup_group_id": 229,
+      "dup_group_id": 213,
       "no_a": 235,
       "grade_a": 2,
       "no_b": 319,
       "grade_b": 3
+    },
+    {
+      "dup_group_id": 282,
+      "no_a": 309,
+      "grade_a": 1,
+      "no_b": 310,
+      "grade_b": 2
     }
   ],
-  "label_noise_ceiling_note": "Conflicting labels are kept (not silently resolved). Groups stay in one fold via StratifiedGroupKFold. Conflicting pairs imply a label-noise ceiling on achievable accuracy of at least 19 disagreeing row-pairs.",
+  "label_noise_ceiling_note": "Conflicting labels are kept (not silently resolved). Groups stay in one fold via StratifiedGroupKFold. Conflicting pairs imply a label-noise ceiling on achievable accuracy of at least 43 disagreeing row-pairs.",
   "n_cases_with_physics_issues": 22,
   "physics_issue_examples": [
     {
@@ -287,5 +457,5 @@
     "wet",
     "d"
   ],
-  "near_dup_rel_tol": 0.01
+  "near_dup_rel_tol": 0.05
 }

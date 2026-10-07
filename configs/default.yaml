@@ -52,7 +52,7 @@ quality:
   iqr_factor: 3.0
   # Relative tolerance on raw measured inputs (σθ, σc, σt, Wet, D when present).
   # 1% catches Table S1 ~0.1–0.2% σθ perturbations; see dup_sensitivity.json.
-  near_dup_rel_tol: 0.01
+  near_dup_rel_tol: 0.05
 
 uncertainty:
   mild_eps: 0.05

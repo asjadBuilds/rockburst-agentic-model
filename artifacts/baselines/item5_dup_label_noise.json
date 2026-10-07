@@ -5,44 +5,156 @@
       "n_groups": 325,
       "n_multi": 19,
       "n_conflict_groups": 15,
-      "M1_qwk": 0.7203227182257605,
-      "M1_accuracy": 0.622093023255814,
-      "conformal_coverage": 0.9215116279069767,
-      "conformal_mean_size": 2.3197674418604652,
-      "note": "Headline nested-style M1 QWK/acc + conformal at this grouping; M7 abs from main ablation at default tol."
+      "n_repeats": 5,
+      "model": "catboost__knn_fixed",
+      "M1_qwk_mean": 0.6733031102820703,
+      "M1_accuracy_mean": 0.5744186046511628,
+      "conformal_coverage_mean": 0.9203488372093023,
+      "M1_qwk_ci": {
+        "mean": 0.5668604651162791,
+        "std": 0.0204498361829544,
+        "ci95_low": 0.5274570343310224,
+        "ci95_high": 0.6085108600263274,
+        "method": "grouped_bootstrap",
+        "n_boot": 200
+      },
+      "M1_accuracy_ci": {
+        "mean": 0.5668604651162791,
+        "std": 0.0204498361829544,
+        "ci95_low": 0.5274570343310224,
+        "ci95_high": 0.6085108600263274,
+        "method": "grouped_bootstrap",
+        "n_boot": 200
+      },
+      "conformal_coverage_ci": {
+        "mean": 0.9447674418604651,
+        "std": 0.009269349693156329,
+        "ci95_low": 0.9282348882981961,
+        "ci95_high": 0.9634907045009785,
+        "method": "grouped_bootstrap",
+        "n_boot": 200
+      },
+      "M1_qwk": 0.6733031102820703,
+      "M1_accuracy": 0.5744186046511628,
+      "conformal_coverage": 0.9203488372093023,
+      "note": "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; CIs = grouped bootstrap on last repeat case vectors."
     },
     {
       "tol": 0.01,
       "n_groups": 319,
       "n_multi": 24,
       "n_conflict_groups": 18,
-      "M1_qwk": 0.6540294722112905,
-      "M1_accuracy": 0.5784883720930233,
-      "conformal_coverage": 0.9011627906976745,
-      "conformal_mean_size": 2.078488372093023,
-      "note": "Headline nested-style M1 QWK/acc + conformal at this grouping; M7 abs from main ablation at default tol."
+      "n_repeats": 5,
+      "model": "catboost__knn_fixed",
+      "M1_qwk_mean": 0.669126184765829,
+      "M1_accuracy_mean": 0.555813953488372,
+      "conformal_coverage_mean": 0.9127906976744186,
+      "M1_qwk_ci": {
+        "mean": 0.561046511627907,
+        "std": 0.020304792294282503,
+        "ci95_low": 0.5235284583743182,
+        "ci95_high": 0.6028447559709242,
+        "method": "grouped_bootstrap",
+        "n_boot": 200
+      },
+      "M1_accuracy_ci": {
+        "mean": 0.561046511627907,
+        "std": 0.020304792294282503,
+        "ci95_low": 0.5235284583743182,
+        "ci95_high": 0.6028447559709242,
+        "method": "grouped_bootstrap",
+        "n_boot": 200
+      },
+      "conformal_coverage_ci": {
+        "mean": 0.9476744186046512,
+        "std": 0.008747093163840175,
+        "ci95_low": 0.9302078762615182,
+        "ci95_high": 0.963813025210084,
+        "method": "grouped_bootstrap",
+        "n_boot": 200
+      },
+      "M1_qwk": 0.669126184765829,
+      "M1_accuracy": 0.555813953488372,
+      "conformal_coverage": 0.9127906976744186,
+      "note": "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; CIs = grouped bootstrap on last repeat case vectors."
     },
     {
       "tol": 0.02,
       "n_groups": 314,
       "n_multi": 26,
       "n_conflict_groups": 21,
-      "M1_qwk": 0.6913715088157278,
-      "M1_accuracy": 0.5959302325581395,
-      "conformal_coverage": 0.8662790697674418,
-      "conformal_mean_size": 1.9680232558139534,
-      "note": "Headline nested-style M1 QWK/acc + conformal at this grouping; M7 abs from main ablation at default tol."
+      "n_repeats": 5,
+      "model": "catboost__knn_fixed",
+      "M1_qwk_mean": 0.6693803127503177,
+      "M1_accuracy_mean": 0.577906976744186,
+      "conformal_coverage_mean": 0.9156976744186046,
+      "M1_qwk_ci": {
+        "mean": 0.5494186046511628,
+        "std": 0.020949427796717723,
+        "ci95_low": 0.5090069980694981,
+        "ci95_high": 0.5883619476498734,
+        "method": "grouped_bootstrap",
+        "n_boot": 200
+      },
+      "M1_accuracy_ci": {
+        "mean": 0.5494186046511628,
+        "std": 0.020949427796717723,
+        "ci95_low": 0.5090069980694981,
+        "ci95_high": 0.5883619476498734,
+        "method": "grouped_bootstrap",
+        "n_boot": 200
+      },
+      "conformal_coverage_ci": {
+        "mean": 0.9098837209302325,
+        "std": 0.011550456851775156,
+        "ci95_low": 0.8877928546891103,
+        "ci95_high": 0.9327230176211454,
+        "method": "grouped_bootstrap",
+        "n_boot": 200
+      },
+      "M1_qwk": 0.6693803127503177,
+      "M1_accuracy": 0.577906976744186,
+      "conformal_coverage": 0.9156976744186046,
+      "note": "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; CIs = grouped bootstrap on last repeat case vectors."
     },
     {
       "tol": 0.05,
       "n_groups": 291,
       "n_multi": 38,
       "n_conflict_groups": 23,
-      "M1_qwk": 0.6747127310182958,
-      "M1_accuracy": 0.6017441860465116,
-      "conformal_coverage": 0.9215116279069767,
-      "conformal_mean_size": 2.3459302325581395,
-      "note": "Headline nested-style M1 QWK/acc + conformal at this grouping; M7 abs from main ablation at default tol."
+      "n_repeats": 5,
+      "model": "catboost__knn_fixed",
+      "M1_qwk_mean": 0.6755488472914642,
+      "M1_accuracy_mean": 0.5715116279069767,
+      "conformal_coverage_mean": 0.9203488372093023,
+      "M1_qwk_ci": {
+        "mean": 0.5784883720930233,
+        "std": 0.02171371079189711,
+        "ci95_low": 0.5401444267775604,
+        "ci95_high": 0.6190476190476191,
+        "method": "grouped_bootstrap",
+        "n_boot": 200
+      },
+      "M1_accuracy_ci": {
+        "mean": 0.5784883720930233,
+        "std": 0.02171371079189711,
+        "ci95_low": 0.5401444267775604,
+        "ci95_high": 0.6190476190476191,
+        "method": "grouped_bootstrap",
+        "n_boot": 200
+      },
+      "conformal_coverage_ci": {
+        "mean": 0.9331395348837209,
+        "std": 0.010126368520216823,
+        "ci95_low": 0.9142694805194805,
+        "ci95_high": 0.9554828509166706,
+        "method": "grouped_bootstrap",
+        "n_boot": 200
+      },
+      "M1_qwk": 0.6755488472914642,
+      "M1_accuracy": 0.5715116279069767,
+      "conformal_coverage": 0.9203488372093023,
+      "note": "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; CIs = grouped bootstrap on last repeat case vectors."
     }
   ],
   "pair_checks": [
@@ -82,43 +194,43 @@
     "0.1-1.0": 201
   },
   "nn_median": 0.13253197534001343,
-  "chosen_tol": 0.01,
-  "choice_note": "NN max-rel-distance histogram shows dense mass below ~1% (exact/near Table S1 copies) and a sparser tail at 1.5\u20135%. Keep near_dup_rel_tol=0.01 as the gap choice (not QWK-tuned). Pairs 19/342 and 20/328 (~1.5%) group at 2%; 9/337 (~4.4%) at 5%.",
+  "chosen_tol": 0.05,
+  "choice_note": "Primary near_dup_rel_tol=0.05 decided after seeing that 1% left known near-copies ungrouped (19\u2013342, 20\u2013328 first group at 2%; 9\u2013337 at 5%). Earlier headline numbers used 1%. Keep 1%/2% as sensitivity. Not QWK-tuned.",
   "label_noise_direction": {
-    "+1": 18,
-    "-1": 0,
+    "+1": 37,
+    "-1": 5,
     "larger_abs": 1,
     "zero": 0,
-    "mean_delta": 1.0526315789473684,
-    "n_pairs": 19
+    "mean_delta": 0.7906976744186046,
+    "n_pairs": 43
   },
   "block_315_344": {
-    "n_conflict_pairs_touching_315_344": 18,
-    "mean_delta_later_minus_earlier": 1.0555555555555556,
-    "frac_plus_one": 0.9444444444444444,
+    "n_conflict_pairs_touching_315_344": 31,
+    "mean_delta_later_minus_earlier": 1.032258064516129,
+    "frac_plus_one": 0.967741935483871,
     "statement": "Among conflicting pairs involving rows 315\u2013344, later grades are often +1 vs earlier counterparts; do not over-interpret as systematic relabeling without source confirmation."
   },
   "policies": {
     "keep_all": {
       "n": 344,
-      "qwk": 0.6730321863824172,
-      "accuracy": 0.5813953488372093
+      "qwk": 0.6914423463238248,
+      "accuracy": 0.6104651162790697
     },
     "keep_one_lowest_no_per_conflict_group": {
-      "n": 325,
-      "qwk": 0.6983089155264963,
-      "accuracy": 0.6553846153846153
+      "n": 306,
+      "qwk": 0.7236119585112873,
+      "accuracy": 0.6633986928104575
     },
     "drop_conflicting_groups": {
-      "n": 307,
-      "qwk": 0.6836265965027681,
-      "accuracy": 0.6221498371335505
+      "n": 283,
+      "qwk": 0.7358257871534379,
+      "accuracy": 0.6607773851590106
     }
   },
   "ceiling": {
-    "n_conflict_rows": 37,
-    "n_conflict_pairs": 19,
+    "n_conflict_rows": 61,
+    "n_conflict_pairs": 43,
     "note": "Label conflicts imply an accuracy/QWK ceiling below 1.0 even with a perfect feature\u2192label map; dropping conflict groups raises empirical scores but shrinks n \u2014 report all three policies.",
-    "M7_abstention_default_tol": 0.053488372093023255
+    "M7_abstention_default_tol": 1.0
   }
 }
