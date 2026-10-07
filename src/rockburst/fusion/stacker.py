@@ -225,8 +225,24 @@ class ReliabilityFusion:
         R = np.asarray(R, dtype=float)
         y = np.asarray(y_correct, dtype=int)
         if len(np.unique(y)) < 2:
-            self.is_fit = False
-            self.coef_ = None
+            # Single-class OOF correctness: still serve a usable confidence
+            # (mean correct-rate) rather than leaving the stacker unfitted
+            # (which forces 100% abstain in the graph).
+            rate = float(np.mean(y)) if len(y) else 0.0
+            self.coef_ = np.zeros(R.shape[1], dtype=float)
+            i_m = FEATURE_NAMES.index("r_model") if "r_model" in FEATURE_NAMES else 2
+            if i_m < len(self.coef_):
+                self.coef_[i_m] = 1.0
+            # logit(rate) ≈ intercept + mean(r_model); use intercept-only signal
+            eps = 1e-6
+            rate = float(np.clip(rate, eps, 1 - eps))
+            self.intercept_ = float(np.log(rate / (1 - rate)))
+            self.coef_[:] = 0.0
+            self.is_fit = True
+            self.feature_report = {
+                "single_class_fallback": True,
+                "constant_rate": rate,
+            }
             return self
         if select_features and feature_mask is None:
             mask, report = choose_feature_mask(R, y)
