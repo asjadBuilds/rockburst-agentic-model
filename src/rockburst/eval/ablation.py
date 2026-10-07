@@ -26,7 +26,7 @@ from rockburst.eval.metrics import (
     quadratic_weighted_kappa,
     severe_misclassification_rate,
 )
-from rockburst.fusion.features import compute_reliability_features
+from rockburst.fusion.features import compute_r_model, compute_reliability_features
 from rockburst.fusion.stacker import ReliabilityFusion, select_decision_thresholds
 from rockburst.graph.runner import run_graph
 from rockburst.ml.pipelines import build_preprocess, get_model_zoo, prepare_xy
@@ -267,10 +267,15 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                 case = df.iloc[int(j)].to_dict()
                 ref = build_fold_reference(df, fit_idx, case)
                 proba = _predict_proba_safe(pipe, X.iloc[[j]])[0]
+                obs = {
+                    c: bool(np.isfinite(float(case[c]))) if case.get(c) is not None else False
+                    for c in FEATURE_COLS
+                }
                 pred = PredictiveOutput(
                     predicted_grade=int(proba.argmax()),
                     probabilities=proba.tolist(),
-                    r_model=float(proba.max()),
+                    r_model=compute_r_model(proba),
+                    observed_mask=obs,
                     model_name="fold",
                 )
                 dq = run_data_quality(case, ref, fold_cfg_base)
@@ -278,7 +283,7 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                 unc = run_uncertainty(
                     case, pred, fold_cfg_base, pipeline=pipe, ensemble=None, conformal=conf
                 )
-                R_tr.append(compute_reliability_features(dq, phys, pred, unc))
+                R_tr.append(compute_reliability_features(dq, phys, pred, unc, case=case))
                 ycorr_tr.append(int(pred.predicted_grade == int(y[j])))
 
             # Inner calib for nested threshold selection (not outer test)
@@ -290,10 +295,15 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                 case = df.iloc[int(j)].to_dict()
                 ref = build_fold_reference(df, fit_idx, case)
                 proba = _predict_proba_safe(pipe, X.iloc[[j]])[0]
+                obs = {
+                    c: bool(np.isfinite(float(case[c]))) if case.get(c) is not None else False
+                    for c in FEATURE_COLS
+                }
                 pred = PredictiveOutput(
                     predicted_grade=int(proba.argmax()),
                     probabilities=proba.tolist(),
-                    r_model=float(proba.max()),
+                    r_model=compute_r_model(proba),
+                    observed_mask=obs,
                     model_name="fold",
                 )
                 dq = run_data_quality(case, ref, fold_cfg_base)
@@ -301,7 +311,7 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                 unc = run_uncertainty(
                     case, pred, fold_cfg_base, pipeline=pipe, ensemble=None, conformal=conf
                 )
-                R_cal.append(compute_reliability_features(dq, phys, pred, unc))
+                R_cal.append(compute_reliability_features(dq, phys, pred, unc, case=case))
                 ycorr_cal.append(int(pred.predicted_grade == int(y[j])))
 
             fusion = ReliabilityFusion()

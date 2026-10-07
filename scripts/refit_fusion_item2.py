@@ -129,7 +129,7 @@ def main() -> None:
             pred = PredictiveOutput(
                 predicted_grade=int(proba.argmax()),
                 probabilities=proba.tolist(),
-                r_model=float(proba.max()),
+                r_model=float(__import__("numpy").asarray(proba).max()),  # raw max-prob; missingness is a stacker feature
                 model_name="fold",
             )
             dq = run_data_quality(case, ref, cfg)
@@ -152,10 +152,9 @@ def main() -> None:
             pred = PredictiveOutput(
                 predicted_grade=int(proba.argmax()),
                 probabilities=proba.tolist(),
-                r_model=float(proba.max() * (1 - 0.07 * 0)),
+                r_model=float(proba.max()),
                 model_name="fold",
             )
-            # recompute r_model with miss penalty helper via run_predict
             pred = run_predict(case, cfg, pipeline=pipe, model_name="fold")
             dq = run_data_quality(case, ref, cfg)
             phys = run_physics(case, cfg)

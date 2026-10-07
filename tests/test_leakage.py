@@ -102,19 +102,26 @@ def test_fold_reference_excludes_self_and_group(processed_df):
 
 
 def test_fusion_monotonicity():
+    from rockburst.fusion.stacker import FEATURE_NAMES, FREE_SIGN_FEATURES
+
     rng = np.random.default_rng(0)
-    R = rng.uniform(0.2, 0.9, size=(80, 5))
+    R = rng.uniform(0.2, 0.9, size=(80, 7))
+    R[:, 5] = rng.integers(0, 3, size=80)  # n_missing
+    R[:, 6] = rng.integers(0, 2, size=80)  # d_observed
     # Higher R → more likely correct
-    logits = R @ np.array([1.0, 1.0, 1.2, 0.8, 0.7]) - 2.5
+    w = np.array([1.0, 1.0, 1.2, 0.8, 0.7, -0.3, 0.2])
+    logits = R @ w - 2.5
     y = (rng.random(80) < 1 / (1 + np.exp(-logits))).astype(int)
     if len(np.unique(y)) < 2:
         y[:40] = 0
         y[40:] = 1
     fusion = ReliabilityFusion().fit(R, y)
     assert fusion.is_fit
-    assert np.all(fusion.coef_ >= 0)
-    base = pack_r_vector(0.8, 0.8, 0.8, 0.8, 0.8)
-    worse = pack_r_vector(0.2, 0.8, 0.8, 0.8, 0.8)
+    for i, name in enumerate(FEATURE_NAMES):
+        if name not in FREE_SIGN_FEATURES:
+            assert fusion.coef_[i] >= -1e-12
+    base = pack_r_vector(0.8, 0.8, 0.8, 0.8, 0.8, 0.0, 1.0)
+    worse = pack_r_vector(0.2, 0.8, 0.8, 0.8, 0.8, 0.0, 1.0)
     assert fusion.r_final(worse) <= fusion.r_final(base) + 1e-9
 
 
@@ -125,11 +132,25 @@ def test_train_serve_reliability_path_identical():
         PredictiveOutput,
         UncertaintyOutput,
     )
+    from rockburst.fusion.features import compute_r_model
 
     dq = DataQualityOutput(data_reliability=0.7, ood_flag=False)
     phys = PhysicsOutput(physics_score=0.9)
+    proba = [0.1, 0.2, 0.6, 0.1]
     pred = PredictiveOutput(
-        predicted_grade=2, probabilities=[0.1, 0.2, 0.6, 0.1], r_model=0.6
+        predicted_grade=2,
+        probabilities=proba,
+        r_model=compute_r_model(proba),
+        observed_mask={
+            "sigma_theta": True,
+            "sigma_c": True,
+            "sigma_t": True,
+            "scf": True,
+            "b1": True,
+            "b2": True,
+            "wet": True,
+            "d": False,
+        },
     )
     unc = UncertaintyOutput(
         uncertainty_score=0.3,
@@ -141,8 +162,16 @@ def test_train_serve_reliability_path_identical():
         entropy=0.5,
     )
     a = compute_reliability_features(dq, phys, pred, unc)
-    b = pack_r_vector(0.7, 0.9, 0.6, 0.7, 0.85)
+    b = pack_r_vector(0.7, 0.9, 0.6, 0.7, 0.85, 1.0, 0.0)
     np.testing.assert_allclose(a, b)
+    assert compute_r_model(proba) == 0.6
+
+
+def test_r_model_train_serve_no_discount():
+    from rockburst.fusion.features import compute_r_model
+
+    proba = np.array([0.05, 0.1, 0.7, 0.15])
+    assert compute_r_model(proba) == 0.7
 
 
 def test_conformal_calib_disjoint_from_fit(processed_df):

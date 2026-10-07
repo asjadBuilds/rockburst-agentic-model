@@ -16,7 +16,11 @@ FEATURE_NAMES = [
     "r_model",
     "r_uncertainty",
     "r_stability",
+    "n_missing",
+    "d_observed",
 ]
+# Reliability channels stay non-negative; missingness may reduce trust (free sign).
+FREE_SIGN_FEATURES = frozenset({"n_missing", "d_observed"})
 
 
 class FusionNotFitError(RuntimeError):
@@ -28,10 +32,24 @@ def _sigmoid(z: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp(-z))
 
 
+def _coef_bounds_for_mask(mask: np.ndarray) -> list[tuple[float | None, float | None]]:
+    """Intercept free; R_* ≥ 0; n_missing / d_observed free-signed."""
+    bounds: list[tuple[float | None, float | None]] = [(None, None)]
+    for i, use in enumerate(mask):
+        if not use:
+            continue
+        name = FEATURE_NAMES[i] if i < len(FEATURE_NAMES) else f"f{i}"
+        if name in FREE_SIGN_FEATURES:
+            bounds.append((None, None))
+        else:
+            bounds.append((0.0, None))
+    return bounds
+
+
 def fit_nonneg_logistic(
     R: np.ndarray, y: np.ndarray, *, feature_mask: np.ndarray | None = None
 ) -> tuple[np.ndarray, float]:
-    """Bound-constrained logistic (coef ≥ 0); intercept free. No class_weight."""
+    """Bound-constrained logistic; intercept free. Missingness coefs free-signed."""
     R = np.asarray(R, dtype=float)
     y = np.asarray(y, dtype=float)
     n, d = R.shape
@@ -55,11 +73,17 @@ def fit_nonneg_logistic(
 
     x0 = np.zeros(d_use + 1)
     x0[0] = 0.0
-    bounds = [(None, None)] + [(0.0, None)] * d_use
+    bounds = _coef_bounds_for_mask(mask)
     res = minimize(nll, x0, method="L-BFGS-B", bounds=bounds)
     intercept = float(res.x[0])
     coef_full = np.zeros(d, dtype=float)
-    coef_full[mask] = np.maximum(res.x[1:], 0.0)
+    coef_use = np.asarray(res.x[1:], dtype=float)
+    # Clip only nonneg channels after optimize (numerical safety)
+    names_use = [FEATURE_NAMES[i] for i, u in enumerate(mask) if u]
+    for j, name in enumerate(names_use):
+        if name not in FREE_SIGN_FEATURES:
+            coef_use[j] = max(float(coef_use[j]), 0.0)
+    coef_full[mask] = coef_use
     return coef_full, intercept
 
 
@@ -158,7 +182,9 @@ def choose_feature_mask(
     report["drop_one_logloss"] = drop_one
     report["feature_mask"] = mask.tolist()
     report["zero_weight_flags"] = [
-        FEATURE_NAMES[i] for i in range(d) if mask[i] and full_coef[i] <= 1e-8
+        FEATURE_NAMES[i]
+        for i in range(min(d, len(FEATURE_NAMES)))
+        if mask[i] and abs(full_coef[i]) <= 1e-8
     ]
     return mask, report
 
@@ -221,7 +247,9 @@ class ReliabilityFusion:
             [
                 FEATURE_NAMES[i]
                 for i in range(len(FEATURE_NAMES))
-                if self.feature_mask[i] and coef[i] <= 1e-8
+                if i < len(coef)
+                and self.feature_mask[i]
+                and abs(coef[i]) <= 1e-8
             ],
         )
         return self
@@ -245,7 +273,16 @@ class ReliabilityFusion:
                 "Abstain or fit the stacker on OOF live reliabilities."
             )
         r = np.asarray(r_vec, dtype=float).ravel()
-        return float(_sigmoid(self.intercept_ + float(r @ self.coef_)))
+        coef = np.asarray(self.coef_, dtype=float).ravel()
+        if len(r) != len(coef):
+            # Back-compat when FEATURE_NAMES grows (pad missing dims with 0).
+            n = max(len(r), len(coef))
+            rr = np.zeros(n, dtype=float)
+            cc = np.zeros(n, dtype=float)
+            rr[: len(r)] = r
+            cc[: len(coef)] = coef
+            r, coef = rr, cc
+        return float(_sigmoid(self.intercept_ + float(r @ coef)))
 
     def r_final(self, r_vec: np.ndarray) -> float:
         raw = self._raw_score(r_vec)
@@ -337,9 +374,20 @@ def pack_r_vector(
     r_model: float,
     r_uncertainty: float,
     r_stability: float,
+    n_missing: float = 0.0,
+    d_observed: float = 1.0,
 ) -> np.ndarray:
     return np.array(
-        [r_data, r_physics, r_model, r_uncertainty, r_stability], dtype=float
+        [
+            r_data,
+            r_physics,
+            r_model,
+            r_uncertainty,
+            r_stability,
+            n_missing,
+            d_observed,
+        ],
+        dtype=float,
     )
 
 

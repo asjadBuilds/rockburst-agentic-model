@@ -17,7 +17,7 @@ from rockburst.agents.schemas import PredictiveOutput
 from rockburst.agents.tools import run_data_quality, run_physics, run_uncertainty
 from rockburst.config import resolve_path
 from rockburst.eval.metrics import classification_report_dict, expected_calibration_error
-from rockburst.fusion.features import compute_reliability_features
+from rockburst.fusion.features import compute_r_model, compute_reliability_features
 from rockburst.fusion.stacker import ReliabilityFusion, select_decision_thresholds
 from rockburst.ml.pipelines import build_preprocess, prepare_xy
 from rockburst.ml.tuning import (
@@ -125,15 +125,16 @@ def _live_r_for_case(
     ref = build_fold_reference(df, train_idx, case, group_col=cfg.get("group_col", "dup_group_id"))
     dq = run_data_quality(case, ref, cfg)
     phys = run_physics(case, cfg)
+    proba_arr = np.asarray(proba, dtype=float)
+    observed_mask = {
+        c: bool(np.isfinite(float(case[c]))) if case.get(c) is not None else False
+        for c in FEATURE_COLS
+    }
     pred = PredictiveOutput(
-        predicted_grade=int(np.argmax(proba)),
-        probabilities=np.asarray(proba, dtype=float).tolist(),
-        r_model=float(np.clip(float(np.max(proba)) * (
-            1 - 0.07 * sum(
-                1 for c in FEATURE_COLS
-                if case.get(c) is None or not np.isfinite(float(case[c]))
-            )
-        ), 0, 1)),
+        predicted_grade=int(np.argmax(proba_arr)),
+        probabilities=proba_arr.tolist(),
+        r_model=compute_r_model(proba_arr),
+        observed_mask=observed_mask,
         model_name="oof",
     )
     unc = run_uncertainty(
@@ -144,7 +145,7 @@ def _live_r_for_case(
         ensemble=ensemble,
         conformal=conformal,
     )
-    return compute_reliability_features(dq, phys, pred, unc)
+    return compute_reliability_features(dq, phys, pred, unc, case=case)
 
 
 def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
