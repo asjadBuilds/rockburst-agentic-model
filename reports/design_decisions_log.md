@@ -112,3 +112,32 @@ Written **before** final full run: ECE / Brier / mean R_final / risk-coverage co
 - Second clean checkout (detached worktree at same commit): `make pipeline` + `item4_metrics`; `scripts/diff_headline_metrics.py` → **no differences** in headline keys.
 - `pytest -q`: 32 passed.
 - Secrets: `git log --all -S"AIza"` hits historical commit `fe8265f` only. Working-tree grep under `artifacts/`, `reports/`, `logs/` finds only documentation mentions in `audit_log.md` (no live key values). `.env` gitignored.
+
+## Item 9 — Fusion feature-set selection (BEFORE comparison)
+
+Written **before** running the A/B/C/D cross-fit comparison on saved OOF vectors.
+
+**Candidates (masks on `FEATURE_NAMES`):**
+- A: `r_model` only (max-prob)
+- B: `r_model` + `n_missing`
+- C: current 7 features minus `d_observed`
+- D: current 7 features
+
+**Protocol:** same grouped cross-fit as production (stacker + calibrator + thresholds fit on other folds’ OOF; score held-out only). Metrics: risk–coverage area, ECE, Brier, mean \(R_{\mathrm{final}}\). Also report paired grouped-bootstrap CI of each set’s area minus the best set’s area (`dup_group_id`).
+
+**Selection rule (locked before results):** among sets whose risk–coverage area is statistically tied with the best (paired Δ CI vs best contains 0), choose the **simplest**; ties among tied sets go to the simpler set. Simplicity order: A ≺ B ≺ C ≺ D. If no other set ties the best, keep the best.
+
+**Honesty note (to be filled after choice):** `n_missing` / `d_observed` were added after seeing earlier results; the final feature set is chosen on held-out evidence under this rule.
+
+### Item 9 — result (after comparison)
+
+| set | area | ECE | Brier | meanR | Δ vs best CI |
+|-----|------|-----|-------|-------|--------------|
+| A | 0.6714 | 0.1338 | 0.2276 | 0.6504 | [−0.033, +0.002] |
+| B | 0.6671 | 0.1169 | 0.2228 | 0.6478 | [−0.037, −0.002] |
+| C | 0.6865 | 0.1040 | 0.2073 | 0.6409 | best (tied with D) |
+| D | 0.6865 | 0.1040 | 0.2073 | 0.6409 | tied with C |
+
+**Chosen: A** (`r_model` / max-prob only) — simplest set whose paired Δ CI vs best contains 0. B excluded (CI entirely below 0).
+
+**Honesty:** `n_missing` and `d_observed` were added after seeing earlier results; the feature set was chosen on held-out evidence under the pre-registered rule above. Locked in `CHOSEN_FUSION_SET` / `locked_feature_mask()` for production, ablation, and item4.

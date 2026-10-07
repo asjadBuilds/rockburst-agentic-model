@@ -22,6 +22,31 @@ FEATURE_NAMES = [
 # Reliability channels stay non-negative; missingness may reduce trust (free sign).
 FREE_SIGN_FEATURES = frozenset({"n_missing", "d_observed"})
 
+# Item 9: locked after A/B/C/D cross-fit on held-out OOF (simplest set tied with best).
+CHOSEN_FUSION_SET = "A"
+CHOSEN_FUSION_FEATURES = ("r_model",)
+
+
+def locked_feature_mask() -> np.ndarray:
+    """Boolean mask over FEATURE_NAMES for the locked production feature set."""
+    return np.array([n in CHOSEN_FUSION_FEATURES for n in FEATURE_NAMES], dtype=bool)
+
+
+def locked_feature_report() -> dict[str, Any]:
+    mask = locked_feature_mask()
+    active = [FEATURE_NAMES[i] for i, u in enumerate(mask) if u]
+    inactive = [FEATURE_NAMES[i] for i, u in enumerate(mask) if not u]
+    return {
+        "chosen_set": CHOSEN_FUSION_SET,
+        "feature_mask": mask.tolist(),
+        "active_features": active,
+        "zero_weight_flags": inactive,
+        "note": (
+            "Locked Item 9: simplest set whose risk-coverage area tied best "
+            "(paired CI vs best contains 0); A ≺ B ≺ C ≺ D."
+        ),
+    }
+
 
 class FusionNotFitError(RuntimeError):
     """Raised when R_final is requested from an unfitted stacker."""
@@ -244,14 +269,15 @@ class ReliabilityFusion:
                 "constant_rate": rate,
             }
             return self
-        if select_features and feature_mask is None:
-            mask, report = choose_feature_mask(R, y)
-            self.feature_mask = mask
-            self.feature_report = report
-        elif feature_mask is not None:
+        if feature_mask is not None:
             self.feature_mask = np.asarray(feature_mask, dtype=bool)
+            self.feature_report = {"feature_mask": self.feature_mask.tolist()}
         else:
-            self.feature_mask = np.ones(R.shape[1], dtype=bool)
+            # Locked Item 9 mask — train / ablation / item4 share this default.
+            self.feature_mask = locked_feature_mask()
+            self.feature_report = locked_feature_report()
+            if select_features:
+                self.feature_report["select_features_ignored"] = True
 
         coef, intercept = fit_nonneg_logistic(R, y, feature_mask=self.feature_mask)
         self.coef_ = coef

@@ -109,7 +109,12 @@ def main() -> None:
             wanted["missingness"] = payload
         elif wanted["ood"] is None and m7.get("ood_status") == "Yes":
             wanted["ood"] = payload
-        elif wanted["disagreement"] is None and m7.get("agent_disagreement") == "high":
+        elif wanted["disagreement"] is None and (
+            m7.get("agent_disagreement") == "high"
+            or float(m7.get("model_disagreement") or 0) >= float(
+                fold_cfg.get("routing", {}).get("disagreement_threshold", 0.35)
+            )
+        ):
             wanted["disagreement"] = payload
         elif (
             wanted["critic"] is None

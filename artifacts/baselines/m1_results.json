@@ -12616,138 +12616,48 @@
   "fusion_crossfit_n_folds": 5,
   "fusion_crossfit_disjoint_ok": true,
   "fusion_path": "/home/leviathan/Workspace/agentic-rockburst-model/artifacts/models/fusion.joblib",
-  "fusion_protocol": "cross_fit_grouped_folds: ECE/Brier/mean_R_final from held-out fold scores; production fusion.joblib fitted on all OOF for serving",
+  "fusion_protocol": "cross_fit_grouped_folds + locked set A (r_model only); ECE/Brier/mean_R_final from held-out; production fusion.joblib on all OOF",
   "fusion_coef": [
     0.0,
-    1.7830263473923256,
     0.0,
-    9.829961754584728,
+    4.9222427230319425,
     0.0,
-    -2.3897768419960843,
-    -2.1729289765518316
+    0.0,
+    0.0,
+    0.0
   ],
-  "fusion_intercept": -4.562706395522024,
+  "fusion_intercept": -2.277803158079044,
   "fusion_feature_report": {
-    "corr": [
-      [
-        1.0,
-        0.25536233677365666,
-        -0.3260256053321843,
-        -0.3901173903628905,
-        -0.08435306254031141,
-        -0.020796360047449076,
-        0.020796360047449038
-      ],
-      [
-        0.25536233677365666,
-        1.0,
-        -0.03701807401337401,
-        -0.10825026713674264,
-        0.08809095529230669,
-        -0.3020801547482426,
-        0.3020801547482425
-      ],
-      [
-        -0.3260256053321843,
-        -0.03701807401337401,
-        1.0,
-        0.9114561085643587,
-        0.4566384006251608,
-        -0.2093452838194519,
-        0.2093452838194519
-      ],
-      [
-        -0.3901173903628905,
-        -0.10825026713674264,
-        0.9114561085643588,
-        1.0,
-        0.27910169169420856,
-        -0.1754740817509683,
-        0.1754740817509683
-      ],
-      [
-        -0.08435306254031141,
-        0.08809095529230669,
-        0.4566384006251608,
-        0.27910169169420856,
-        1.0,
-        -0.11451074352832519,
-        0.1145107435283252
-      ],
-      [
-        -0.02079636004744908,
-        -0.3020801547482426,
-        -0.20934528381945192,
-        -0.1754740817509683,
-        -0.11451074352832517,
-        1.0,
-        -1.0
-      ],
-      [
-        0.02079636004744904,
-        0.3020801547482425,
-        0.20934528381945192,
-        0.1754740817509683,
-        0.1145107435283252,
-        -1.0,
-        1.0
-      ]
+    "chosen_set": "A",
+    "feature_mask": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
     ],
-    "vif": {
-      "r_data": 1.2510675223028742,
-      "r_physics": 1.2058938499665703,
-      "r_model": 8.15535096964867,
-      "r_uncertainty": 7.320021400977834,
-      "r_stability": 1.4753870155611342,
-      "n_missing": 9007199254740992.0,
-      "d_observed": 9007199254740992.0
-    },
-    "pair": {
-      "r_model_r_uncertainty_corr": 0.9114561085643587
-    },
-    "names": [
+    "active_features": [
+      "r_model"
+    ],
+    "zero_weight_flags": [
       "r_data",
       "r_physics",
-      "r_model",
       "r_uncertainty",
       "r_stability",
       "n_missing",
       "d_observed"
     ],
-    "collinearity_action": {
-      "dropped": [
-        "r_model"
-      ],
-      "auc_r_model": 0.6937794862834178,
-      "auc_r_uncertainty": 0.7455297338225872,
-      "reason": "corr=0.911, vif_m=8.16, vif_u=7.32"
-    },
-    "drop_one_logloss": {
-      "full": 0.5557268418700704,
-      "drop_r_data": 0.555726841686373,
-      "drop_r_physics": 0.5559680248753268,
-      "drop_r_uncertainty": 0.6405927887818758,
-      "drop_r_stability": 0.5557268416520902,
-      "drop_n_missing": 0.5557268427325854,
-      "drop_d_observed": 0.5557268424616951
-    },
-    "feature_mask": [
-      true,
-      true,
-      false,
-      true,
-      true,
-      true,
-      true
-    ],
-    "zero_weight_flags": [
-      "r_data",
-      "r_stability"
-    ]
+    "note": "Locked Item 9: simplest set whose risk-coverage area tied best (paired CI vs best contains 0); A \u227a B \u227a C \u227a D."
   },
   "fusion_zero_weight_flags": [
     "r_data",
-    "r_stability"
+    "r_physics",
+    "r_uncertainty",
+    "r_stability",
+    "n_missing",
+    "d_observed"
   ],
   "fusion_coef_bootstrap": {
     "coef_mean": [
@@ -12810,10 +12720,10 @@
     "accept_with_caution": 0.7000000000000001,
     "accept_r_final": 0.7000000000000001
   },
-  "fusion_r_final_ece": 0.10397876216489706,
-  "fusion_r_final_ece_crossfit": 0.10397876216489706,
-  "fusion_brier": 0.20728076838018755,
-  "fusion_mean_r_final": 0.6408889711578636,
+  "fusion_r_final_ece": 0.1337601334438284,
+  "fusion_r_final_ece_crossfit": 0.1337601334438284,
+  "fusion_brier": 0.22756171974755404,
+  "fusion_mean_r_final": 0.6503644905970019,
   "fusion_oof_accuracy_of_base": 0.6308139534883721,
   "fusion_calibrated": true,
   "fusion_crossfit_disjoint": true,
@@ -12899,6 +12809,74 @@
       "mean_r_final": 0.9969924743740629,
       "empirical_correct": 0.9259259259259259,
       "n": 54
+    }
+  ],
+  "fusion_chosen_set": "A",
+  "fusion_crossfit_fold_coefs": [
+    {
+      "fold": 0,
+      "intercept": -2.243131426646559,
+      "coef": [
+        0.0,
+        0.0,
+        4.982567954555006,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "fold": 1,
+      "intercept": -1.964915986834685,
+      "coef": [
+        0.0,
+        0.0,
+        4.509165629707395,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "fold": 2,
+      "intercept": -2.042231150079868,
+      "coef": [
+        0.0,
+        0.0,
+        4.494612173319227,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "fold": 3,
+      "intercept": -2.7541557382345543,
+      "coef": [
+        0.0,
+        0.0,
+        5.586081168406624,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "fold": 4,
+      "intercept": -2.394064718948307,
+      "coef": [
+        0.0,
+        0.0,
+        5.06719801195854,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
     }
   ]
 }

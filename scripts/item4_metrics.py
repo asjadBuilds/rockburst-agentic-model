@@ -191,6 +191,19 @@ def main() -> None:
     correct = np.asarray(correct_m1)
     flag = np.asarray(critic_flag)
     err = 1 - correct
+    gids = np.asarray(group_ids)
+
+    from rockburst.eval.bootstrap import grouped_bootstrap_metric
+
+    def _auroc_point(e, f):
+        f = np.asarray(f)
+        e = np.asarray(e)
+        if f.sum() == 0 or f.sum() == len(f):
+            return float("nan")
+        try:
+            return float(roc_auc_score(e, f))
+        except ValueError:
+            return float("nan")
 
     def _flag_metrics(f):
         f = np.asarray(f)
@@ -204,10 +217,14 @@ def main() -> None:
         prec, rec, _, _ = precision_recall_fscore_support(
             err, f, average="binary", zero_division=0
         )
+        auroc_ci = grouped_bootstrap_metric(
+            err, f, gids, _auroc_point, n_boot=200, seed=seed
+        )
         return {
             "error_rate_flagged": float(err[f == 1].mean()) if f.sum() else None,
             "error_rate_not_flagged": float(err[f == 0].mean()) if (f == 0).sum() else None,
             "auroc": auroc,
+            "auroc_ci": auroc_ci,
             "precision": float(prec),
             "recall": float(rec),
             "flag_rate": float(f.mean()),
@@ -220,7 +237,6 @@ def main() -> None:
     conf_r = np.asarray(conf_rfinal, dtype=float)
     conf_m = np.asarray(conf_maxp, dtype=float)
     conf_e = np.asarray(conf_ent, dtype=float)
-    gids = np.asarray(group_ids)
     corr_f = correct.astype(float)
 
     # Paired grouped bootstrap on area(R_final) - area(max_prob)
@@ -321,6 +337,17 @@ def main() -> None:
         "conformal_overall": cov,
     }
     dest = resolve_path(cfg, "baselines") / "item4_metrics.json"
+    vec_path = resolve_path(cfg, "baselines") / "item4_case_vectors.npz"
+    np.savez_compressed(
+        vec_path,
+        err=err.astype(int),
+        flag=flag.astype(int),
+        groups=gids,
+        physics=np.asarray(rule_flags["physics"], dtype=int),
+        ood=np.asarray(rule_flags["ood"], dtype=int),
+        disagreement=np.asarray(rule_flags["disagreement"], dtype=int),
+        large_set=np.asarray(rule_flags["large_set"], dtype=int),
+    )
     dest.write_text(json.dumps(out, indent=2, default=str))
     print(json.dumps({
         "critic_auroc": out["critic_error_detection"]["overall_flag"]["auroc"],

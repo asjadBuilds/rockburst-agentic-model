@@ -1,24 +1,24 @@
 {
   "predicted_grade": 1,
-  "prediction_probability": 0.4177017981178579,
+  "prediction_probability": 0.4510302197918618,
   "prediction_set": [
-    0,
     1,
-    2
+    2,
+    3
   ],
   "physics_consistency": 1.0,
-  "input_reliability": 0.8255408900374175,
+  "input_reliability": 0.8425709092052102,
   "ood_status": "No",
   "prediction_stability": "high",
-  "agent_disagreement": "moderate",
-  "final_system_confidence": 0.0,
-  "decision": "Inadequate confidence; abstain and request additional data/review.",
-  "recommended_action": "abstain",
+  "agent_disagreement": "low",
+  "final_system_confidence": 0.4791666666666667,
+  "decision": "Confidence insufficient for routine accept; engineering verification recommended.",
+  "recommended_action": "engineering_verification",
   "probabilities": [
-    0.40840662110687875,
-    0.4177017981178579,
-    0.1348290807752633,
-    0.0390625
+    0.0078125,
+    0.4510302197918618,
+    0.30690685572494014,
+    0.2342504244831979
   ],
   "route_trace": [
     "rules:data_quality",
@@ -30,28 +30,22 @@
     "fallback:critic",
     "rules:finalize"
   ],
-  "abstained": true,
+  "abstained": false,
   "critic_endorse": false,
   "downgrade_reason": null,
   "physics_skipped": true,
   "recheck_payloads": {},
   "r_vector": {
-    "r_data": 0.8255408900374175,
+    "r_data": 0.8425709092052102,
     "r_physics": 1.0,
-    "r_model": 0.4177017981178579,
-    "r_uncertainty": 0.3788047023920976,
-    "r_stability": 0.8342421411829172,
+    "r_model": 0.4510302197918618,
+    "r_uncertainty": 0.5241137542226464,
+    "r_stability": 0.9693483464679247,
     "n_missing": 0.0,
     "d_observed": 1.0,
-    "r_final": 0.0
+    "r_final": 0.4791666666666667
   },
   "example_protocol": "held-out fold model",
   "true_grade": 2,
-  "m6_route_trace": [
-    "rules:data_quality",
-    "rules:geomechanics_skipped",
-    "rules:predict",
-    "rules:uncertainty",
-    "rules:finalize"
-  ]
+  "disagreement_note": "max model_disagreement=0.000 on fold0"
 }

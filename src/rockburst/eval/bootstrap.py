@@ -54,6 +54,74 @@ def grouped_bootstrap_ci(
     }
 
 
+def grouped_bootstrap_metric(
+    a: np.ndarray,
+    b: np.ndarray,
+    groups: np.ndarray,
+    metric: Callable[[np.ndarray, np.ndarray], float],
+    *,
+    n_boot: int = 500,
+    seed: int = 42,
+    min_n: int = 5,
+) -> dict[str, float | None]:
+    """Grouped bootstrap CI for a paired metric ``metric(a[mask], b[mask])``."""
+    a = np.asarray(a)
+    b = np.asarray(b)
+    groups = np.asarray(groups)
+    if len(a) == 0:
+        return {
+            "mean": None,
+            "std": None,
+            "ci95_low": None,
+            "ci95_high": None,
+            "method": "grouped_bootstrap",
+            "n_boot": 0,
+        }
+    try:
+        point_raw = metric(a, b)
+        point = float(point_raw) if point_raw is not None else float("nan")
+    except (ValueError, ZeroDivisionError):
+        point = float("nan")
+    uniq = np.unique(groups)
+    rng = np.random.default_rng(seed)
+    boots: list[float] = []
+    if len(uniq) < 2:
+        ok = point if np.isfinite(point) else None
+        return {
+            "mean": ok,
+            "std": 0.0 if ok is not None else None,
+            "ci95_low": ok,
+            "ci95_high": ok,
+            "method": "grouped_bootstrap",
+            "n_boot": 0,
+        }
+    for _ in range(n_boot):
+        sample_g = rng.choice(uniq, size=len(uniq), replace=True)
+        mask = np.isin(groups, sample_g)
+        if int(mask.sum()) < min_n:
+            continue
+        try:
+            v = metric(a[mask], b[mask])
+        except (ValueError, ZeroDivisionError):
+            continue
+        if v is None:
+            continue
+        fv = float(v)
+        if not np.isfinite(fv):
+            continue
+        boots.append(fv)
+    arr = np.asarray(boots, dtype=float)
+    ok = point if np.isfinite(point) else None
+    return {
+        "mean": ok,
+        "std": float(arr.std(ddof=1)) if len(arr) > 1 else (0.0 if len(arr) else None),
+        "ci95_low": float(np.percentile(arr, 2.5)) if len(arr) else ok,
+        "ci95_high": float(np.percentile(arr, 97.5)) if len(arr) else ok,
+        "method": "grouped_bootstrap",
+        "n_boot": int(len(arr)),
+    }
+
+
 def fold_list_ci(values: list[float]) -> dict[str, Any]:
     """Legacy normal CI over fold means (too narrow; kept for comparison)."""
     arr = np.asarray(values, dtype=float)

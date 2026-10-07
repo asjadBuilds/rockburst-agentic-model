@@ -11,10 +11,10 @@
       "M1_accuracy_mean": 0.5744186046511628,
       "conformal_coverage_mean": 0.9203488372093023,
       "M1_qwk_ci": {
-        "mean": 0.5668604651162791,
-        "std": 0.0204498361829544,
-        "ci95_low": 0.5274570343310224,
-        "ci95_high": 0.6085108600263274,
+        "mean": 0.6577463710808948,
+        "std": 0.027771529184142874,
+        "ci95_low": 0.6002440510931916,
+        "ci95_high": 0.7148342804202745,
         "method": "grouped_bootstrap",
         "n_boot": 200
       },
@@ -37,7 +37,7 @@
       "M1_qwk": 0.6733031102820703,
       "M1_accuracy": 0.5744186046511628,
       "conformal_coverage": 0.9203488372093023,
-      "note": "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; CIs = grouped bootstrap on last repeat case vectors."
+      "note": "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; QWK CI = grouped bootstrap of QWK per resample; acc/coverage CIs = grouped bootstrap of case vectors."
     },
     {
       "tol": 0.01,
@@ -50,10 +50,10 @@
       "M1_accuracy_mean": 0.555813953488372,
       "conformal_coverage_mean": 0.9127906976744186,
       "M1_qwk_ci": {
-        "mean": 0.561046511627907,
-        "std": 0.020304792294282503,
-        "ci95_low": 0.5235284583743182,
-        "ci95_high": 0.6028447559709242,
+        "mean": 0.6933969369821742,
+        "std": 0.024653031693119592,
+        "ci95_low": 0.6486621587684015,
+        "ci95_high": 0.7434689396735576,
         "method": "grouped_bootstrap",
         "n_boot": 200
       },
@@ -76,7 +76,7 @@
       "M1_qwk": 0.669126184765829,
       "M1_accuracy": 0.555813953488372,
       "conformal_coverage": 0.9127906976744186,
-      "note": "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; CIs = grouped bootstrap on last repeat case vectors."
+      "note": "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; QWK CI = grouped bootstrap of QWK per resample; acc/coverage CIs = grouped bootstrap of case vectors."
     },
     {
       "tol": 0.02,
@@ -89,10 +89,10 @@
       "M1_accuracy_mean": 0.577906976744186,
       "conformal_coverage_mean": 0.9156976744186046,
       "M1_qwk_ci": {
-        "mean": 0.5494186046511628,
-        "std": 0.020949427796717723,
-        "ci95_low": 0.5090069980694981,
-        "ci95_high": 0.5883619476498734,
+        "mean": 0.6468494126023496,
+        "std": 0.028138762259381653,
+        "ci95_low": 0.5861763405618847,
+        "ci95_high": 0.6945856784983713,
         "method": "grouped_bootstrap",
         "n_boot": 200
       },
@@ -115,7 +115,7 @@
       "M1_qwk": 0.6693803127503177,
       "M1_accuracy": 0.577906976744186,
       "conformal_coverage": 0.9156976744186046,
-      "note": "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; CIs = grouped bootstrap on last repeat case vectors."
+      "note": "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; QWK CI = grouped bootstrap of QWK per resample; acc/coverage CIs = grouped bootstrap of case vectors."
     },
     {
       "tol": 0.05,
@@ -128,10 +128,10 @@
       "M1_accuracy_mean": 0.5715116279069767,
       "conformal_coverage_mean": 0.9203488372093023,
       "M1_qwk_ci": {
-        "mean": 0.5784883720930233,
-        "std": 0.02171371079189711,
-        "ci95_low": 0.5401444267775604,
-        "ci95_high": 0.6190476190476191,
+        "mean": 0.6707110540224337,
+        "std": 0.026751908564071718,
+        "ci95_low": 0.6178913600491442,
+        "ci95_high": 0.7164886764641171,
         "method": "grouped_bootstrap",
         "n_boot": 200
       },
@@ -154,7 +154,7 @@
       "M1_qwk": 0.6755488472914642,
       "M1_accuracy": 0.5715116279069767,
       "conformal_coverage": 0.9203488372093023,
-      "note": "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; CIs = grouped bootstrap on last repeat case vectors."
+      "note": "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; QWK CI = grouped bootstrap of QWK per resample; acc/coverage CIs = grouped bootstrap of case vectors."
     }
   ],
   "pair_checks": [

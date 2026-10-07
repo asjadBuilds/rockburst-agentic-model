@@ -573,7 +573,7 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         results["ensemble_path"] = str(ens_path)
 
         # Live-agent OOF R using production model family fold params
-        from rockburst.fusion.stacker import FEATURE_NAMES, choose_feature_mask, bootstrap_coef_cis
+        from rockburst.fusion.stacker import FEATURE_NAMES, bootstrap_coef_cis
 
         n_feat = len(FEATURE_NAMES)
         R = np.zeros((len(y), n_feat), dtype=float)
@@ -637,7 +637,10 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
             inner_fit, inner_val = _split_fit_calib(
                 y, groups, idx_fit, seed=seed + 100 + fold
             )
-            mask, feat_report = choose_feature_mask(R[inner_fit], y_correct[inner_fit])
+            from rockburst.fusion.stacker import locked_feature_mask, locked_feature_report
+
+            mask = locked_feature_mask()
+            feat_report = locked_feature_report()
             fold_fusion = ReliabilityFusion().fit(
                 R[idx_fit], y_correct[idx_fit], feature_mask=mask, select_features=False
             )
@@ -672,7 +675,10 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         _inner_fit, inner_val = _split_fit_calib(
             y, groups, np.arange(len(y)), seed=seed + 99
         )
-        mask, feat_report = choose_feature_mask(R[_inner_fit], y_correct[_inner_fit])
+        from rockburst.fusion.stacker import locked_feature_mask, locked_feature_report
+
+        mask = locked_feature_mask()
+        feat_report = locked_feature_report()
         fusion = ReliabilityFusion().fit(
             R, y_correct, feature_mask=mask, select_features=False
         )
