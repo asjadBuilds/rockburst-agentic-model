@@ -1,6 +1,6 @@
 {
-  "predicted_grade": 0,
-  "prediction_probability": 0.6546500940566428,
+  "predicted_grade": 1,
+  "prediction_probability": 0.6093867726346278,
   "prediction_set": [
     0,
     1
@@ -8,39 +8,88 @@
   "physics_consistency": 0.95,
   "input_reliability": 0.797626055402878,
   "ood_status": "No",
-  "prediction_stability": "high",
-  "agent_disagreement": "low",
-  "final_system_confidence": 0.7623423550015193,
-  "decision": "High rockburst potential; engineering verification recommended.",
-  "recommended_action": "engineering_verification",
+  "prediction_stability": "low",
+  "agent_disagreement": "moderate",
+  "final_system_confidence": 0.999999,
+  "decision": "Accept with caution; verify key measurements. (Critic unresolved (endorse=False, recheck=data); downgraded accept \u2192 accept_with_caution)",
+  "recommended_action": "accept_with_caution",
   "probabilities": [
-    0.6546500940566428,
-    0.260475137309985,
-    0.04742476806605148,
-    0.03745000056732067
+    0.3614489352247107,
+    0.6093867726346278,
+    0.0275706605754864,
+    0.001593631565175104
   ],
   "route_trace": [
     "rules:data_quality",
     "rules:geomechanics",
     "rules:predict",
     "rules:uncertainty",
+    "rules:extra_validation",
+    "rules:critic",
+    "rejected:recheck_data",
+    "fallback:critic",
     "rules:finalize"
   ],
   "abstained": false,
+  "critic_endorse": false,
+  "downgrade_reason": "Critic unresolved (endorse=False, recheck=data); downgraded accept \u2192 accept_with_caution",
+  "physics_skipped": false,
+  "recheck_payloads": {
+    "alt_imputer": {
+      "tool": "alt_imputer_reprediction",
+      "imputers": [
+        "median",
+        "knn",
+        "iterative"
+      ],
+      "probas": {
+        "median": [
+          0.64,
+          0.18,
+          0.13,
+          0.05
+        ],
+        "knn": [
+          0.65,
+          0.2,
+          0.1,
+          0.05
+        ],
+        "iterative": [
+          0.6,
+          0.17,
+          0.13,
+          0.1
+        ]
+      },
+      "grades": {
+        "median": 0,
+        "knn": 0,
+        "iterative": 0
+      },
+      "prob_spread": 0.08000000000000002,
+      "grade_flip": true,
+      "large_spread": true,
+      "primary_imputer": "knn",
+      "primary_grade": 1
+    }
+  },
   "r_vector": {
     "r_data": 0.797626055402878,
     "r_physics": 0.95,
-    "r_model": 0.6088245874726778,
-    "r_uncertainty": 0.6124881449297137,
-    "r_stability": 0.8227177843275578,
-    "r_final": 0.7623423550015193
+    "r_model": 0.6093867726346278,
+    "r_uncertainty": 0.5295410559795585,
+    "r_stability": 0.4574992563940112,
+    "n_missing": 1.0,
+    "d_observed": 0.0,
+    "r_final": 0.999999
   },
   "trace_path": "/home/leviathan/Workspace/agentic-rockburst-model/artifacts/traces/case_329.json",
   "example_protocol": "production model, case seen in training (full-data refit of best_baseline.joblib)",
   "failure_analysis": {
     "true_grade": 1,
-    "predicted_grade": 0,
+    "predicted_grade": 1,
     "confident": true,
-    "diagnosis": "Wrong confident prediction"
+    "diagnosis": "Prediction matched label"
   }
 }

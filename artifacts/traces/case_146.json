@@ -1,6 +1,6 @@
 {
   "predicted_grade": 3,
-  "prediction_probability": 0.9602298848822869,
+  "prediction_probability": 0.96875,
   "prediction_set": [
     3
   ],
@@ -9,14 +9,14 @@
   "ood_status": "Yes",
   "prediction_stability": "high",
   "agent_disagreement": "low",
-  "final_system_confidence": 0.9252074586992888,
-  "decision": "Prediction accepted; routine monitoring recommended.",
-  "recommended_action": "accept",
+  "final_system_confidence": 0.999999,
+  "decision": "Accept with caution; verify key measurements. (Critic unresolved (endorse=False, recheck=data); downgraded accept \u2192 accept_with_caution)",
+  "recommended_action": "accept_with_caution",
   "probabilities": [
-    0.002357100979959409,
-    0.011585583997696948,
-    0.025827430140056853,
-    0.9602298848822869
+    0.0,
+    0.0,
+    0.03125,
+    0.96875
   ],
   "route_trace": [
     "rules:data_quality",
@@ -24,17 +24,23 @@
     "rules:predict",
     "rules:uncertainty",
     "rules:critic",
-    "rules:data_quality",
-    "rules:critic",
+    "rejected:recheck_data",
+    "fallback:critic",
     "rules:finalize"
   ],
   "abstained": false,
+  "critic_endorse": false,
+  "downgrade_reason": "Critic unresolved (endorse=False, recheck=data); downgraded accept \u2192 accept_with_caution",
+  "physics_skipped": false,
+  "recheck_payloads": {},
   "r_vector": {
     "r_data": 0.5694490999265583,
     "r_physics": 0.85,
-    "r_model": 0.9602298848822869,
-    "r_uncertainty": 0.9137362553907793,
-    "r_stability": 0.9949883831432302,
-    "r_final": 0.9252074586992888
+    "r_model": 0.96875,
+    "r_uncertainty": 0.9398133026822677,
+    "r_stability": 0.98171875,
+    "n_missing": 0.0,
+    "d_observed": 1.0,
+    "r_final": 0.999999
   }
 }
