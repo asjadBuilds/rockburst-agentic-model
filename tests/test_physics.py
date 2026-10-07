@@ -1,4 +1,8 @@
+import pandas as pd
+
+from rockburst.config import load_config, resolve_path
 from rockburst.physics import check_case, compute_b1, compute_b2, compute_scf
+from rockburst.physics.precheck import full_physics_result, should_skip_geomechanics
 
 
 def test_row1_formulas():
@@ -22,6 +26,25 @@ def test_check_case_detects_bad_b1():
     res = check_case(row)
     assert res.r_physics < 1.0
     assert any("b1" in i for i in res.issues)
+
+
+def test_skip_matches_full_tool_on_all_rows():
+    cfg = load_config()
+    df = pd.read_csv(resolve_path(cfg, "processed_csv"))
+    n_skip = 0
+    for _, row in df.iterrows():
+        case = row.to_dict()
+        skip = should_skip_geomechanics(case, cfg)
+        res = full_physics_result(case, cfg)
+        if skip:
+            n_skip += 1
+            assert res.r_physics == 1.0
+            assert res.issues == []
+        else:
+            assert not (res.r_physics == 1.0 and res.issues == [])
+    assert len(df) == 344
+    # expose count for step report via attribute
+    test_skip_matches_full_tool_on_all_rows.n_skip = n_skip
 
 
 def test_package_version():
