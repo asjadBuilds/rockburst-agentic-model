@@ -12,3 +12,5 @@ dist/
 build/
 .ipynb_checkpoints/
 requirements-unpinned.bak.txt
+artifacts/tuning_cache/
+logs/
