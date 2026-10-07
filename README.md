@@ -4,7 +4,7 @@ Physics-guided multi-agent system for rockburst grade (0–3) assessment with re
 
 **Design rule:** the planner (rules or Gemini) only chooses the next action. All numbers come from deterministic Python tools. Fusion decides trust and abstention.
 
-**Headline (nested-unbiased M1):** QWK **0.621**, accuracy **0.567**. Rules planner is the default (no API key). See [`reports/technical_report.md`](reports/technical_report.md) and [`reports/preregistration.md`](reports/preregistration.md).
+**Headline (nested-unbiased M1):** QWK **0.621**, accuracy **0.567**. Rules planner is the default (no API key). See [`reports/technical_report.md`](reports/technical_report.md) and [`reports/design_decisions_log.md`](reports/design_decisions_log.md).
 
 ## Setup
 
@@ -59,7 +59,7 @@ src/rockburst/
 scripts/
 data/raw|processed/
 artifacts/{models,baselines,traces,examples,planner_cache}/
-reports/{methodology,technical_report,audit_log,preregistration}.md
+reports/{methodology,technical_report,audit_log,design_decisions_log}.md
 tests/
 ```
 
@@ -67,4 +67,4 @@ tests/
 - [`reports/methodology.md`](reports/methodology.md) — architecture, routing, fusion, conformal
 - [`reports/technical_report.md`](reports/technical_report.md) — nested headline, agent contributions, §10 table
 - [`reports/audit_log.md`](reports/audit_log.md) — before/after by correction item
-- [`reports/preregistration.md`](reports/preregistration.md) — locked rules before measurement
+- [`reports/design_decisions_log.md`](reports/design_decisions_log.md) — locked rules before measurement

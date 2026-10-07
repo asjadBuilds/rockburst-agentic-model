@@ -1,85 +1,118 @@
 # Technical Report — Rockburst Agentic AI
 
-## Lead finding: label noise and nested headline
+Numbers below are from the **final-hardening step-6** full run on branch `final-hardening` (tol 5%, cross-fit fusion). Artefact paths under `artifacts/baselines/`.
 
-**Nested-unbiased M1 (headline):** pooled QWK **0.621**, accuracy **0.567** (production mode `catboost__knn`; fold winners mix ExtraTrees/CatBoost/LightGBM + KNN). See `artifacts/baselines/m1_results.json`.
+## Lead finding
 
-**Label conflicts @ 1% near-dup grouping:** 18 conflicting-label groups / **19** pairs. Direction (later `no` − earlier): **+1 in 18/19**, mean Δ ≈ **1.05**. Rows **315–344** appear systematically one grade higher than earlier near-duplicates in **94%** of those pairs — state without over-interpreting as intentional relabeling.
+### (a) M1 results by protocol
 
-| Policy | n | M1 QWK | M1 accuracy |
-|--------|---|--------|-------------|
-| Keep all (default) | 344 | 0.673 | 0.581 |
-| Keep one (lowest `no` / conflict group) | 325 | 0.698 | 0.655 |
-| Drop conflicting groups | 307 | 0.684 | 0.622 |
+| Protocol | QWK | Accuracy | Production / note |
+|----------|-----|----------|-------------------|
+| Nested-unbiased (headline) | **0.689** | **0.613** | `rf__median`; `m1_results.json` → `nested_unbiased.pooled_oof` |
+| Selection-biased (not headline) | 0.698 | 0.628 | Same file → `selection_biased` |
+| Ablation protocol (fixed mode, 5×5 grouped OOF) | 0.682 | 0.589 | `ablation_results.json` M1 |
+| Fixed `catboost__knn` @ tol 0.5/1/2/5% (means, 5 repeats) | 0.673 / 0.669 / 0.669 / 0.676 | 0.574 / 0.556 / 0.578 / 0.572 | `item5_dup_label_noise.json`; CIs overlap |
 
-Near-dup tolerance **1%** chosen from NN distance gap (dense mass \<1%, sparse 1.5–5% tail), not by maximizing QWK. Pairs 19↔342 / 20↔328 group at 2%; 9↔337 at 5%. Full table: `artifacts/baselines/item5_dup_label_noise.json`.
+### (b) Label-noise finding (hypothesis)
+
+At primary **5%** near-dup tolerance: **43** conflicting pairs; direction later−earlier **+1: 37**, **−1: 5** (`item5_dup_label_noise.json`). Among pairs touching rows 315–344, mean Δ ≈ **+1.03**, frac +1 ≈ **97%**. **Hypothesis only:** later copies often appear one grade higher; **not** established as deliberate relabelling.
+
+| Policy @ 5% | n | M1 QWK | M1 accuracy |
+|-------------|---|--------|-------------|
+| Keep all | 344 | 0.691 | 0.610 |
+| Keep one (lowest `no`) | 306 | 0.724 | 0.663 |
+| Drop conflicting groups | 283 | 0.736 | 0.661 |
+
+Primary tol **5%** chosen after seeing 1% left known near-copies ungrouped (19↔342, 20↔328 @2%; 9↔337 @5%). Earlier headlines used 1%.
+
+### (c) What each agent contributes (including zeros)
+
+| Component | Measured effect |
+|-----------|-----------------|
+| Physics skip | **990** skips / 1720 evals; skip iff full `check_case` score 1.0 + no issues |
+| Extra validation | **681** invocations |
+| Critic + rechecks | Fire rate **0.52**; tools geo/skip/extra/recheck_p/d/m/critic = 730/990/681/21/146/717/1779 |
+| Substantive M6≠M7 routes | Rate **0.52** (mostly `other_or_mixed` / Critic+recheck bundle; `critic_only` 11) |
+| Grade / QWK / abstention M5 vs M6 vs M7 | **Identical** (QWK 0.682, abs **0.053**) |
+| Fusion point estimate | Non-zero: `r_physics`, `r_uncertainty`, `n_missing`, `d_observed`; **zero:** `r_data`, `r_model`, `r_stability` |
+| Critic flag AUROC | **0.598** (weak); large-set rule ≈ 0.628 |
+| Risk–coverage `R_final` vs max-prob | Areas **0.515 vs 0.682**; paired Δ **−0.167** [−0.202, −0.125] — `R_final` does **not** beat max-prob |
+
+### (d) Honest statements
+
+- Fusion does **not** reduce to calibrated model confidence: learned `r_model` weight is **0**; confidence is driven mainly by `r_uncertainty` (+ physics / missingness features). Even so, `R_final` loses to max-prob on risk–coverage.
+- Critic discrimination is **weak** (AUROC ≈ 0.60; CI not strongly above chance in spirit of the point estimate).
+- **M5 = M6 = M7** on grade metrics and abstention; agents change routes/decisions more than argmax grades.
 
 ---
 
 ## Dataset
-- Source: Table S1 (`sustainability-2534712-supplementary.pdf`), **n = 344**.
-- Features: \(\sigma_\theta,\sigma_c,\sigma_t,\mathrm{SCF},B_1,B_2,W_{et},D\); target grade \(0\)–\(3\).
-- \(D\) missing in **131** rows.
-- Issues retained as agent tests: bad \(B_1\), OOD SCF, conflicting near-dups.
+- Source: Table S1, **n = 344**.
+- Features: \(\sigma_\theta,\sigma_c,\sigma_t,\mathrm{SCF},B_1,B_2,W_{et},D\); target 0–3.
+- \(D\) missing in **131** rows; `dup_group_id` at **5%** → **291** groups.
 
 ## Training protocol
-- Seed `42`. Nested grouped CV: `n_outer=5`, `n_inner=3`, Optuna `n_trials=8` / family.
-- **Selection-biased** (do not use as headline): QWK **0.685**, acc **0.616**.
-- **Nested-unbiased (headline):** QWK **0.621**, acc **0.567**.
-- Conformal: **a priori `marginal_split`** (simplest finite-sample guarantee). Side-by-side coverage: marginal **0.898**, Mondrian **0.927**, CV+ **0.904**. Per-class coverage (Item 4): ≈ 0.90 / 0.88 / 0.90 / 0.93.
-- Fusion: constrained non-negative logistic + isotonic; collinearity drops `r_uncertainty`; point estimate weights **only `r_model`**. Mean \(R_{\mathrm{final}}\) **0.572** vs base acc **0.567**; ECE **0.042** (was 0.141). Zero-weight flags: `r_data`, `r_physics`, `r_stability`.
-
-## What each agent contributes (measured)
-
-| Component | Measured effect |
-|-----------|-----------------|
-| Physics skip / conditional routing | M6 route ≠ M5 on **61%** of cases; **1050** physics skips / 1720 |
-| Extra validation | Invoked **684** times |
-| Critic + rechecks | Fire **49%**; recheck tools used (phys/data/model = 25/181/630); `decision_changed` **450** (downgrades only) |
-| Grade / QWK / abstention M5 vs M6 vs M7 | **Identical** (QWK 0.667, abs 0.053 on full ablation) |
-| Fusion `R_data`/`R_physics`/`R_stability` | **Zero weight** in point estimate |
-| Critic flag AUROC | **0.592** (weak); large-set rule AUROC 0.626 |
-| Risk–coverage: `R_final` vs max-prob | Areas **0.592 vs 0.668** — `R_final` does **not** beat max-prob |
-
-Ablation M1 QWK **0.667** [0.620, 0.712] vs nested **0.621**: different protocol (single production mode on repeated OOF vs per-fold inner winners). Nested remains headline.
+- Seed `42`. Nested grouped CV: `n_outer=5`, `n_inner=3`, Optuna trials per config.
+- Conformal headline: **`marginal_split`**; nested coverage ≈ **0.939**.
+- Fusion: cross-fit stacker + calibrator + thresholds on other folds’ OOF; metrics from held-out scores only (`fusion_protocol` in `m1_results.json`). Mean \(R_{\mathrm{final}}\) **0.641**; ECE **0.104**. Serving `fusion.joblib` fitted on all OOF.
 
 ## Ablation table (grouped OOF, 5×5)
 
 | Model | QWK | Accuracy | Abstention |
 |-------|-----|----------|------------|
-| M1–M3 | 0.667 | 0.587 | 0 / 0 / 0 |
-| M4 | 0.667 | 0.587 | **0.392** |
-| M5–M7 | 0.667 | 0.587 | **0.053** |
+| M1–M3 | 0.682 | 0.589 | 0 |
+| M4 | 0.682 | 0.589 | **0.440** |
+| M5–M7 | 0.682 | 0.589 | **0.053** |
 
-Accepted vs abstained (M7): accepted harder-filtered accuracy higher; abstained cases worse (see prior audit).
+## §4.2 Missing-data table (held-out fold models)
+
+From `ablation_results.json` → `missing_data` (accuracy on n=40 probes unless noted):
+
+| Imputer | complete | miss \(\sigma_\theta\) | miss \(\sigma_c\) | miss \(\sigma_t\) | miss Wet | miss D | multi | infer-only miss D | train+infer miss D |
+|---------|----------|------------------------|-------------------|-------------------|----------|--------|-------|-------------------|--------------------|
+| median | 0.40 | 0.375 | 0.425 | 0.40 | 0.30 | 0.35 | 0.225 | 0.362 | 0.391 |
+| knn | 0.40 | 0.425 | 0.425 | 0.40 | 0.375 | 0.45 | 0.35 | 0.435 | 0.391 |
+| iterative | 0.40 | 0.425 | 0.425 | 0.425 | 0.325 | 0.35 | 0.375 | 0.362 | (see JSON) |
+
+## §4.3 Multiclass vs ordinal (pooled OOF by family)
+
+Additional justified tabular method: **ExtraTrees** (alongside RF / boosting). Ordinal logistic is competitive but below RF headline.
+
+| Model | QWK | Accuracy |
+|-------|-----|----------|
+| `rf__median` (production) | 0.693 | 0.631 |
+| `extratrees__median` | 0.642 | 0.576 |
+| `catboost__median` | 0.657 | 0.555 |
+| `ordinal_logistic__median` | 0.623 | 0.535 |
+| `ordinal_logistic__knn` | 0.620 | 0.529 |
+| `logistic__median` | 0.589 | 0.491 |
 
 ## Brief §10 constraints
 
 | Constraint | Status | Evidence |
 |------------|--------|----------|
 | No prompt-only agents without tools | **met** | `agents/tools.py`, physics, ML, fusion |
-| Do not claim more agents ⇒ better performance | **met** | M7 ≰ M1 on QWK; M5≡M6≡M7 on grade metrics |
-| No test data in preprocessing / selection | **met** | Nested inner selection; fold impute/scale |
-| No hand-picked reliability weights without validation | **partly** | Learned constrained fusion; heuristic fallback **removed**; zero-weight physics/data still a limitation |
-| Do not hide when full system ≤ baseline | **met** | Paired Δ=0; Critic AUROC weak; `R_final` loses to max-prob |
+| Do not claim more agents ⇒ better performance | **met** | M5≡M6≡M7 on grades; Critic AUROC weak |
+| No test data in preprocessing / selection | **met** | Nested inner selection; fold impute/scale; fusion cross-fit |
+| No hand-picked reliability weights without validation | **partly** | Learned stacker; `R_data`/`R_stability` (and `r_model`) zero in point estimate — brief \(R_{\mathrm{final}}=f(\ldots)\) only **partly** met |
+| Do not hide when full system ≤ baseline | **met** | Paired risk–coverage Δ\<0; M7 ≰ M1 on QWK |
 | Not accuracy alone | **met** | QWK, severe-error, coverage, ECE, risk–coverage |
-| Abstain when inadequate confidence | **met** | Gates + `max_loops`; Item 4 M7 abs ≈ 0.12 under refit fusion |
+| Abstain when inadequate confidence | **met** | Gates + fusion bands; M5–M7 abs ≈ 0.053 |
 
 ## Limitations
-- \(n=344\); label noise (≥19 conflict pairs; 315–344 often +1).
-- M7 does not improve grade metrics vs M1; routing/decision labels change, grades do not.
-- Fusion point estimate ignores `R_data`/`R_physics`/`R_stability`.
-- Ablation vs nested gap; sensitivity of hand-set constants was flat on a single-fold probe.
-- Gemini quotas; rules planner is the default.
+- \(n=344\); label-noise hypothesis at 5% (43 conflict pairs).
+- M7 does not improve grades vs M1; routing changes more than predictions.
+- `R_final` underperforms max-prob / inv-entropy on risk–coverage.
+- Gemini: LLM planner agreement ≈ 0.91 with fallback ≈ 0.24 (`llm_planner_comparison.json`); treat as cache-assisted.
 
 ## Artefacts
 | Path | Content |
 |------|---------|
-| `artifacts/baselines/m1_results.json` | Nested/biased M1, fusion, conformal |
-| `artifacts/baselines/ablation_results.json` | M1–M7 + critic/coord stats |
-| `artifacts/baselines/fusion_item2_refit.json` | Fusion before/after |
-| `artifacts/baselines/item4_metrics.json` | Critic AUROC, risk–coverage, per-class |
+| `artifacts/baselines/m1_results.json` | Nested/biased M1, cross-fit fusion |
+| `artifacts/baselines/ablation_results.json` | M1–M7 + missing/robustness/critic |
+| `artifacts/baselines/item4_metrics.json` | Critic AUROC, risk–coverage + paired CI |
 | `artifacts/baselines/item5_dup_label_noise.json` | Tol sensitivity + label noise |
-| `artifacts/baselines/threshold_sensitivity.json` | Constants sensitivity |
-| `reports/preregistration.md` | Locked rules |
-| `reports/audit_log.md` | Before/after by item |
+| `artifacts/baselines/threshold_sensitivity.json` | Hand-set constant sensitivity |
+| `reports/design_decisions_log.md` | Design decisions (before/after seeing results) |
+| `reports/audit_log.md` | Historical fix log |
+| `artifacts/examples/trace_*.json` | Held-out routing evidence |

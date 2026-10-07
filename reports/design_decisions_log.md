@@ -1,20 +1,26 @@
-# Pre-registration — follow-up round (conditional coordinator / fusion / thresholds)
+# Design decisions log
 
-Rules below are locked **before** the evaluation that measures them. Justified by the client brief or domain logic, not by test outcomes. If a rule is changed after seeing results, both versions are reported in `audit_log.md`.
+Renamed from `preregistration.md` (final-hardening step 7). Entries are marked **before** or **after** seeing results. Do not read “locked a priori” unless the entry says so and git history supports it.
+
+Changed after seeing results (both versions):
+
+| Rule | Before | After (final-hardening) |
+|------|--------|-------------------------|
+| Physics skip | Cheap SCF/B1/B2 + Wet/D in range (duplicated logic) | Skip iff `check_case` returns score 1.0 and no issues |
+| Near-dup primary tol | **0.01 (1%)** | **0.05 (5%)** |
+| `r_model` | `max(p)*(1-0.07*n_miss)` | raw `max(p)`; missingness learned in stacker |
+| Fusion metrics | Pooled OOF fit+score | Cross-fit held-out scores only |
+| M6 | `allow_critic=False` also blocked `extra_validation` | M6 = coordinator + extra_validation; Critic off |
 
 ---
 
-## Item 1 — Routing and Critic (locked 2026-10-06, before Item 1 measure)
+## Item 1 — Routing and Critic (written 2026-10-06, before Item 1 measure)
 
-### 1a. Physics skip (cheap pre-check)
+### 1a. Physics skip
 
-**Skip geomechanics** only when a pure deterministic pre-check shows:
+**Original (before final-hardening):** cheap pre-check on SCF/B1/B2 + Wet/D ranges.
 
-1. Exact relations SCF, B1, B2 all agree within config `physics.rel_tol` / `physics.abs_tol` (defaults 0.05).
-2. Wet is present and inside `physics.wet_range` (default [0.5, 40]).
-3. D is present and inside `physics.d_range` (default [50, 2500]).
-
-Otherwise run the full geomechanics tool. Missing D ⇒ do **not** skip (pre-check fails).
+**After seeing skip≠full-tool mismatch (final-hardening step 1):** skip geomechanics only when full `check_case` returns `r_physics == 1.0` and `issues == []` (no duplicated penalty logic).
 
 ### 1a. Extra validation branch
 
@@ -65,20 +71,20 @@ Require `abstain_t < eng_t < caution_t ≤ accept_t`. Thresholds selected on inn
 
 ---
 
-## Item 2 — Fusion refit (locked before Item 2 measure)
+## Item 2 — Fusion refit (written before Item 2 measure; amended in final-hardening)
 
 1. Fit binary logistic for “base prediction correct” on OOF live reliabilities.
 2. **No** `class_weight="balanced"`.
-3. Non-negativity via **L-BFGS-B bound-constrained** fit (`coef ≥ 0`, intercept free) — not post-hoc clipping.
-4. Inner-fold feature ablation / collinearity: if `|corr(r_model, r_uncertainty)| ≥ 0.9` or VIF > 5, keep higher univariate AUC (tie → `r_model`); zero-weight features kept as reported flags.
-5. Isotonic calibration of `R_final` fitted on **inner** holdout only.
-6. Unfitted stacker: **abstain** (no heuristic `[0.2,0.2,0.25,0.2,0.15]`).
-7. Missing-D confidence drop measured on held-out folds (observed D vs masked+imputed).
+3. Reliability channels: non-negative L-BFGS-B; **after results:** `n_missing` / `d_observed` free-signed (missingness may reduce trust).
+4. Collinearity rule for `r_model` vs `r_uncertainty` unchanged; zero-weight features reported.
+5. Isotonic calibration on inner / non-test data only.
+6. Unfitted stacker: abstain; **after seeing 100% abstain bug:** single-class OOF correctness uses constant-rate fallback so fold fusion remains scorable.
+7. Missingness: hand 0.07 discount **removed** after diagnosing train/serve gap; learned via stacker features instead.
 
-## Item 3 — Thresholds / conformal (locked before Item 3 measure)
+## Item 3 — Thresholds / conformal (written before Item 3 measure)
 
-- Decision bands as in Item 1 table; select four cutoffs on **inner** data per outer fold.
-- Headline conformal method: **`marginal_split`** a priori (simplest finite-sample guarantee). Mondrian and CV+ reported side-by-side; not chosen by closeness to 0.90.
+- Decision bands as in Item 1 table; select four cutoffs on non-test data.
+- Headline conformal: **`marginal_split`** (simplest finite-sample guarantee — design choice, not “a priori” in the strong sense after iteration). Mondrian and CV+ side-by-side; not chosen by closeness to 0.90.
 ## Item 5 — Near-dup tolerance
 
 - **Before results (original):** Choose from NN gap; locked at **0.01 (1%)**.

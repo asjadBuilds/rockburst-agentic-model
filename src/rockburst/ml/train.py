@@ -461,7 +461,7 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                 "mean_size": float(np.mean(method_size[m])),
                 "coverage_std": float(np.std(method_cov[m], ddof=1)) if len(method_cov[m]) > 1 else 0.0,
             }
-        chosen = "marginal_split"  # a priori (preregistration); not picked by closeness to 0.90
+        chosen = "marginal_split"  # design choice (design_decisions_log); not picked by closeness to 0.90
         results["conformal"] = {
             "alpha": alpha,
             "method": chosen,

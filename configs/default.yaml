@@ -66,7 +66,7 @@ routing:
   abstain_r_final: 0.45
   accept_r_final: 0.70
   large_set_size: 3
-  # Pre-registered (reports/preregistration.md): extra validation when R_data < cut
+  # Design log (reports/design_decisions_log.md): extra validation when R_data < cut
   extra_validation_r_data: 0.55
 
 fusion:

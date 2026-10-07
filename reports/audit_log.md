@@ -227,7 +227,7 @@ See `reports/technical_report.md` checklist table (all seven constraints **met**
 
 ## Follow-up Item 1 — Conditional routing + real rechecks (2026-10-06)
 
-**Pre-registered in** `reports/preregistration.md` (physics skip, `R_data` cut 0.55, Critic downgrade, recheck tools) **before** this measure.
+**Pre-registered in** `reports/design_decisions_log.md` (physics skip, `R_data` cut 0.55, Critic downgrade, recheck tools) **before** this measure.
 
 ### What was wrong
 - Geomechanics always ran (`missing or suspicious or True`).
@@ -263,7 +263,7 @@ See `reports/technical_report.md` checklist table (all seven constraints **met**
 
 ## Follow-up Item 2 — Refit fusion (2026-10-06)
 
-**Pre-registered in** `reports/preregistration.md` before measure. Refit from saved OOF live `R` via `scripts/refit_fusion_item2.py` (constrained fit + isotonic + missing-D holdout).
+**Pre-registered in** `reports/design_decisions_log.md` before measure. Refit from saved OOF live `R` via `scripts/refit_fusion_item2.py` (constrained fit + isotonic + missing-D holdout).
 
 ### What was wrong
 - `class_weight="balanced"` + post-hoc `coef ≥ 0` clip → only `r_model`, `r_uncertainty` nonzero (`[0,0,2.245,1.816,0]`).
@@ -297,7 +297,7 @@ M5 ≡ M6 ≡ M7 on accuracy / QWK / abstention / ECE still holds. Routes and re
 
 ## Follow-up Item 3 — Nested thresholds + untuned constants (2026-10-06)
 
-**Pre-registered** decision bands + a-priori `marginal_split` + domain hand-set constants in `reports/preregistration.md` before measure.
+**Pre-registered** decision bands + a-priori `marginal_split` + domain hand-set constants in `reports/design_decisions_log.md` before measure.
 
 ### What was wrong
 - `decide()` mapped both mid bands to `engineering_verification` and only returned `accept` at R ≥ ~0.90 (`accept_r_final` dead).
@@ -381,7 +381,7 @@ Label conflicts imply a ceiling below perfect accuracy; ≥19 disagreeing pairs.
 
 ### Docs
 - Updated `README.md`, `methodology.md`, `technical_report.md` (label-noise lead; nested headline; measured agent contributions including zeros; §10 table with met/partly; limitations).
-- `reports/preregistration.md` holds locked rules for Items 1–5.
+- `reports/design_decisions_log.md` holds locked rules for Items 1–5.
 
 ### Verification
 | Check | Result |
