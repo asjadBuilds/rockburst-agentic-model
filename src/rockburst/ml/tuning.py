@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -200,6 +203,34 @@ def available_model_names(quick: bool = False) -> list[str]:
     return names
 
 
+def _tuning_cache_key(
+    *,
+    model_name: str,
+    imputer_kind: str,
+    n_inner: int,
+    n_trials: int,
+    seed: int,
+    near_dup_rel_tol: float,
+    config_hash: str,
+    y: np.ndarray,
+    groups: np.ndarray,
+) -> str:
+    payload = {
+        "model_name": model_name,
+        "imputer_kind": imputer_kind,
+        "n_inner": n_inner,
+        "n_trials": n_trials,
+        "seed": seed,
+        "near_dup_rel_tol": near_dup_rel_tol,
+        "config_hash": config_hash,
+        "n": int(len(y)),
+        "y_sum": int(np.asarray(y).sum()),
+        "n_groups": int(len(np.unique(groups))),
+    }
+    raw = json.dumps(payload, sort_keys=True)
+    return hashlib.sha256(raw.encode()).hexdigest()[:24]
+
+
 def nested_optuna_select(
     X,
     y,
@@ -210,11 +241,34 @@ def nested_optuna_select(
     n_inner: int,
     n_trials: int,
     seed: int,
+    cache_dir: str | Path | None = None,
+    near_dup_rel_tol: float = 0.01,
+    config_hash: str = "",
 ) -> tuple[Any, dict[str, Any], float]:
     """Inner-loop Optuna; returns (best_estimator, best_params, best_inner_qwk)."""
     if optuna is None:
         est = _suggest_estimator(_FixedTrial(), model_name, seed)
         return est, {}, float("nan")
+
+    cache_path = None
+    if cache_dir is not None:
+        key = _tuning_cache_key(
+            model_name=model_name,
+            imputer_kind=imputer_kind,
+            n_inner=n_inner,
+            n_trials=n_trials,
+            seed=seed,
+            near_dup_rel_tol=near_dup_rel_tol,
+            config_hash=config_hash or "none",
+            y=np.asarray(y),
+            groups=np.asarray(groups),
+        )
+        cache_path = Path(cache_dir) / f"{model_name}__{imputer_kind}__{key}.json"
+        if cache_path.exists():
+            blob = json.loads(cache_path.read_text())
+            params = dict(blob.get("best_params") or {})
+            best_est = estimator_from_params(model_name, params, seed)
+            return best_est, params, float(blob.get("best_inner_qwk", float("nan")))
 
     n_inner = min(n_inner, max(2, len(np.unique(groups)) // 2))
     sgkf = StratifiedGroupKFold(n_splits=n_inner, shuffle=True, random_state=seed)
@@ -238,7 +292,17 @@ def nested_optuna_select(
     study = optuna.create_study(direction="maximize", sampler=sampler)
     study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
     best_est = _suggest_estimator(study.best_trial, model_name, seed)
-    return best_est, dict(study.best_params), float(study.best_value)
+    params = dict(study.best_params)
+    score = float(study.best_value)
+    if cache_path is not None:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(
+            json.dumps(
+                {"best_params": params, "best_inner_qwk": score, "model_name": model_name},
+                indent=2,
+            )
+        )
+    return best_est, params, score
 
 
 def estimator_from_params(name: str, params: dict[str, Any], seed: int) -> Any:

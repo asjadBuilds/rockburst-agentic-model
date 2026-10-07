@@ -83,3 +83,20 @@ Require `abstain_t < eng_t < caution_t ≤ accept_t`. Thresholds selected on inn
 
 - Choose `near_dup_rel_tol` from NN max-rel-distance gap (dense mass below ~1%, sparse 1.5–5% tail), **not** by maximizing QWK.
 - Final choice: **0.01 (1%)** — documented after NN histogram; pairs 19/342 & 20/328 (~1.5%) first group at 2%; 9/337 (~4.4%) at 5%.
+
+## Item 6 — Hand-set decision-path constants (assumption + sensitivity; after seeing routing design)
+
+Written **after** seeing routing/Critic design, **before** final-hardening full run. Not learned on test folds. Sensitivity via `scripts/threshold_sensitivity.py` (± fixed deltas; report all; do not pick best).
+
+| Constant | Value | Status |
+|----------|-------|--------|
+| Hard abstain: \|set\|≥3 & stability < 0.55 | 0.55 | assumption |
+| Hard abstain: disagreement ≥ 0.5 & R_final < 0.75 | 0.5 / 0.75 | assumption |
+| Hard abstain: OOD & physics < 0.7 & r_model < 0.6 | 0.7 / 0.6 | assumption |
+| Physics penalties wet/D/SCF-OOD | 0.1 / 0.05 / 0.15 | assumption |
+| Routing disagreement / physics / set size | 0.35 / 0.6 / 3 | assumption |
+| Extra validation R_data cut | 0.55 | assumption |
+
+## Item 7 — Fusion cross-fit (final-hardening step 4)
+
+Written **before** final full run: ECE / Brier / mean R_final / risk-coverage computed only from held-out fold scores after fitting stacker+calibrator+thresholds on other folds' OOF. Production `fusion.joblib` still fitted on all OOF for serving.

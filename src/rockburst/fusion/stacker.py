@@ -294,9 +294,17 @@ class ReliabilityFusion:
         self.decision_thresholds.update(thresholds)
 
     def decide(self, r_final: float, cfg: dict[str, Any] | None = None) -> str:
-        """Confidence-ascending decision bands (pre-registered).
+        """Map R_final to a decision (confidence-ascending).
 
-        abstain < eng_verify < caution <= accept
+        Intended ordering (low → high confidence):
+          R < abstain_t                         → abstain
+          abstain_t ≤ R < eng_t                 → engineering_verification
+          eng_t ≤ R < caution_t                 → accept_with_caution
+          R ≥ accept_t                          → accept
+        with abstain_t < eng_t < caution_t ≤ accept_t.
+        When caution_t < accept_t, scores in [caution_t, accept_t) stay
+        accept_with_caution (caution floors accept; label changes at accept_t).
+        engineering_verification is NEVER above accept.
         """
         thr = dict(self.decision_thresholds)
         if cfg:
@@ -312,7 +320,7 @@ class ReliabilityFusion:
         eng_t = float(thr.get("engineering_verification", 0.55))
         caution_t = float(thr.get("accept_with_caution", 0.65))
         accept_t = float(thr.get("accept_r_final", 0.75))
-        # Enforce ordering
+        # Enforce ordering: abstain < eng < caution ≤ accept
         eng_t = max(eng_t, abstain_t + 1e-6)
         caution_t = max(caution_t, eng_t + 1e-6)
         accept_t = max(accept_t, caution_t)
@@ -320,6 +328,8 @@ class ReliabilityFusion:
             return "abstain"
         if r_final < eng_t:
             return "engineering_verification"
+        if r_final < caution_t:
+            return "accept_with_caution"
         if r_final < accept_t:
             return "accept_with_caution"
         return "accept"
@@ -431,10 +441,11 @@ def select_decision_thresholds(
                         if ri < abstain_t:
                             score += 0.3 if yi == 0 else -0.05
                         elif ri < eng_t:
-                            # engineering verification — cautious middle
                             score += 0.4 if yi == 1 else -0.2
-                        elif ri < accept_t:
+                        elif ri < caution_t:
                             score += 0.5 if yi == 1 else -0.3
+                        elif ri < accept_t:
+                            score += 0.7 if yi == 1 else -0.5
                         else:
                             score += 1.0 if yi == 1 else -1.0
                     if score > best_score:

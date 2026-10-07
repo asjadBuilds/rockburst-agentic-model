@@ -296,10 +296,24 @@ def test_decide_band_ordering():
             "accept_r_final": 0.8,
         }
     )
+    # Confidence-ascending: eng_verify is BELOW accept, never above.
     assert f.decide(0.3) == "abstain"
     assert f.decide(0.5) == "engineering_verification"
-    assert f.decide(0.7) == "accept_with_caution"
+    assert f.decide(0.6) == "accept_with_caution"  # eng ≤ R < caution
+    assert f.decide(0.7) == "accept_with_caution"  # caution ≤ R < accept
     assert f.decide(0.85) == "accept"
+
+
+def test_crossfit_fusion_indices_disjoint():
+    """ECE/held-out scores must not use rows that fitted that fold's stacker."""
+    rng = np.random.default_rng(0)
+    n, n_folds = 40, 4
+    fold_of_row = np.repeat(np.arange(n_folds), n // n_folds)
+    for fold in range(n_folds):
+        idx_fit = set(np.where(fold_of_row != fold)[0].tolist())
+        idx_te = set(np.where(fold_of_row == fold)[0].tolist())
+        assert idx_fit.isdisjoint(idx_te)
+        assert len(idx_fit) + len(idx_te) == n
 
 
 def test_unfitted_fusion_raises():
@@ -307,7 +321,7 @@ def test_unfitted_fusion_raises():
 
     f = ReliabilityFusion()
     try:
-        f.r_final(np.ones(5))
+        f.r_final(np.ones(7))
         assert False, "expected FusionNotFitError"
     except FusionNotFitError:
         pass
