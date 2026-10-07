@@ -199,11 +199,31 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         "m7_route_diverged_from_m5": 0,
         "m6_route_diverged_from_m5": 0,
     }
+    _SUBSTANTIVE = frozenset(
+        {
+            "extra_validation",
+            "alternative_imputer",
+            "perturbation",
+            "cross_check",
+            "recheck",
+            "recheck_physics",
+            "recheck_data",
+            "recheck_model",
+            "critic",
+        }
+    )
     coord_stats = {
         "n_cases": 0,
         "route_diverged_from_m5": 0,
         "final_decision_differed": 0,
         "grade_differed": 0,
+        "m6_vs_m7_substantive_divergence": 0,
+        "divergence_causes": {
+            "critic_only": 0,
+            "extra_validation_only": 0,
+            "recheck_only": 0,
+            "other_or_mixed": 0,
+        },
     }
     risk_curves: dict[str, list[dict[str, Any]]] = {s: [] for s in ["M1", "M4", "M5", "M6", "M7"]}
     traces_sample: list[dict[str, Any]] = []
@@ -441,37 +461,60 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                     if abs(g7i - y_true) >= 2:
                         critic_stats["changed_severe_error"] += 1
 
-                # Coordinator M6/M7 vs M5
+                # Coordinator M6/M7 vs M5 (substantive actions only)
                 coord_stats["n_cases"] += 1
-                m5_trace = [
-                    "m5:data_quality",
-                    "m5:geomechanics",
-                    "m5:predict",
-                    "m5:uncertainty",
-                    "m5:finalize",
+
+                def _norm_actions(trace: list[str] | None) -> list[str]:
+                    out: list[str] = []
+                    for t in trace or []:
+                        a = t.split(":")[-1]
+                        if a == "geomechanics_skipped":
+                            a = "geomechanics"
+                        out.append(a)
+                    return out
+
+                def _substantive(actions: list[str]) -> set[str]:
+                    return {a for a in actions if a in _SUBSTANTIVE}
+
+                m5_actions = [
+                    "data_quality",
+                    "geomechanics",
+                    "predict",
+                    "uncertainty",
+                    "finalize",
                 ]
-                m5_actions = [t.split(":")[-1] for t in m5_trace]
-                m6_actions = [t.split(":")[-1] for t in (m6.get("route_trace") or [])]
-                m7_actions = [t.split(":")[-1] for t in (m7.get("route_trace") or [])]
-                # Normalize skip tag for divergence (skip ≠ fixed phys)
-                m6_norm = [
-                    "geomechanics" if a == "geomechanics_skipped" else a
-                    for a in m6_actions
-                ]
-                m7_norm = [
-                    "geomechanics" if a == "geomechanics_skipped" else a
-                    for a in m7_actions
-                ]
-                if m6_actions != m5_actions:
+                m6_norm = _norm_actions(m6.get("route_trace"))
+                m7_norm = _norm_actions(m7.get("route_trace"))
+                m6_sub = _substantive(m6_norm)
+                m7_sub = _substantive(m7_norm)
+                m5_sub = _substantive(m5_actions)
+                if m6_sub != m5_sub:
                     coord_stats["route_diverged_from_m5"] += 1
                     critic_stats["m6_route_diverged_from_m5"] += 1
-                if m7_actions != m5_actions:
+                if m7_sub != m5_sub:
                     critic_stats["m7_route_diverged_from_m5"] += 1
                 if m6.get("recommended_action") != m5.get("recommended_action"):
                     coord_stats["final_decision_differed"] += 1
                 if preds["M6"][-1] != preds["M5"][-1]:
                     coord_stats["grade_differed"] += 1
-                _ = (m6_norm, m7_norm)  # retained for future paired route analytics
+                if m6_sub != m7_sub:
+                    coord_stats["m6_vs_m7_substantive_divergence"] += 1
+                    only_m7 = m7_sub - m6_sub
+                    only_m6 = m6_sub - m7_sub
+                    causes = coord_stats["divergence_causes"]
+                    if only_m7 == {"critic"} and not only_m6:
+                        causes["critic_only"] += 1
+                    elif only_m7 | only_m6 == {"extra_validation"}:
+                        causes["extra_validation_only"] += 1
+                    elif (only_m7 | only_m6) and (only_m7 | only_m6) <= {
+                        "recheck",
+                        "recheck_physics",
+                        "recheck_data",
+                        "recheck_model",
+                    }:
+                        causes["recheck_only"] += 1
+                    else:
+                        causes["other_or_mixed"] += 1
 
                 if len(traces_sample) < 8:
                     traces_sample.append(
@@ -654,9 +697,16 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         "critic_fire_rate": critic_stats["critic_fired"] / max(critic_stats["n_cases"], 1),
         "coord_route_divergence_rate": coord_stats["route_diverged_from_m5"]
         / max(coord_stats["n_cases"], 1),
+        "m6_vs_m7_substantive_divergence_rate": coord_stats[
+            "m6_vs_m7_substantive_divergence"
+        ]
+        / max(coord_stats["n_cases"], 1),
+        "m6_vs_m7_divergence_causes": coord_stats["divergence_causes"],
         "note": (
-            "If M5/M6/M7 remain indistinguishable, thresholds may be too loose for "
-            "Critic/coordinator to change grades; not tuned on test folds."
+            "Route divergence uses substantive actions only "
+            "(extra_validation / recheck* / critic). "
+            "If M5/M6/M7 remain indistinguishable on grades, agents may not "
+            "change argmax; not tuned on test folds."
         ),
     }
 

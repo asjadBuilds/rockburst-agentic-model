@@ -156,12 +156,8 @@ def rule_based_next_action(
     if state.unc is None:
         return "uncertainty"
 
-    # Extra validation branch (missing D / imputed / low R_data)
-    if (
-        allow_critic
-        and not state.extra_validation_done
-        and needs_extra_validation(state.data_q, cfg)
-    ):
+    # Extra validation is part of coordinator routing (M6+), independent of Critic.
+    if not state.extra_validation_done and needs_extra_validation(state.data_q, cfg):
         return "extra_validation"
 
     need_critic = False
