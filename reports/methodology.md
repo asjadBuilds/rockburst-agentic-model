@@ -43,11 +43,11 @@ Planner: Gemini Flash (`configs/default.yaml` `gemini.planner_model`) when `--ll
 | Predictive | Leakage-safe sklearn/boosting/SVM pipelines (nested Optuna) | grade, probs, `R_model` |
 | Uncertainty | Entropy, ensemble disagreement, **split conformal** (finite-sample quantile), perturbations | `R_uncertainty`, `R_stability`, prediction set |
 | Critic | Contradiction rules | `request_recheck` |
-| Fusion | Constrained non-neg logistic + isotonic on live OOF `R_*` | `R_final`, decision (unfitted → abstain) |
+| Fusion | Cross-fit non-neg logistic + isotonic; locked set **A** (`r_model` only) | `R_final`, decision (unfitted → abstain) |
 
 ## Near-duplicate grouping
 `dup_group_id` is assigned by relative-tolerance matching on raw measured inputs
-\(\sigma_\theta,\sigma_c,\sigma_t,W_{et},D\) (when present), default `near_dup_rel_tol=0.01`, via connected components.
+\(\sigma_\theta,\sigma_c,\sigma_t,W_{et},D\) (when present), primary `near_dup_rel_tol=0.05`, via connected components.
 Conflicting labels inside a group are **kept** (noise ceiling documented); `StratifiedGroupKFold` keeps each group in one fold.
 Quality near-dup flags use the same tolerance; fold references drop the whole group.
 
@@ -60,10 +60,9 @@ B_2=(\sigma_c-\sigma_t)/(\sigma_c+\sigma_t)
 Wet and depth \(D\) are empirical tendencies only.
 
 ## Reliability fusion
-\[
-R_{\mathrm{final}}=\sigma(w^\top [R_{\mathrm{data}},R_{\mathrm{physics}},R_{\mathrm{model}},R_{\mathrm{uncertainty}},R_{\mathrm{stability}}]+b)
-\]
-Weights \(w,b\) are learned by logistic regression on **out-of-fold** correctness using the **same** `compute_reliability_features` path as serving. Coefficients are constrained to be non-negative. Decision thresholds are selected on a held-out slice of OOF scores — never on the outer test fold.
+The implemented formula can take several reliability channels, but the **final** fusion reduces to calibrated max-probability (feature set **A** = `r_model` only). Sets C/D gave nominally better calibration (ECE 0.104 vs 0.134, Brier 0.207 vs 0.228) and area (0.687 vs 0.671) but not significantly (paired CI of A vs best [−0.033, +0.002]), so the simpler set was chosen by a rule fixed in advance. `r_data`, `r_physics`, and `r_stability` are reported flags and carry no significant extra signal on this dataset.
+
+Stacker weights are learned on **out-of-fold** correctness with the same feature path as serving; coefficients are non-negative; thresholds are selected on held-out OOF — never on the outer test fold. Mean \(R_{\mathrm{final}}\) (0.650) exceeds base accuracy (~0.57–0.59), so the system remains overconfident by about 7–8 points.
 
 ## Conformal prediction
 Grouped **split conformal** with nonconformity \(1-p_y\) and finite-sample quantile
