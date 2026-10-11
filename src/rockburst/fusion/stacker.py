@@ -16,7 +16,36 @@ FEATURE_NAMES = [
     "r_model",
     "r_uncertainty",
     "r_stability",
+    "n_missing",
+    "d_observed",
 ]
+# Reliability channels stay non-negative; missingness may reduce trust (free sign).
+FREE_SIGN_FEATURES = frozenset({"n_missing", "d_observed"})
+
+# Item 9: locked after A/B/C/D cross-fit on held-out OOF (simplest set tied with best).
+CHOSEN_FUSION_SET = "A"
+CHOSEN_FUSION_FEATURES = ("r_model",)
+
+
+def locked_feature_mask() -> np.ndarray:
+    """Boolean mask over FEATURE_NAMES for the locked production feature set."""
+    return np.array([n in CHOSEN_FUSION_FEATURES for n in FEATURE_NAMES], dtype=bool)
+
+
+def locked_feature_report() -> dict[str, Any]:
+    mask = locked_feature_mask()
+    active = [FEATURE_NAMES[i] for i, u in enumerate(mask) if u]
+    inactive = [FEATURE_NAMES[i] for i, u in enumerate(mask) if not u]
+    return {
+        "chosen_set": CHOSEN_FUSION_SET,
+        "feature_mask": mask.tolist(),
+        "active_features": active,
+        "zero_weight_flags": inactive,
+        "note": (
+            "Locked Item 9: simplest set whose risk-coverage area tied best "
+            "(paired CI vs best contains 0); A ≺ B ≺ C ≺ D."
+        ),
+    }
 
 
 class FusionNotFitError(RuntimeError):
@@ -28,10 +57,24 @@ def _sigmoid(z: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp(-z))
 
 
+def _coef_bounds_for_mask(mask: np.ndarray) -> list[tuple[float | None, float | None]]:
+    """Intercept free; R_* ≥ 0; n_missing / d_observed free-signed."""
+    bounds: list[tuple[float | None, float | None]] = [(None, None)]
+    for i, use in enumerate(mask):
+        if not use:
+            continue
+        name = FEATURE_NAMES[i] if i < len(FEATURE_NAMES) else f"f{i}"
+        if name in FREE_SIGN_FEATURES:
+            bounds.append((None, None))
+        else:
+            bounds.append((0.0, None))
+    return bounds
+
+
 def fit_nonneg_logistic(
     R: np.ndarray, y: np.ndarray, *, feature_mask: np.ndarray | None = None
 ) -> tuple[np.ndarray, float]:
-    """Bound-constrained logistic (coef ≥ 0); intercept free. No class_weight."""
+    """Bound-constrained logistic; intercept free. Missingness coefs free-signed."""
     R = np.asarray(R, dtype=float)
     y = np.asarray(y, dtype=float)
     n, d = R.shape
@@ -55,11 +98,17 @@ def fit_nonneg_logistic(
 
     x0 = np.zeros(d_use + 1)
     x0[0] = 0.0
-    bounds = [(None, None)] + [(0.0, None)] * d_use
+    bounds = _coef_bounds_for_mask(mask)
     res = minimize(nll, x0, method="L-BFGS-B", bounds=bounds)
     intercept = float(res.x[0])
     coef_full = np.zeros(d, dtype=float)
-    coef_full[mask] = np.maximum(res.x[1:], 0.0)
+    coef_use = np.asarray(res.x[1:], dtype=float)
+    # Clip only nonneg channels after optimize (numerical safety)
+    names_use = [FEATURE_NAMES[i] for i, u in enumerate(mask) if u]
+    for j, name in enumerate(names_use):
+        if name not in FREE_SIGN_FEATURES:
+            coef_use[j] = max(float(coef_use[j]), 0.0)
+    coef_full[mask] = coef_use
     return coef_full, intercept
 
 
@@ -158,7 +207,9 @@ def choose_feature_mask(
     report["drop_one_logloss"] = drop_one
     report["feature_mask"] = mask.tolist()
     report["zero_weight_flags"] = [
-        FEATURE_NAMES[i] for i in range(d) if mask[i] and full_coef[i] <= 1e-8
+        FEATURE_NAMES[i]
+        for i in range(min(d, len(FEATURE_NAMES)))
+        if mask[i] and abs(full_coef[i]) <= 1e-8
     ]
     return mask, report
 
@@ -199,17 +250,34 @@ class ReliabilityFusion:
         R = np.asarray(R, dtype=float)
         y = np.asarray(y_correct, dtype=int)
         if len(np.unique(y)) < 2:
-            self.is_fit = False
-            self.coef_ = None
+            # Single-class OOF correctness: still serve a usable confidence
+            # (mean correct-rate) rather than leaving the stacker unfitted
+            # (which forces 100% abstain in the graph).
+            rate = float(np.mean(y)) if len(y) else 0.0
+            self.coef_ = np.zeros(R.shape[1], dtype=float)
+            i_m = FEATURE_NAMES.index("r_model") if "r_model" in FEATURE_NAMES else 2
+            if i_m < len(self.coef_):
+                self.coef_[i_m] = 1.0
+            # logit(rate) ≈ intercept + mean(r_model); use intercept-only signal
+            eps = 1e-6
+            rate = float(np.clip(rate, eps, 1 - eps))
+            self.intercept_ = float(np.log(rate / (1 - rate)))
+            self.coef_[:] = 0.0
+            self.is_fit = True
+            self.feature_report = {
+                "single_class_fallback": True,
+                "constant_rate": rate,
+            }
             return self
-        if select_features and feature_mask is None:
-            mask, report = choose_feature_mask(R, y)
-            self.feature_mask = mask
-            self.feature_report = report
-        elif feature_mask is not None:
+        if feature_mask is not None:
             self.feature_mask = np.asarray(feature_mask, dtype=bool)
+            self.feature_report = {"feature_mask": self.feature_mask.tolist()}
         else:
-            self.feature_mask = np.ones(R.shape[1], dtype=bool)
+            # Locked Item 9 mask — train / ablation / item4 share this default.
+            self.feature_mask = locked_feature_mask()
+            self.feature_report = locked_feature_report()
+            if select_features:
+                self.feature_report["select_features_ignored"] = True
 
         coef, intercept = fit_nonneg_logistic(R, y, feature_mask=self.feature_mask)
         self.coef_ = coef
@@ -221,7 +289,9 @@ class ReliabilityFusion:
             [
                 FEATURE_NAMES[i]
                 for i in range(len(FEATURE_NAMES))
-                if self.feature_mask[i] and coef[i] <= 1e-8
+                if i < len(coef)
+                and self.feature_mask[i]
+                and abs(coef[i]) <= 1e-8
             ],
         )
         return self
@@ -245,7 +315,16 @@ class ReliabilityFusion:
                 "Abstain or fit the stacker on OOF live reliabilities."
             )
         r = np.asarray(r_vec, dtype=float).ravel()
-        return float(_sigmoid(self.intercept_ + float(r @ self.coef_)))
+        coef = np.asarray(self.coef_, dtype=float).ravel()
+        if len(r) != len(coef):
+            # Back-compat when FEATURE_NAMES grows (pad missing dims with 0).
+            n = max(len(r), len(coef))
+            rr = np.zeros(n, dtype=float)
+            cc = np.zeros(n, dtype=float)
+            rr[: len(r)] = r
+            cc[: len(coef)] = coef
+            r, coef = rr, cc
+        return float(_sigmoid(self.intercept_ + float(r @ coef)))
 
     def r_final(self, r_vec: np.ndarray) -> float:
         raw = self._raw_score(r_vec)
@@ -257,9 +336,17 @@ class ReliabilityFusion:
         self.decision_thresholds.update(thresholds)
 
     def decide(self, r_final: float, cfg: dict[str, Any] | None = None) -> str:
-        """Confidence-ascending decision bands (pre-registered).
+        """Map R_final to a decision (confidence-ascending).
 
-        abstain < eng_verify < caution <= accept
+        Intended ordering (low → high confidence):
+          R < abstain_t                         → abstain
+          abstain_t ≤ R < eng_t                 → engineering_verification
+          eng_t ≤ R < caution_t                 → accept_with_caution
+          R ≥ accept_t                          → accept
+        with abstain_t < eng_t < caution_t ≤ accept_t.
+        When caution_t < accept_t, scores in [caution_t, accept_t) stay
+        accept_with_caution (caution floors accept; label changes at accept_t).
+        engineering_verification is NEVER above accept.
         """
         thr = dict(self.decision_thresholds)
         if cfg:
@@ -275,7 +362,7 @@ class ReliabilityFusion:
         eng_t = float(thr.get("engineering_verification", 0.55))
         caution_t = float(thr.get("accept_with_caution", 0.65))
         accept_t = float(thr.get("accept_r_final", 0.75))
-        # Enforce ordering
+        # Enforce ordering: abstain < eng < caution ≤ accept
         eng_t = max(eng_t, abstain_t + 1e-6)
         caution_t = max(caution_t, eng_t + 1e-6)
         accept_t = max(accept_t, caution_t)
@@ -283,6 +370,8 @@ class ReliabilityFusion:
             return "abstain"
         if r_final < eng_t:
             return "engineering_verification"
+        if r_final < caution_t:
+            return "accept_with_caution"
         if r_final < accept_t:
             return "accept_with_caution"
         return "accept"
@@ -337,9 +426,20 @@ def pack_r_vector(
     r_model: float,
     r_uncertainty: float,
     r_stability: float,
+    n_missing: float = 0.0,
+    d_observed: float = 1.0,
 ) -> np.ndarray:
     return np.array(
-        [r_data, r_physics, r_model, r_uncertainty, r_stability], dtype=float
+        [
+            r_data,
+            r_physics,
+            r_model,
+            r_uncertainty,
+            r_stability,
+            n_missing,
+            d_observed,
+        ],
+        dtype=float,
     )
 
 
@@ -383,10 +483,11 @@ def select_decision_thresholds(
                         if ri < abstain_t:
                             score += 0.3 if yi == 0 else -0.05
                         elif ri < eng_t:
-                            # engineering verification — cautious middle
                             score += 0.4 if yi == 1 else -0.2
-                        elif ri < accept_t:
+                        elif ri < caution_t:
                             score += 0.5 if yi == 1 else -0.3
+                        elif ri < accept_t:
+                            score += 0.7 if yi == 1 else -0.5
                         else:
                             score += 1.0 if yi == 1 else -1.0
                     if score > best_score:

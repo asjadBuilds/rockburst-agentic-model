@@ -1,0 +1,57 @@
+{
+  "predicted_grade": 3,
+  "prediction_probability": 0.6850709033613446,
+  "prediction_set": [
+    1,
+    2,
+    3
+  ],
+  "physics_consistency": 1.0,
+  "input_reliability": 0.7015983786610379,
+  "ood_status": "Yes",
+  "prediction_stability": "high",
+  "agent_disagreement": "low",
+  "final_system_confidence": 0.999999,
+  "decision": "Accept with caution; verify key measurements. (Critic unresolved (endorse=False, recheck=model); downgraded accept \u2192 accept_with_caution)",
+  "recommended_action": "accept_with_caution",
+  "probabilities": [
+    0.0078125,
+    0.15625,
+    0.15086659663865545,
+    0.6850709033613446
+  ],
+  "route_trace": [
+    "rules:data_quality",
+    "rules:geomechanics_skipped",
+    "rules:predict",
+    "rules:uncertainty",
+    "rules:critic",
+    "rejected:recheck_model",
+    "fallback:critic",
+    "rules:finalize"
+  ],
+  "abstained": false,
+  "critic_endorse": false,
+  "downgrade_reason": "Critic unresolved (endorse=False, recheck=model); downgraded accept \u2192 accept_with_caution",
+  "physics_skipped": true,
+  "recheck_payloads": {},
+  "r_vector": {
+    "r_data": 0.7015983786610379,
+    "r_physics": 1.0,
+    "r_model": 0.6850709033613446,
+    "r_uncertainty": 0.6224125009127852,
+    "r_stability": 0.9790423740181707,
+    "n_missing": 0.0,
+    "d_observed": 1.0,
+    "r_final": 0.999999
+  },
+  "example_protocol": "held-out fold model",
+  "true_grade": 3,
+  "m6_route_trace": [
+    "rules:data_quality",
+    "rules:geomechanics_skipped",
+    "rules:predict",
+    "rules:uncertainty",
+    "rules:finalize"
+  ]
+}

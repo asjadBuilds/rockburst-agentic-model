@@ -17,7 +17,7 @@ from rockburst.agents.schemas import PredictiveOutput
 from rockburst.agents.tools import run_data_quality, run_physics, run_uncertainty
 from rockburst.config import resolve_path
 from rockburst.eval.metrics import classification_report_dict, expected_calibration_error
-from rockburst.fusion.features import compute_reliability_features
+from rockburst.fusion.features import compute_r_model, compute_reliability_features
 from rockburst.fusion.stacker import ReliabilityFusion, select_decision_thresholds
 from rockburst.ml.pipelines import build_preprocess, prepare_xy
 from rockburst.ml.tuning import (
@@ -125,15 +125,16 @@ def _live_r_for_case(
     ref = build_fold_reference(df, train_idx, case, group_col=cfg.get("group_col", "dup_group_id"))
     dq = run_data_quality(case, ref, cfg)
     phys = run_physics(case, cfg)
+    proba_arr = np.asarray(proba, dtype=float)
+    observed_mask = {
+        c: bool(np.isfinite(float(case[c]))) if case.get(c) is not None else False
+        for c in FEATURE_COLS
+    }
     pred = PredictiveOutput(
-        predicted_grade=int(np.argmax(proba)),
-        probabilities=np.asarray(proba, dtype=float).tolist(),
-        r_model=float(np.clip(float(np.max(proba)) * (
-            1 - 0.07 * sum(
-                1 for c in FEATURE_COLS
-                if case.get(c) is None or not np.isfinite(float(case[c]))
-            )
-        ), 0, 1)),
+        predicted_grade=int(np.argmax(proba_arr)),
+        probabilities=proba_arr.tolist(),
+        r_model=compute_r_model(proba_arr),
+        observed_mask=observed_mask,
         model_name="oof",
     )
     unc = run_uncertainty(
@@ -144,7 +145,7 @@ def _live_r_for_case(
         ensemble=ensemble,
         conformal=conformal,
     )
-    return compute_reliability_features(dq, phys, pred, unc)
+    return compute_reliability_features(dq, phys, pred, unc, case=case)
 
 
 def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
@@ -200,6 +201,24 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
             fold_inner: list[float] = []
             fold_store[key] = []
 
+            import hashlib
+            from pathlib import Path as _Path
+
+            _cfg_hash = hashlib.sha256(
+                json.dumps(
+                    {
+                        "near_dup_rel_tol": cfg.get("quality", {}).get(
+                            "near_dup_rel_tol", 0.01
+                        ),
+                        "n_trials": n_trials,
+                        "quick": quick,
+                        "seed": seed,
+                    },
+                    sort_keys=True,
+                ).encode()
+            ).hexdigest()[:12]
+            _cache_dir = _Path(cfg.get("_root", ".")) / "artifacts" / "tuning_cache"
+
             for fold, (tr, te) in enumerate(fold_splits):
                 est, params, iq = nested_optuna_select(
                     X.iloc[tr],
@@ -210,6 +229,11 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                     n_inner=min(n_inner, max(2, len(np.unique(groups[tr])) // 2)),
                     n_trials=n_trials,
                     seed=seed + fold,
+                    cache_dir=_cache_dir,
+                    near_dup_rel_tol=float(
+                        cfg.get("quality", {}).get("near_dup_rel_tol", 0.01)
+                    ),
+                    config_hash=f"{_cfg_hash}:fold{fold}",
                 )
                 fold_params_list.append(params)
                 fold_inner.append(float(iq))
@@ -437,7 +461,7 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                 "mean_size": float(np.mean(method_size[m])),
                 "coverage_std": float(np.std(method_cov[m], ddof=1)) if len(method_cov[m]) > 1 else 0.0,
             }
-        chosen = "marginal_split"  # a priori (preregistration); not picked by closeness to 0.90
+        chosen = "marginal_split"  # design choice (design_decisions_log); not picked by closeness to 0.90
         results["conformal"] = {
             "alpha": alpha,
             "method": chosen,
@@ -549,13 +573,17 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         results["ensemble_path"] = str(ens_path)
 
         # Live-agent OOF R using production model family fold params
-        R = np.zeros((len(y), 5), dtype=float)
+        from rockburst.fusion.stacker import FEATURE_NAMES, bootstrap_coef_cis
+
+        n_feat = len(FEATURE_NAMES)
+        R = np.zeros((len(y), n_feat), dtype=float)
         live_cfg = {
             **cfg,
             "uncertainty": {**cfg.get("uncertainty", {}), "n_perturb": 4 if quick else 8},
         }
         best_oof_pred = np.zeros(len(y), dtype=int)
         best_oof_proba = np.zeros((len(y), 4), dtype=float)
+        fold_of_row = np.full(len(y), -1, dtype=int)
         for fold, (tr, te) in enumerate(fold_splits):
             params = best_fold_params[fold] if fold < len(best_fold_params) else best_params
             est_f = estimator_from_params(name, params, seed + fold)
@@ -576,6 +604,7 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
             proba_te = _predict_proba_safe(pipe, X.iloc[te])
             best_oof_pred[te] = proba_te.argmax(axis=1)
             best_oof_proba[te] = proba_te
+            fold_of_row[te] = fold
             for k, j in enumerate(te):
                 case = df.iloc[int(j)].to_dict()
                 R[j] = _live_r_for_case(
@@ -590,37 +619,91 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                 )
 
         y_correct = (best_oof_pred == y).astype(int)
-        # Inner split for feature selection / calibration / thresholds (not outer test)
+        # Cross-fit stacker/calibrator/thresholds: fit on other folds' OOF, score held-out.
+        r_final_oof = np.zeros(len(y), dtype=float)
+        crossfit_fit_sets: list[set[int]] = []
+        crossfit_te_sets: list[set[int]] = []
+        for fold, (_tr, te) in enumerate(fold_splits):
+            train_mask = (fold_of_row >= 0) & (fold_of_row != fold)
+            te_mask = fold_of_row == fold
+            if not train_mask.any() or not te_mask.any():
+                continue
+            idx_fit = np.where(train_mask)[0]
+            idx_te = np.where(te_mask)[0]
+            crossfit_fit_sets.append(set(int(i) for i in idx_fit))
+            crossfit_te_sets.append(set(int(i) for i in idx_te))
+            assert crossfit_fit_sets[-1].isdisjoint(crossfit_te_sets[-1])
+            # Inner split of non-test OOF for calib/thresholds
+            inner_fit, inner_val = _split_fit_calib(
+                y, groups, idx_fit, seed=seed + 100 + fold
+            )
+            from rockburst.fusion.stacker import locked_feature_mask, locked_feature_report
+
+            mask = locked_feature_mask()
+            feat_report = locked_feature_report()
+            fold_fusion = ReliabilityFusion().fit(
+                R[idx_fit], y_correct[idx_fit], feature_mask=mask, select_features=False
+            )
+            fold_fusion.feature_report = feat_report
+            if fold_fusion.is_fit:
+                r_raw_fit = np.array(
+                    [fold_fusion._raw_score(R[i]) for i in idx_fit]
+                )
+                # Calibrate + thresholds on inner_val only (subset of non-test)
+                val_pos = np.isin(idx_fit, inner_val)
+                if val_pos.any():
+                    fold_fusion.fit_calibrator(
+                        r_raw_fit[val_pos], y_correct[idx_fit][val_pos]
+                    )
+                    r_val = np.array(
+                        [fold_fusion.r_final(R[i]) for i in idx_fit[val_pos]]
+                    )
+                    thr = select_decision_thresholds(
+                        r_val, y_correct[idx_fit][val_pos]
+                    )
+                    fold_fusion.set_decision_thresholds(thr)
+                for j in idx_te:
+                    r_final_oof[j] = fold_fusion.r_final(R[j])
+            else:
+                r_final_oof[idx_te] = 0.0
+        results["fusion_crossfit_n_folds"] = len(crossfit_te_sets)
+        results["fusion_crossfit_disjoint_ok"] = all(
+            fs.isdisjoint(ts) for fs, ts in zip(crossfit_fit_sets, crossfit_te_sets)
+        )
+
+        # Production fusion: fit on all OOF (serving only; metrics use held-out above)
         _inner_fit, inner_val = _split_fit_calib(
             y, groups, np.arange(len(y)), seed=seed + 99
         )
-        from rockburst.fusion.stacker import choose_feature_mask, bootstrap_coef_cis
+        from rockburst.fusion.stacker import locked_feature_mask, locked_feature_report
 
-        mask, feat_report = choose_feature_mask(R[_inner_fit], y_correct[_inner_fit])
+        mask = locked_feature_mask()
+        feat_report = locked_feature_report()
         fusion = ReliabilityFusion().fit(
             R, y_correct, feature_mask=mask, select_features=False
         )
         fusion.feature_report = feat_report
-        # Raw scores; calibrate on inner val only
-        r_raw_oof = np.array(
-            [
-                fusion._raw_score(R[i]) if fusion.is_fit else 0.0
-                for i in range(len(y))
-            ]
-        )
-        fusion.fit_calibrator(r_raw_oof[inner_val], y_correct[inner_val])
-        r_final_oof = np.array(
-            [fusion.r_final(R[i]) if fusion.is_fit else 0.0 for i in range(len(y))]
-        )
-        thresholds = select_decision_thresholds(
-            r_final_oof[inner_val], y_correct[inner_val]
-        )
-        fusion.set_decision_thresholds(thresholds)
-        fusion.decision_thresholds.update(thresholds)
+        if fusion.is_fit:
+            r_raw_all = np.array(
+                [fusion._raw_score(R[i]) for i in range(len(y))]
+            )
+            fusion.fit_calibrator(r_raw_all[inner_val], y_correct[inner_val])
+            thr_prod = select_decision_thresholds(
+                np.array([fusion.r_final(R[i]) for i in inner_val]),
+                y_correct[inner_val],
+            )
+            fusion.set_decision_thresholds(thr_prod)
+            thresholds = thr_prod
+        else:
+            thresholds = fusion.decision_thresholds
 
         fpath = models_dir / "fusion.joblib"
         fusion.save(fpath)
         results["fusion_path"] = str(fpath)
+        results["fusion_protocol"] = (
+            "cross_fit_grouped_folds: ECE/Brier/mean_R_final from held-out fold "
+            "scores; production fusion.joblib fitted on all OOF for serving"
+        )
         results["fusion_coef"] = fusion.coef_.tolist() if fusion.is_fit else None
         results["fusion_intercept"] = (
             float(fusion.intercept_) if fusion.is_fit else None
@@ -643,19 +726,17 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         results["decision_thresholds"] = thresholds
         from sklearn.metrics import brier_score_loss
 
+        held = fold_of_row >= 0
         results["fusion_r_final_ece"] = expected_calibration_error(
-            y_correct, np.column_stack([1 - r_final_oof, r_final_oof])
+            y_correct[held],
+            np.column_stack([1 - r_final_oof[held], r_final_oof[held]]),
         )
-        results["fusion_r_final_ece_inner_val"] = expected_calibration_error(
-            y_correct[inner_val],
-            np.column_stack(
-                [1 - r_final_oof[inner_val], r_final_oof[inner_val]]
-            ),
-        )
-        results["fusion_brier"] = float(brier_score_loss(y_correct, r_final_oof))
-        results["fusion_mean_r_final"] = float(r_final_oof.mean())
-        results["fusion_oof_accuracy_of_base"] = float(y_correct.mean())
+        results["fusion_r_final_ece_crossfit"] = results["fusion_r_final_ece"]
+        results["fusion_brier"] = float(brier_score_loss(y_correct[held], r_final_oof[held]))
+        results["fusion_mean_r_final"] = float(r_final_oof[held].mean())
+        results["fusion_oof_accuracy_of_base"] = float(y_correct[held].mean())
         results["fusion_calibrated"] = fusion.calibrator is not None
+        results["fusion_crossfit_disjoint"] = True
         results["missing_d_confidence_note"] = (
             "See artifacts/baselines/fusion_missing_d_drop.json (Item 2)."
         )
@@ -663,7 +744,7 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         bins = np.linspace(0, 1, 11)
         diagram = []
         for i in range(10):
-            m = (r_final_oof > bins[i]) & (r_final_oof <= bins[i + 1])
+            m = held & (r_final_oof > bins[i]) & (r_final_oof <= bins[i + 1])
             if m.sum() == 0:
                 continue
             diagram.append(
@@ -677,6 +758,7 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         results["fusion_reliability_diagram"] = diagram
         np.save(models_dir / "fusion_R_oof.npy", R)
         np.save(models_dir / "fusion_y_correct.npy", y_correct)
+        np.save(models_dir / "fusion_r_final_crossfit.npy", r_final_oof)
 
         # Nested production conformal on nested OOF using fold calib of winners
         nested_cov = _recompute_coverage(best_name)

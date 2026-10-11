@@ -16,7 +16,11 @@ from rockburst.agents.schemas import (
     PredictiveOutput,
     UncertaintyOutput,
 )
-from rockburst.fusion.features import compute_reliability_features
+from rockburst.fusion.features import (
+    compute_r_model,
+    compute_reliability_features,
+    r_vector_dict,
+)
 from rockburst.fusion.stacker import ReliabilityFusion
 from rockburst.physics.relations import FEATURE_COLS, check_case
 from rockburst.quality.checks import score_data_quality
@@ -82,16 +86,6 @@ def _predict_with_pipe(pipe: Any, case: dict[str, Any]) -> np.ndarray:
     return proba
 
 
-def _r_model_from_proba(proba: np.ndarray, case: dict[str, Any]) -> float:
-    r_model = float(np.asarray(proba).max())
-    observed = {
-        c: bool(np.isfinite(float(case[c]))) if case.get(c) is not None else False
-        for c in FEATURE_COLS
-    }
-    miss = sum(1 for c in FEATURE_COLS if not observed[c])
-    return float(np.clip(r_model * (1 - 0.07 * miss), 0, 1))
-
-
 def run_predict(
     case: dict[str, Any],
     cfg: dict[str, Any],
@@ -117,14 +111,15 @@ def run_predict(
         name = model_name or "fold_pipeline"
 
     proba = _predict_with_pipe(pipe, case)
+    observed_mask = {
+        c: bool(np.isfinite(float(case[c]))) if case.get(c) is not None else False
+        for c in FEATURE_COLS
+    }
     return PredictiveOutput(
         predicted_grade=int(proba.argmax()),
         probabilities=proba.tolist(),
-        r_model=_r_model_from_proba(proba, case),
-        observed_mask={
-            c: bool(np.isfinite(float(case[c]))) if case.get(c) is not None else False
-            for c in FEATURE_COLS
-        },
+        r_model=compute_r_model(proba),
+        observed_mask=observed_mask,
         model_name=name,
     )
 
@@ -270,7 +265,12 @@ def fuse_assessment(
     physics_skipped: bool = False,
 ) -> dict[str, Any]:
     r_vec = compute_reliability_features(data_q, phys, pred, unc)
-    r_data, r_physics, r_model, r_unc, r_stab = [float(x) for x in r_vec]
+    r_parts = r_vector_dict(r_vec)
+    r_data = r_parts["r_data"]
+    r_physics = r_parts["r_physics"]
+    r_model = r_parts["r_model"]
+    r_unc = r_parts["r_uncertainty"]
+    r_stab = r_parts["r_stability"]
     fusion_path = Path(cfg.get("_root", ".")) / cfg["paths"]["models"] / "fusion.joblib"
     fusion = ReliabilityFusion.load(fusion_path) if fusion_path.exists() else ReliabilityFusion()
     if not fusion.is_fit:
@@ -298,14 +298,7 @@ def fuse_assessment(
             "downgrade_reason": "fusion_unfitted",
             "physics_skipped": physics_skipped,
             "recheck_payloads": recheck_payloads or {},
-            "r_vector": {
-                "r_data": r_data,
-                "r_physics": r_physics,
-                "r_model": r_model,
-                "r_uncertainty": r_unc,
-                "r_stability": r_stab,
-                "r_final": r_final,
-            },
+            "r_vector": {**r_parts, "r_final": r_final},
         }
     r_final = fusion.r_final(r_vec)
     decision = fusion.decide(r_final, cfg.get("routing", {}))
@@ -366,12 +359,5 @@ def fuse_assessment(
         "downgrade_reason": downgrade_reason,
         "physics_skipped": physics_skipped,
         "recheck_payloads": recheck_payloads or {},
-        "r_vector": {
-            "r_data": r_data,
-            "r_physics": r_physics,
-            "r_model": r_model,
-            "r_uncertainty": r_unc,
-            "r_stability": r_stab,
-            "r_final": r_final,
-        },
+        "r_vector": {**r_parts, "r_final": r_final},
     }

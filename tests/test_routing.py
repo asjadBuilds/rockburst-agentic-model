@@ -71,6 +71,16 @@ def test_missing_d_triggers_extra_validation(cfg_df):
     assert "extra_validation" in trace
 
 
+def test_m6_extra_validation_without_critic(cfg_df):
+    """M6 = coordinator + extra_validation; Critic disabled."""
+    cfg, df = cfg_df
+    row = df[df["d"].isna()].iloc[0].to_dict()
+    result = run_graph(row, df, cfg, use_llm=False, allow_critic=False)
+    actions = [t.split(":")[-1] for t in (result.get("route_trace") or [])]
+    assert "extra_validation" in actions
+    assert "critic" not in actions
+
+
 def test_recheck_calls_different_tool(cfg_df):
     cfg, df = cfg_df
     # Force a critic→recheck_physics path via bad B1 case

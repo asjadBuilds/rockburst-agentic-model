@@ -1,0 +1,47 @@
+{
+  "predicted_grade": 1,
+  "prediction_probability": 0.7265625,
+  "prediction_set": [
+    1,
+    2
+  ],
+  "physics_consistency": 1.0,
+  "input_reliability": 0.8296293588517945,
+  "ood_status": "No",
+  "prediction_stability": "high",
+  "agent_disagreement": "low",
+  "final_system_confidence": 0.999999,
+  "decision": "Prediction accepted; routine monitoring recommended.",
+  "recommended_action": "accept",
+  "probabilities": [
+    0.0234375,
+    0.7265625,
+    0.21875,
+    0.03125
+  ],
+  "route_trace": [
+    "rules:data_quality",
+    "rules:geomechanics_skipped",
+    "rules:predict",
+    "rules:uncertainty",
+    "rules:finalize"
+  ],
+  "abstained": false,
+  "critic_endorse": null,
+  "downgrade_reason": null,
+  "physics_skipped": true,
+  "recheck_payloads": {},
+  "r_vector": {
+    "r_data": 0.8296293588517945,
+    "r_physics": 1.0,
+    "r_model": 0.7265625,
+    "r_uncertainty": 0.6707092064519297,
+    "r_stability": 0.9766299566073573,
+    "n_missing": 0.0,
+    "d_observed": 1.0,
+    "r_final": 0.999999
+  },
+  "example_protocol": "held-out fold model: case was in outer test fold; pipeline fit only on fold train/fit indices",
+  "fold_model": "rf__median",
+  "true_grade": 1
+}

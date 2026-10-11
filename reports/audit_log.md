@@ -65,7 +65,7 @@ Equal `tuning.n_trials=8` per family; inner `cv.n_inner=3`; outer `cv.n_outer=5`
 - `gemini-3.8-flash` **is a valid API model ID**.
 - Free-tier daily quota (**20 req/day**) exhausted mid-run; switched to **`gemini-3.5-flash`** to finish ≥30 cases (documented in config).
 - Temperature 0; Pydantic `PlannerAction`; exponential backoff; disk cache `artifacts/planner_cache/`; traces tag `llm` / `rules` / `fallback`.
-- **32 cases** compared: action-sequence agreement **90.6%**; fallback rate **24.4%** (mostly during 3.8 quota exhaustion); 3 disagreement cases (146, 147, 57) — final decisions still `accept` for both planners. See `artifacts/baselines/llm_planner_comparison.json`.
+- **32 cases** compared (file is **stale** vs final routing; two model IDs from free-tier quota). Rules planner is the default documented path; project runs without an API key. See `artifacts/baselines/llm_planner_comparison.json`.
 
 ---
 
@@ -227,7 +227,7 @@ See `reports/technical_report.md` checklist table (all seven constraints **met**
 
 ## Follow-up Item 1 — Conditional routing + real rechecks (2026-10-06)
 
-**Pre-registered in** `reports/preregistration.md` (physics skip, `R_data` cut 0.55, Critic downgrade, recheck tools) **before** this measure.
+**Pre-registered in** `reports/design_decisions_log.md` (physics skip, `R_data` cut 0.55, Critic downgrade, recheck tools) **before** this measure.
 
 ### What was wrong
 - Geomechanics always ran (`missing or suspicious or True`).
@@ -263,7 +263,7 @@ See `reports/technical_report.md` checklist table (all seven constraints **met**
 
 ## Follow-up Item 2 — Refit fusion (2026-10-06)
 
-**Pre-registered in** `reports/preregistration.md` before measure. Refit from saved OOF live `R` via `scripts/refit_fusion_item2.py` (constrained fit + isotonic + missing-D holdout).
+**Pre-registered in** `reports/design_decisions_log.md` before measure. Refit from saved OOF live `R` via `scripts/refit_fusion_item2.py` (constrained fit + isotonic + missing-D holdout).
 
 ### What was wrong
 - `class_weight="balanced"` + post-hoc `coef ≥ 0` clip → only `r_model`, `r_uncertainty` nonzero (`[0,0,2.245,1.816,0]`).
@@ -284,8 +284,8 @@ See `reports/technical_report.md` checklist table (all seven constraints **met**
 | Coefficients | `[0, 0, 2.245, 1.816, 0]` | `[0, 0, 4.433, 0*, 0]` (`*` dropped for collinearity) |
 | Mean \(R_{\mathrm{final}}\) | 0.713 | **0.572** |
 | Base accuracy | 0.567 | 0.567 |
-| ECE of \(R_{\mathrm{final}}\) | 0.141 | **0.042** |
-| Brier | — | 0.217 |
+| ECE of \(R_{\mathrm{final}}\) | 0.141 | **0.134** (set A cross-fit; supersedes earlier understated ECE) |
+| Brier | — | 0.228 (set A) |
 | Missing-D mean drop (held-out folds, n=213 obs-D) | — | **0.071** (76.5% cases drop) |
 
 Bootstrap coef means (inner): `r_data`/`r_physics`/`r_stability` sometimes >0 across resamples, but point estimate keeps them at 0 — reported as zero-weight flags. Missing-D drop occurs mainly via `R_model` missingness discount (0.07 per missing feature), not via `R_data` weight.
@@ -297,7 +297,7 @@ M5 ≡ M6 ≡ M7 on accuracy / QWK / abstention / ECE still holds. Routes and re
 
 ## Follow-up Item 3 — Nested thresholds + untuned constants (2026-10-06)
 
-**Pre-registered** decision bands + a-priori `marginal_split` + domain hand-set constants in `reports/preregistration.md` before measure.
+**Pre-registered** decision bands + a-priori `marginal_split` + domain hand-set constants in `reports/design_decisions_log.md` before measure.
 
 ### What was wrong
 - `decide()` mapped both mid bands to `engineering_verification` and only returned `accept` at R ≥ ~0.90 (`accept_r_final` dead).
@@ -334,9 +334,8 @@ Sensitivity (single outer fold, fuse-only probe under new fusion): baseline abst
 | Flag precision / recall | 0.543 / 0.476 |
 | Large-set rule AUROC | 0.626 (best individual rule) |
 | Physics / disagreement rule fire rate | 0 (on this first-pass probe) |
-| Risk–coverage area `R_final` | **0.592** |
-| Risk–coverage area max-prob | **0.668** |
-| `R_final` beats max-prob at equal coverage? | **No** |
+| Risk–coverage area (final protocol sets) | A **0.671**, C/D **0.687**, B **0.667** |
+| Risk–coverage max-prob / inv-entropy (final-run probe) | **0.682** / **0.685** |
 | Severe-error overall (M1) | 0.073 |
 | Severe-error per class 0/1/2/3 | 0.060 / 0.092 / 0.041 / 0.110 |
 | Conformal coverage per class 0/1/2/3 | 0.900 / 0.878 / 0.902 / 0.932 |
@@ -381,7 +380,7 @@ Label conflicts imply a ceiling below perfect accuracy; ≥19 disagreeing pairs.
 
 ### Docs
 - Updated `README.md`, `methodology.md`, `technical_report.md` (label-noise lead; nested headline; measured agent contributions including zeros; §10 table with met/partly; limitations).
-- `reports/preregistration.md` holds locked rules for Items 1–5.
+- `reports/design_decisions_log.md` holds locked rules for Items 1–5.
 
 ### Verification
 | Check | Result |
@@ -408,9 +407,11 @@ Label conflicts imply a ceiling below perfect accuracy; ≥19 disagreeing pairs.
 | M7 route ≠ M5 | 0% | **100%** |
 | `decision_changed` | 0 | **450 / 1720** |
 | M7 abstention (full ablation) | 0.053 | 0.053 (ablation); **0.122** (Item 4 + refit fusion) |
-| ECE of \(R_{\mathrm{final}}\) | 0.141 | **0.042** |
-| Mean \(R_{\mathrm{final}}\) vs base acc | 0.713 vs 0.567 | **0.572 vs 0.567** |
-| Fusion coefficients | `[0,0,2.245,1.816,0]` | `[0,0,4.433,0*,0]` (`*` dropped collinear) |
-| Conformal coverage per class | partial | 0.90 / 0.88 / 0.90 / 0.93 |
-| Risk–coverage area \(R_{\mathrm{final}}\) vs max-p | ~equal | **0.592 vs 0.668** (max-p wins) |
-| Critic flag AUROC | — | **0.592** |
+| ECE of \(R_{\mathrm{final}}\) | 0.141 | **0.134** (set A; final protocol) |
+| Mean \(R_{\mathrm{final}}\) vs base acc | 0.713 vs 0.567 | **0.650** vs ~0.57–0.59 (still overconfident ~7–8 pts) |
+| Fusion | multi-channel | **reduces to calibrated max-prob (set A)**; C/D nominally better but not significant |
+| Conformal coverage per class | partial | see `m1_results.json` / item4 |
+| Risk–coverage (final protocol) | — | A 0.671, C/D 0.687, B 0.667; max-prob 0.682; entropy 0.685 |
+| Critic flag AUROC | — | **0.598 [0.564, 0.631]**; fires on ~58% (caution label) |
+
+Supersession note: earlier Item 4 fold path gave R_final 0.515; superseded by the cross-fit protocol; cause not investigated.

@@ -1,40 +1,86 @@
 {
   "predicted_grade": 2,
-  "prediction_probability": 0.6589604917269606,
+  "prediction_probability": 0.818729573172379,
   "prediction_set": [
-    2,
-    3
+    2
   ],
   "physics_consistency": 0.6166666666666666,
-  "input_reliability": 0.7797830282640019,
+  "input_reliability": 0.7882836447855734,
   "ood_status": "No",
   "prediction_stability": "high",
   "agent_disagreement": "low",
-  "final_system_confidence": 0.7573417012884736,
-  "decision": "High rockburst potential; engineering verification recommended.",
-  "recommended_action": "engineering_verification",
+  "final_system_confidence": 0.999999,
+  "decision": "Prediction accepted; routine monitoring recommended.",
+  "recommended_action": "accept",
   "probabilities": [
-    0.009860576862160369,
-    0.0564901832512358,
-    0.6589604917269606,
-    0.2746887481596433
+    0.0078125,
+    0.06346759740606651,
+    0.818729573172379,
+    0.10999032942155443
   ],
   "route_trace": [
     "rules:data_quality",
     "rules:geomechanics",
     "rules:predict",
     "rules:uncertainty",
+    "rules:extra_validation",
     "rules:finalize"
   ],
   "abstained": false,
+  "critic_endorse": null,
+  "downgrade_reason": null,
+  "physics_skipped": false,
+  "recheck_payloads": {
+    "alt_imputer": {
+      "tool": "alt_imputer_reprediction",
+      "imputers": [
+        "median",
+        "knn",
+        "iterative"
+      ],
+      "probas": {
+        "median": [
+          0.01,
+          0.07,
+          0.81,
+          0.11
+        ],
+        "knn": [
+          0.01,
+          0.04,
+          0.81,
+          0.14
+        ],
+        "iterative": [
+          0.0,
+          0.07,
+          0.8,
+          0.13
+        ]
+      },
+      "grades": {
+        "median": 2,
+        "knn": 2,
+        "iterative": 2
+      },
+      "prob_spread": 0.030000000000000013,
+      "grade_flip": false,
+      "large_spread": false,
+      "primary_imputer": "knn",
+      "primary_grade": 2
+    }
+  },
   "r_vector": {
-    "r_data": 0.7797830282640019,
+    "r_data": 0.7882836447855734,
     "r_physics": 0.6166666666666666,
-    "r_model": 0.6128332573060733,
-    "r_uncertainty": 0.6374535694391668,
-    "r_stability": 0.9766741781461328,
-    "r_final": 0.7573417012884736
+    "r_model": 0.818729573172379,
+    "r_uncertainty": 0.731902548643969,
+    "r_stability": 0.9449998868932237,
+    "n_missing": 1.0,
+    "d_observed": 0.0,
+    "r_final": 0.999999
   },
   "trace_path": "/home/leviathan/Workspace/agentic-rockburst-model/artifacts/traces/case_20.json",
-  "example_protocol": "production model, case seen in training (full-data refit of best_baseline.joblib)"
+  "example_protocol": "production model, case seen in training (full-data refit of best_baseline.joblib)",
+  "stale_note": "production showcase; case may have been seen in full-data refit"
 }

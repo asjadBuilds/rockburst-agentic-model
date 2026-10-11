@@ -1,0 +1,104 @@
+{
+  "predicted_grade": 2,
+  "prediction_probability": 0.7449736495733518,
+  "prediction_set": [
+    2,
+    3
+  ],
+  "physics_consistency": 0.95,
+  "input_reliability": 0.80300936829461,
+  "ood_status": "No",
+  "prediction_stability": "high",
+  "agent_disagreement": "low",
+  "final_system_confidence": 0.999999,
+  "decision": "Prediction accepted; routine monitoring recommended.",
+  "recommended_action": "accept",
+  "probabilities": [
+    0.0,
+    0.06248592184812346,
+    0.7449736495733518,
+    0.1925404285785248
+  ],
+  "route_trace": [
+    "rules:data_quality",
+    "rules:geomechanics",
+    "rules:predict",
+    "rules:uncertainty",
+    "rules:extra_validation",
+    "rules:finalize"
+  ],
+  "abstained": false,
+  "critic_endorse": null,
+  "downgrade_reason": null,
+  "physics_skipped": false,
+  "recheck_payloads": {
+    "alt_imputer": {
+      "tool": "alt_imputer_reprediction",
+      "imputers": [
+        "median",
+        "knn",
+        "iterative"
+      ],
+      "probas": {
+        "median": [
+          0.0,
+          0.03,
+          0.73,
+          0.24
+        ],
+        "knn": [
+          0.0,
+          0.03,
+          0.75,
+          0.22
+        ],
+        "iterative": [
+          0.0,
+          0.06,
+          0.81,
+          0.13
+        ]
+      },
+      "grades": {
+        "median": 2,
+        "knn": 2,
+        "iterative": 2
+      },
+      "prob_spread": 0.11000000000000003,
+      "grade_flip": false,
+      "large_spread": false,
+      "primary_imputer": "median",
+      "primary_grade": 2
+    },
+    "targeted_perturbation": {
+      "tool": "targeted_perturbation_recheck",
+      "features": [
+        "d"
+      ],
+      "stability_score": 1.0,
+      "prediction_stability": "high",
+      "flip_rate": 0.0,
+      "low_stability": false
+    }
+  },
+  "r_vector": {
+    "r_data": 0.80300936829461,
+    "r_physics": 0.95,
+    "r_model": 0.7449736495733518,
+    "r_uncertainty": 0.6927979569161611,
+    "r_stability": 0.9585978144847133,
+    "n_missing": 1.0,
+    "d_observed": 0.0,
+    "r_final": 0.999999
+  },
+  "example_protocol": "held-out fold model",
+  "true_grade": 2,
+  "m6_route_trace": [
+    "rules:data_quality",
+    "rules:geomechanics",
+    "rules:predict",
+    "rules:uncertainty",
+    "rules:extra_validation",
+    "rules:finalize"
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "predicted_grade": 0,
-  "prediction_probability": 0.7698204137449411,
+  "prediction_probability": 0.7598864352247107,
   "prediction_set": [
     0,
     1
@@ -10,29 +10,75 @@
   "ood_status": "No",
   "prediction_stability": "high",
   "agent_disagreement": "low",
-  "final_system_confidence": 0.82320029489671,
+  "final_system_confidence": 0.999999,
   "decision": "Prediction accepted; routine monitoring recommended.",
   "recommended_action": "accept",
   "probabilities": [
-    0.7698204137449411,
-    0.15340972799980976,
-    0.04418644378345271,
-    0.03258341447179636
+    0.7598864352247107,
+    0.2109492726346278,
+    0.0275706605754864,
+    0.001593631565175104
   ],
   "route_trace": [
     "rules:data_quality",
     "rules:geomechanics",
     "rules:predict",
     "rules:uncertainty",
+    "rules:extra_validation",
     "rules:finalize"
   ],
   "abstained": false,
+  "critic_endorse": null,
+  "downgrade_reason": null,
+  "physics_skipped": false,
+  "recheck_payloads": {
+    "alt_imputer": {
+      "tool": "alt_imputer_reprediction",
+      "imputers": [
+        "median",
+        "knn",
+        "iterative"
+      ],
+      "probas": {
+        "median": [
+          0.64,
+          0.18,
+          0.13,
+          0.05
+        ],
+        "knn": [
+          0.65,
+          0.2,
+          0.1,
+          0.05
+        ],
+        "iterative": [
+          0.63,
+          0.17,
+          0.1,
+          0.1
+        ]
+      },
+      "grades": {
+        "median": 0,
+        "knn": 0,
+        "iterative": 0
+      },
+      "prob_spread": 0.05000000000000001,
+      "grade_flip": false,
+      "large_spread": false,
+      "primary_imputer": "knn",
+      "primary_grade": 0
+    }
+  },
   "r_vector": {
     "r_data": 0.7990558717428706,
     "r_physics": 0.95,
-    "r_model": 0.7159329847827952,
-    "r_uncertainty": 0.6804278591837245,
-    "r_stability": 0.9235788702775454,
-    "r_final": 0.82320029489671
+    "r_model": 0.7598864352247107,
+    "r_uncertainty": 0.7203223540625603,
+    "r_stability": 0.9543393297691294,
+    "n_missing": 1.0,
+    "d_observed": 0.0,
+    "r_final": 0.999999
   }
 }

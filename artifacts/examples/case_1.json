@@ -1,42 +1,47 @@
 {
-  "predicted_grade": 3,
-  "prediction_probability": 0.5127708846026489,
+  "predicted_grade": 2,
+  "prediction_probability": 0.6316736048965587,
   "prediction_set": [
-    1,
     2,
     3
   ],
   "physics_consistency": 1.0,
   "input_reliability": 0.7991749873096115,
   "ood_status": "No",
-  "prediction_stability": "high",
-  "agent_disagreement": "low",
-  "final_system_confidence": 0.6979392027111886,
-  "decision": "High rockburst potential; engineering verification recommended.",
-  "recommended_action": "engineering_verification",
+  "prediction_stability": "moderate",
+  "agent_disagreement": "moderate",
+  "final_system_confidence": 0.999999,
+  "decision": "Prediction accepted; routine monitoring recommended.",
+  "recommended_action": "accept",
   "probabilities": [
-    0.009941738863765736,
-    0.15746280552068434,
-    0.31982457101290107,
-    0.5127708846026489
+    0.0,
+    0.10588733513198054,
+    0.6316736048965587,
+    0.2624390599714608
   ],
   "route_trace": [
     "rules:data_quality",
-    "rules:geomechanics",
+    "rules:geomechanics_skipped",
     "rules:predict",
     "rules:uncertainty",
-    "rules:critic",
     "rules:finalize"
   ],
   "abstained": false,
+  "critic_endorse": null,
+  "downgrade_reason": null,
+  "physics_skipped": true,
+  "recheck_payloads": {},
   "r_vector": {
     "r_data": 0.7991749873096115,
     "r_physics": 1.0,
-    "r_model": 0.5127708846026489,
-    "r_uncertainty": 0.5481438338217482,
-    "r_stability": 0.9714032742178191,
-    "r_final": 0.6979392027111886
+    "r_model": 0.6316736048965587,
+    "r_uncertainty": 0.4862230847481328,
+    "r_stability": 0.6526699246488328,
+    "n_missing": 0.0,
+    "d_observed": 1.0,
+    "r_final": 0.999999
   },
   "trace_path": "/home/leviathan/Workspace/agentic-rockburst-model/artifacts/traces/case_1.json",
-  "example_protocol": "production model, case seen in training (full-data refit of best_baseline.joblib)"
+  "example_protocol": "production model, case seen in training (full-data refit of best_baseline.joblib)",
+  "stale_note": "production showcase; case may have been seen in full-data refit"
 }

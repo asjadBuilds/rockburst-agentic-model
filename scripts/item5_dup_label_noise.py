@@ -42,16 +42,18 @@ def _rel_dist(a: pd.Series, b: pd.Series) -> float:
     return float(max(vals)) if vals else float("inf")
 
 
-def _headline_at_tol(df_raw: pd.DataFrame, cfg: dict, tol: float, m1: dict) -> dict:
+def _headline_at_tol(
+    df_raw: pd.DataFrame, cfg: dict, tol: float, m1: dict, *, n_repeats: int = 5
+) -> dict:
+    """Fixed catboost__knn (no re-tune); >=5 grouped-CV repeats; grouped-bootstrap CI."""
+    from rockburst.eval.bootstrap import grouped_bootstrap_ci, grouped_bootstrap_metric
+    from rockburst.uncertainty.conformal import conformal_prediction_set
+
     cfg2 = json.loads(json.dumps(cfg))
     cfg2.setdefault("quality", {})["near_dup_rel_tol"] = tol
     processed, audit = process_raw(df_raw, cfg2)
     X, y, groups = prepare_xy(processed)
-    best_name = (
-        m1.get("nested_unbiased", {}).get("production_model")
-        or m1.get("best_model")
-        or "catboost__knn"
-    )
+    best_name = "catboost__knn"
     name, imp = best_name.split("__", 1)
     params = m1.get("best_params") or {}
     seed = int(cfg.get("seed", 42))
@@ -62,41 +64,92 @@ def _headline_at_tol(df_raw: pd.DataFrame, cfg: dict, tol: float, m1: dict) -> d
 
         base_est = get_model_zoo(quick=True)[name]
 
-    oof_pred = np.zeros(len(y), dtype=int)
-    oof_proba = np.zeros((len(y), 4))
-    sets = [None] * len(y)
-    sgkf = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=seed)
-    for fold, (tr, te) in enumerate(sgkf.split(X, y, groups)):
-        fit_idx, calib_idx = _split_fit_calib(y, groups, tr, seed=seed + fold)
-        pipe = Pipeline([("prep", build_preprocess(imp)), ("model", clone(base_est))])
-        pipe.fit(X.iloc[fit_idx], y[fit_idx])
-        proba = _predict_proba_safe(pipe, X.iloc[te])
-        oof_pred[te] = proba.argmax(axis=1)
-        oof_proba[te] = proba
-        if len(calib_idx):
-            conf = fit_marginal_thresholds(
-                y[calib_idx], _predict_proba_safe(pipe, X.iloc[calib_idx]), alpha=0.1
+    qwks, accs, covs = [], [], []
+    # Pooled last-repeat vectors for bootstrap CI
+    last_y = last_pred = last_correct = last_groups = last_covered = None
+    for rep in range(n_repeats):
+        oof_pred = np.zeros(len(y), dtype=int)
+        sets: list = [None] * len(y)
+        sgkf = StratifiedGroupKFold(
+            n_splits=5, shuffle=True, random_state=seed + 17 * rep
+        )
+        for fold, (tr, te) in enumerate(sgkf.split(X, y, groups)):
+            fit_idx, calib_idx = _split_fit_calib(
+                y, groups, tr, seed=seed + fold + 100 * rep
             )
-            from rockburst.uncertainty.conformal import conformal_prediction_set
-
-            for k, j in enumerate(te):
-                sets[j] = conformal_prediction_set(
-                    proba[k], alpha=0.1, class_thresholds=conf.class_thresholds
+            pipe = Pipeline(
+                [("prep", build_preprocess(imp)), ("model", clone(base_est))]
+            )
+            pipe.fit(X.iloc[fit_idx], y[fit_idx])
+            proba = _predict_proba_safe(pipe, X.iloc[te])
+            oof_pred[te] = proba.argmax(axis=1)
+            if len(calib_idx):
+                conf = fit_marginal_thresholds(
+                    y[calib_idx],
+                    _predict_proba_safe(pipe, X.iloc[calib_idx]),
+                    alpha=0.1,
                 )
-    cov = coverage_and_size(y, sets)
+                for k, j in enumerate(te):
+                    sets[j] = conformal_prediction_set(
+                        proba[k], alpha=0.1, class_thresholds=conf.class_thresholds
+                    )
+        qwks.append(quadratic_weighted_kappa(y, oof_pred))
+        accs.append(float((y == oof_pred).mean()))
+        cov = coverage_and_size(y, sets)
+        covs.append(cov["coverage"])
+        last_y = np.asarray(y, dtype=int)
+        last_pred = np.asarray(oof_pred, dtype=int)
+        last_correct = (y == oof_pred).astype(float)
+        last_groups = np.asarray(groups)
+        last_covered = np.asarray(
+            [1.0 if s is not None and y[i] in s else 0.0 for i, s in enumerate(sets)]
+        )
+
+    def _ci(vals_case, g):
+        return grouped_bootstrap_ci(vals_case, g, n_boot=200, seed=seed)
+
+    qwk_ci = (
+        grouped_bootstrap_metric(
+            last_y,
+            last_pred,
+            last_groups,
+            quadratic_weighted_kappa,
+            n_boot=200,
+            seed=seed,
+        )
+        if last_y is not None
+        else None
+    )
     return {
         "tol": tol,
         "n_groups": audit["n_dup_groups"],
         "n_multi": audit["n_groups_with_duplicates"],
         "n_conflict_groups": audit["n_conflicting_label_groups"],
-        "M1_qwk": quadratic_weighted_kappa(y, oof_pred),
-        "M1_accuracy": float((y == oof_pred).mean()),
-        "conformal_coverage": cov["coverage"],
-        "conformal_mean_size": cov["mean_size"],
-        # M7 abstention would need full graph; report M1 headlines + group stats here
-        "note": "Headline nested-style M1 QWK/acc + conformal at this grouping; M7 abs from main ablation at default tol.",
+        "n_repeats": n_repeats,
+        "model": "catboost__knn_fixed",
+        "M1_qwk_mean": float(np.mean(qwks)),
+        "M1_accuracy_mean": float(np.mean(accs)),
+        "conformal_coverage_mean": float(np.mean(covs)),
+        "M1_qwk_ci": qwk_ci,
+        "M1_accuracy_ci": _ci(last_correct, last_groups) if last_correct is not None else None,
+        "conformal_coverage_ci": _ci(last_covered, last_groups)
+        if last_covered is not None
+        else None,
+        "M1_qwk": float(np.mean(qwks)),
+        "M1_accuracy": float(np.mean(accs)),
+        "conformal_coverage": float(np.mean(covs)),
+        "_last_oof": {
+            "y": last_y,
+            "pred": last_pred,
+            "groups": last_groups,
+            "covered": last_covered,
+        },
+        "note": (
+            "Fixed catboost__knn, no re-tune; >=5 grouped-CV repeats; "
+            "QWK CI = grouped bootstrap of QWK per resample; "
+            "acc/coverage CIs = grouped bootstrap of case vectors."
+        ),
     }
-
 
 def main() -> None:
     cfg = load_config()
@@ -152,11 +205,11 @@ def main() -> None:
     }
     # Choice: keep 1% — clear mass below 0.5–1% for Table S1 copies; 1.5% pairs are
     # borderline measurement noise; pre-register as domain choice from gap (mass <1% vs sparse 1–5%)
-    chosen_tol = 0.01
+    chosen_tol = 0.05
     choice_note = (
-        "NN max-rel-distance histogram shows dense mass below ~1% (exact/near Table S1 "
-        "copies) and a sparser tail at 1.5–5%. Keep near_dup_rel_tol=0.01 as the gap "
-        "choice (not QWK-tuned). Pairs 19/342 and 20/328 (~1.5%) group at 2%; 9/337 (~4.4%) at 5%."
+        "Primary near_dup_rel_tol=0.05 decided after seeing that 1% left known near-copies "
+        "ungrouped (19–342, 20–328 first group at 2%; 9–337 at 5%). Earlier headline "
+        "numbers used 1%. Keep 1%/2% as sensitivity. Not QWK-tuned."
     )
 
     # Label-noise analysis on default 1% conflicts
@@ -279,8 +332,25 @@ def main() -> None:
         "M7_abstention_default_tol": abl["ablations"]["M7"]["abstention_rate"]["mean"],
     }
 
+    # Persist last-repeat OOF for CI recompute; strip from JSON payload
+    oof_path = resolve_path(cfg, "baselines") / "item5_last_oof.npz"
+    save_kw: dict = {}
+    clean_headlines = []
+    for h in headlines:
+        blob = h.pop("_last_oof", None)
+        if blob and blob.get("y") is not None:
+            t = h["tol"]
+            save_kw[f"y_{t}"] = np.asarray(blob["y"])
+            save_kw[f"pred_{t}"] = np.asarray(blob["pred"])
+            save_kw[f"groups_{t}"] = np.asarray(blob["groups"])
+            if blob.get("covered") is not None:
+                save_kw[f"covered_{t}"] = np.asarray(blob["covered"])
+        clean_headlines.append(h)
+    if save_kw:
+        np.savez_compressed(oof_path, **save_kw)
+
     out = {
-        "headlines_by_tol": headlines,
+        "headlines_by_tol": clean_headlines,
         "pair_checks": pair_tol,
         "nn_hist": hist,
         "nn_median": float(np.median(nn)),
@@ -294,7 +364,7 @@ def main() -> None:
     dest = resolve_path(cfg, "baselines") / "item5_dup_label_noise.json"
     dest.write_text(json.dumps(out, indent=2, default=str))
     print(json.dumps({
-        "headlines": headlines,
+        "headlines": clean_headlines,
         "pairs": pair_tol,
         "chosen_tol": chosen_tol,
         "direction": counts,
