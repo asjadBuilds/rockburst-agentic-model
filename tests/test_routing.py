@@ -105,6 +105,141 @@ def test_recheck_calls_different_tool(cfg_df):
         assert "borderline_relations" in payload
 
 
+def test_non_endorsing_critic_keeps_state_until_recheck():
+    """C1: Critic must remain for recheck preconditions; clear only after tool runs."""
+    cfg = load_config()
+    state = CaseState(
+        case={},
+        data_q=DataQualityOutput(data_reliability=0.9, ood_flag=False),
+        pred=None,
+        unc=None,
+        critic=CriticOutput(
+            challenges=["Low physics consistency"],
+            request_recheck="physics",
+            endorse=False,
+        ),
+    )
+    # Minimal stubs so planner reaches recheck branch
+    from rockburst.agents.schemas import (
+        PhysicsOutput,
+        PredictiveOutput,
+        UncertaintyOutput,
+    )
+
+    state.phys = PhysicsOutput(physics_score=0.4, issues=["b1 inconsistency"])
+    state.pred = PredictiveOutput(
+        predicted_grade=1,
+        probabilities=[0.05, 0.85, 0.05, 0.05],
+        r_model=0.9,
+    )
+    state.unc = UncertaintyOutput(
+        uncertainty_score=0.2,
+        r_uncertainty=0.8,
+        prediction_set=[1],
+        model_disagreement=0.0,
+        prediction_stability="high",
+        stability_score=0.9,
+        entropy=0.5,
+    )
+    state.extra_validation_done = True  # M2 identity gate already satisfied
+    action = rule_based_next_action(state, cfg, allow_critic=True)
+    assert action == "recheck_physics"
+    assert state.critic is not None
+    assert state.critic.endorse is False
+    assert action_preconditions_met(action, state)
+
+
+def test_non_endorsing_critic_executes_recheck_with_payload(cfg_df):
+    """C1: non-endorsing Critic → executed recheck_* and payload in recheck_payloads."""
+    cfg, df = cfg_df
+    from rockburst.agents.schemas import (
+        PhysicsOutput,
+        PredictiveOutput,
+        UncertaintyOutput,
+    )
+    from rockburst.config import resolve_path
+    import joblib
+
+    mp = resolve_path(cfg, "models") / "best_baseline.joblib"
+    if not mp.exists():
+        pytest.skip("model artifact missing")
+
+    case = df.iloc[0].to_dict()
+    state = CaseState(case=case, max_loops=8)
+    state.data_q = DataQualityOutput(data_reliability=0.9, ood_flag=False)
+    state.phys = PhysicsOutput(physics_score=0.4, issues=["b1 inconsistency"])
+    state.pred = PredictiveOutput(
+        predicted_grade=1,
+        probabilities=[0.05, 0.85, 0.05, 0.05],
+        r_model=0.9,
+    )
+    state.unc = UncertaintyOutput(
+        uncertainty_score=0.2,
+        r_uncertainty=0.8,
+        prediction_set=[1],
+        model_disagreement=0.0,
+        prediction_stability="high",
+        stability_score=0.9,
+        entropy=0.5,
+    )
+    state.extra_validation_done = True  # isolate critic→recheck path
+    state.critic = CriticOutput(
+        challenges=["Derived B1 does not match sigma_c/sigma_t"],
+        request_recheck="physics",
+        endorse=False,
+    )
+    state = step(state, df.head(50), cfg, use_llm=False, allow_critic=True)
+    assert any(t.endswith(":recheck_physics") for t in state.route_trace)
+    assert not any(t.startswith("rejected:recheck_physics") for t in state.route_trace)
+    assert state.recheck_payloads.get("physics_tol") is not None
+    assert state.critic is None  # cleared after successful recheck
+
+
+def test_loop_limit_forces_abstain_on_missing_evidence(cfg_df):
+    """C2: max_loops with missing predict/uncertainty → forced abstain, not quiet finalize."""
+    cfg, df = cfg_df
+    cfg = {**cfg, "routing": {**cfg.get("routing", {}), "max_loops": 2}}
+    case = df.iloc[0].to_dict()
+    result = run_graph(case, df.head(50), cfg, use_llm=False, allow_critic=False)
+    assert result.get("abstained") is True
+    assert result.get("recommended_action") == "abstain"
+    assert "forced_finalize" in (result.get("route_trace") or [])
+    assert "Forced stop at loop limit" in (result.get("decision") or "")
+
+
+def test_loop_limit_forces_abstain_on_unresolved_critic():
+    """C2: at max_loops with non-endorsing Critic → forced_abstain, not finalize."""
+    cfg = load_config()
+    state = CaseState(
+        case={},
+        loop=8,
+        max_loops=8,
+        data_q=DataQualityOutput(data_reliability=0.9, ood_flag=False),
+        critic=CriticOutput(
+            challenges=["unresolved"],
+            request_recheck="none",
+            endorse=False,
+        ),
+    )
+    from rockburst.agents.schemas import PredictiveOutput, UncertaintyOutput
+
+    state.pred = PredictiveOutput(
+        predicted_grade=1,
+        probabilities=[0.05, 0.85, 0.05, 0.05],
+        r_model=0.9,
+    )
+    state.unc = UncertaintyOutput(
+        uncertainty_score=0.2,
+        r_uncertainty=0.8,
+        prediction_set=[1],
+        model_disagreement=0.0,
+        prediction_stability="high",
+        stability_score=0.9,
+        entropy=0.5,
+    )
+    assert rule_based_next_action(state, cfg) == "forced_abstain"
+
+
 def test_guard_rejects_invalid_action():
     state = CaseState(case={})
     assert not action_preconditions_met("critic", state)

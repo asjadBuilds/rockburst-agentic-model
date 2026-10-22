@@ -7,7 +7,7 @@ name = "rockburst"
 version = "0.1.0"
 description = "Physics-guided agentic AI for rockburst intensity assessment"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
   "pdfplumber",
   "pandas",
@@ -26,14 +26,13 @@ dependencies = [
   "seaborn",
   "shap",
   "google-genai",
-  "langgraph",
-  "langchain-core",
-  "imbalanced-learn",
   "joblib",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+# Unused at runtime (m5): optional experiments only — orchestrator is custom FSM
+experimental = ["langgraph", "langchain-core", "imbalanced-learn"]
 
 [project.scripts]
 rockburst = "rockburst.cli:main"

@@ -2,6 +2,8 @@
 
 Renamed from `preregistration.md` (final-hardening step 7). Entries are marked **before** or **after** seeing results. Do not read “locked a priori” unless the entry says so and git history supports it.
 
+**Slice 8 (after remediation):** production conformal = Mondrian + contiguous sets (overrides earlier a-priori marginal note); production model = best mean inner QWK (not mode-of-winners); Critic may escalate to abstain (overrides earlier “floor at engineering_verification”); delivered planner = rules FSM. See `reports/feedback_response.md` and `reports/technical_report.md` history appendix for superseded numbers.
+
 Changed after seeing results (both versions):
 
 | Rule | Before | After (final-hardening) |

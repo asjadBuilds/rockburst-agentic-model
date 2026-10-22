@@ -228,7 +228,10 @@ class ReliabilityFusion:
         self.is_fit = False
         self.feature_mask: np.ndarray = np.ones(len(FEATURE_NAMES), dtype=bool)
         self.feature_report: dict[str, Any] = {}
-        self.calibrator: IsotonicRegression | None = None
+        self.calibrator: Any | None = None
+        self.calibration_method: str | None = None
+        self.calibration_n: int = 0
+        self.conf_eps: float = 1e-3
         self.decision_thresholds: dict[str, float] = {
             "abstain_r_final": 0.45,
             "engineering_verification": 0.55,
@@ -297,15 +300,34 @@ class ReliabilityFusion:
         return self
 
     def fit_calibrator(self, r_raw: np.ndarray, y_correct: np.ndarray) -> "ReliabilityFusion":
-        """Isotonic calibration of raw stacker scores → P(correct), inner data only."""
-        r = np.asarray(r_raw, dtype=float)
-        y = np.asarray(y_correct, dtype=int)
+        """Calibrate raw stacker scores → P(correct) on inner data only.
+
+        Small n or few unique raw scores → Platt (logistic); otherwise isotonic
+        with bounds away from exact 0/1 to reduce tie collapse.
+        """
+        r = np.asarray(r_raw, dtype=float).ravel()
+        y = np.asarray(y_correct, dtype=int).ravel()
+        self.calibration_n = int(len(r))
+        self.calibration_method = None
+        self.calibrator = None
         if len(np.unique(y)) < 2 or len(r) < 5:
-            self.calibrator = None
             return self
-        iso = IsotonicRegression(out_of_bounds="clip", y_min=0.0, y_max=1.0)
+        eps = float(self.conf_eps)
+        n_unique = int(len(np.unique(np.round(r, 6))))
+        # Platt when small n or isotonic would be nearly constant (ties).
+        use_platt = len(r) < 40 or n_unique < 5
+        if use_platt:
+            from sklearn.linear_model import LogisticRegression
+
+            lr = LogisticRegression(solver="lbfgs", max_iter=1000)
+            lr.fit(r.reshape(-1, 1), y)
+            self.calibrator = lr
+            self.calibration_method = "platt"
+            return self
+        iso = IsotonicRegression(out_of_bounds="clip", y_min=eps, y_max=1.0 - eps)
         iso.fit(r, y)
         self.calibrator = iso
+        self.calibration_method = "isotonic"
         return self
 
     def _raw_score(self, r_vec: np.ndarray) -> float:
@@ -328,9 +350,18 @@ class ReliabilityFusion:
 
     def r_final(self, r_vec: np.ndarray) -> float:
         raw = self._raw_score(r_vec)
+        eps = float(self.conf_eps)
         if self.calibrator is not None:
-            return float(self.calibrator.predict([raw])[0])
-        return raw
+            if self.calibration_method == "platt" or (
+                hasattr(self.calibrator, "predict_proba")
+                and not isinstance(self.calibrator, IsotonicRegression)
+            ):
+                val = float(self.calibrator.predict_proba([[raw]])[0, 1])
+            else:
+                val = float(self.calibrator.predict([raw])[0])
+        else:
+            val = raw
+        return float(np.clip(val, eps, 1.0 - eps))
 
     def set_decision_thresholds(self, thresholds: dict[str, float]) -> None:
         self.decision_thresholds.update(thresholds)
@@ -347,9 +378,12 @@ class ReliabilityFusion:
         When caution_t < accept_t, scores in [caution_t, accept_t) stay
         accept_with_caution (caution floors accept; label changes at accept_t).
         engineering_verification is NEVER above accept.
+
+        Learned ``decision_thresholds`` are authoritative. Hand-set routing
+        keys override only when ``cfg['override_decision_thresholds']`` is true.
         """
         thr = dict(self.decision_thresholds)
-        if cfg:
+        if cfg and bool(cfg.get("override_decision_thresholds")):
             for k in (
                 "abstain_r_final",
                 "engineering_verification",
@@ -385,6 +419,9 @@ class ReliabilityFusion:
                 "feature_mask": self.feature_mask,
                 "feature_report": self.feature_report,
                 "calibrator": self.calibrator,
+                "calibration_method": self.calibration_method,
+                "calibration_n": self.calibration_n,
+                "conf_eps": self.conf_eps,
                 "decision_thresholds": self.decision_thresholds,
             },
             path,
@@ -404,9 +441,18 @@ class ReliabilityFusion:
             )
             obj.feature_report = data.get("feature_report", {})
             obj.calibrator = data.get("calibrator")
+            obj.calibration_method = data.get("calibration_method")
+            obj.calibration_n = int(data.get("calibration_n", 0) or 0)
+            obj.conf_eps = float(data.get("conf_eps", obj.conf_eps))
             obj.decision_thresholds = data.get(
                 "decision_thresholds", obj.decision_thresholds
             )
+            # Infer method for older blobs
+            if obj.calibrator is not None and obj.calibration_method is None:
+                if isinstance(obj.calibrator, IsotonicRegression):
+                    obj.calibration_method = "isotonic"
+                elif hasattr(obj.calibrator, "predict_proba"):
+                    obj.calibration_method = "platt"
             return obj
         # Legacy sklearn LogisticRegression blob
         model = data.get("model")

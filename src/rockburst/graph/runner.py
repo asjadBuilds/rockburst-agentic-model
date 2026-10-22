@@ -46,6 +46,7 @@ Action = Literal[
     "recheck_data",
     "recheck_model",
     "finalize",
+    "forced_abstain",
 ]
 
 ALLOWED_ACTIONS = frozenset(
@@ -60,6 +61,7 @@ ALLOWED_ACTIONS = frozenset(
         "recheck_data",
         "recheck_model",
         "finalize",
+        "forced_abstain",
     }
 )
 
@@ -131,7 +133,45 @@ def action_preconditions_met(action: str, state: CaseState) -> bool:
         return state.critic is not None and not state.critic.endorse
     if action == "finalize":
         return state.unc is not None and state.pred is not None
+    if action == "forced_abstain":
+        return True
     return False
+
+
+def _missing_evidence(state: CaseState) -> bool:
+    return state.pred is None or state.unc is None or state.data_q is None
+
+
+def _unresolved_objections(state: CaseState) -> bool:
+    if state.critic is not None and not state.critic.endorse:
+        return True
+    return bool(state.validation_objections)
+
+
+def apply_forced_abstain(state: CaseState, cfg: dict[str, Any]) -> CaseState:
+    """Hard stop: fuse available evidence and abstain (documented max_loops termination)."""
+    trace = list(state.route_trace)
+    if "forced_finalize" not in trace:
+        trace = trace + ["forced_finalize"]
+    state.result = fuse_assessment(
+        state.data_q,
+        state.phys,
+        state.pred,
+        state.unc,
+        cfg,
+        trace,
+        critic=state.critic,
+        recheck_payloads=state.recheck_payloads,
+        physics_skipped=state.physics_skipped,
+    )
+    state.result["recommended_action"] = "abstain"
+    state.result["abstained"] = True
+    state.result["decision"] = (
+        "Forced stop at loop limit; abstain pending review."
+    )
+    state.result["route_trace"] = trace
+    state.done = True
+    return state
 
 
 def rule_based_next_action(
@@ -139,7 +179,10 @@ def rule_based_next_action(
 ) -> Action:
     """Deterministic planner implementing required routing predicates."""
     rt = cfg.get("routing", {})
+    # C2: at loop limit, abstain if Critic objections / evidence still open — never quiet-finalize.
     if state.loop >= state.max_loops:
+        if _unresolved_objections(state) or _missing_evidence(state):
+            return "forced_abstain"
         return "finalize"
     if state.data_q is None:
         return "data_quality"
@@ -157,7 +200,9 @@ def rule_based_next_action(
         return "uncertainty"
 
     # Extra validation is part of coordinator routing (M6+), independent of Critic.
-    if not state.extra_validation_done and needs_extra_validation(state.data_q, cfg):
+    if not state.extra_validation_done and needs_extra_validation(
+        state.data_q, cfg, phys=state.phys
+    ):
         return "extra_validation"
 
     need_critic = False
@@ -178,19 +223,17 @@ def rule_based_next_action(
     if need_critic and state.critic is None:
         return "critic"
 
+    # C1: keep Critic until the recheck tool runs (preconditions require it).
     if state.critic is not None and not state.critic.endorse:
         req = state.critic.request_recheck
         if req == "physics" and state.recheck_counts["physics"] < 1:
             state.recheck_counts["physics"] += 1
-            state.critic = None
             return "recheck_physics"
         if req == "data" and state.recheck_counts["data"] < 1:
             state.recheck_counts["data"] += 1
-            state.critic = None
             return "recheck_data"
         if req == "model" and state.recheck_counts["model"] < 1:
             state.recheck_counts["model"] += 1
-            state.critic = None
             return "recheck_model"
         return "finalize"
     return "finalize"
@@ -387,7 +430,10 @@ def step(
         action = "finalize"
 
     # Guard even rules path for safety (e.g. finalize before unc)
-    if not action_preconditions_met(action, state) and action != "finalize":
+    if (
+        not action_preconditions_met(action, state)
+        and action not in {"finalize", "forced_abstain"}
+    ):
         state.route_trace.append(f"rejected:{action}")
         PLANNER_STATS["rejected"] += 1
         action = rule_based_next_action(state, cfg, allow_critic=allow_critic)
@@ -458,6 +504,7 @@ def step(
         state.validation_objections = validation_objections_from_rechecks(
             state.recheck_payloads
         )
+        state.critic = None  # clear only after successful recheck
     elif action == "recheck_data":
         X_tr, y_tr = _fold_xy(cfg, reference)
         name = str(cfg.get("_fold_model_name") or "")
@@ -496,6 +543,7 @@ def step(
         state.validation_objections = validation_objections_from_rechecks(
             state.recheck_payloads
         )
+        state.critic = None  # clear only after successful recheck
     elif action == "recheck_model":
         X_tr, y_tr = _fold_xy(cfg, reference)
         name = str(cfg.get("_fold_model_name") or "")
@@ -518,6 +566,9 @@ def step(
         state.validation_objections = validation_objections_from_rechecks(
             state.recheck_payloads
         )
+        state.critic = None  # clear only after successful recheck
+    elif action == "forced_abstain":
+        apply_forced_abstain(state, cfg)
     elif action == "finalize":
         state.result = fuse_assessment(
             state.data_q,
@@ -545,27 +596,13 @@ def run_graph(
     state = CaseState(
         case=case, max_loops=int(cfg.get("routing", {}).get("max_loops", 8))
     )
-    while not state.done and state.loop < state.max_loops + 2:
+    # Allow one terminating step at loop == max_loops (finalize or forced_abstain).
+    while not state.done and state.loop <= state.max_loops:
         state = step(
             state, reference, cfg, use_llm=use_llm, allow_critic=allow_critic
         )
     if not state.done:
-        state.result = fuse_assessment(
-            state.data_q,
-            state.phys,
-            state.pred,
-            state.unc,
-            cfg,
-            state.route_trace + ["forced_finalize"],
-            critic=state.critic,
-            recheck_payloads=state.recheck_payloads,
-            physics_skipped=state.physics_skipped,
-        )
-        state.result["recommended_action"] = "abstain"
-        state.result["abstained"] = True
-        state.result["decision"] = (
-            "Forced stop at loop limit; abstain pending review."
-        )
+        apply_forced_abstain(state, cfg)
     return state.result or {}
 
 

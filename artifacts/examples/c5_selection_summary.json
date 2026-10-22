@@ -1,0 +1,17 @@
+{
+  "fold_model": "rf__iterative",
+  "n_test_fold0": 69,
+  "abstain_found": true,
+  "abstain_no": 77,
+  "failure_found": true,
+  "failure_no": 77,
+  "scanned": [
+    {
+      "fold": 0,
+      "no": 77,
+      "action": "abstain",
+      "fold_err": 3
+    }
+  ],
+  "note": "C5: abstain/failure selected from held-out folds via rules FSM"
+}

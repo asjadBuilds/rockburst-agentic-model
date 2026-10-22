@@ -19,6 +19,7 @@ from rockburst.config import resolve_path
 from rockburst.eval.metrics import classification_report_dict, expected_calibration_error
 from rockburst.fusion.features import compute_r_model, compute_reliability_features
 from rockburst.fusion.stacker import ReliabilityFusion, select_decision_thresholds
+from rockburst.ml.ordinal import argmax_grade, median_of_distribution
 from rockburst.ml.pipelines import build_preprocess, prepare_xy
 from rockburst.ml.tuning import (
     DEFAULT_N_TRIALS,
@@ -111,6 +112,53 @@ def _fit_conformal(
     return fit_marginal_thresholds(y_calib, p_cal, alpha=alpha)
 
 
+def fit_fold_ensemble(
+    X: pd.DataFrame,
+    y: np.ndarray,
+    fit_idx: np.ndarray,
+    ranked: list[tuple[str, dict[str, Any]]],
+    *,
+    seed: int,
+    fold: int,
+    top_k: int = 3,
+) -> dict[str, Any]:
+    """Fit top-k ensemble members on fold fit indices only (no full-data reuse)."""
+    ensemble: dict[str, Any] = {}
+    for key, meta in ranked[:top_k]:
+        mname, mimp = key.split("__", 1)
+        fold_params_list = meta.get("fold_params") or []
+        if fold < len(fold_params_list) and fold_params_list[fold]:
+            params = fold_params_list[fold]
+        else:
+            params = meta.get("best_params") or {}
+        mest = estimator_from_params(mname, params, seed + fold)
+        pipe = Pipeline(
+            [("prep", build_preprocess(mimp)), ("model", clone(mest))]
+        )
+        pipe.fit(X.iloc[fit_idx], y[fit_idx])
+        ensemble[key] = pipe
+    return ensemble
+
+
+def _risk_coverage_curve(
+    confidence: np.ndarray, correct: np.ndarray
+) -> dict[str, Any]:
+    """Accuracy when keeping top-confidence fraction; area under curve."""
+    if len(confidence) == 0:
+        return {"points": [], "area": None}
+    order = np.argsort(-np.asarray(confidence, dtype=float))
+    corr = np.asarray(correct, dtype=float)[order]
+    coverages = np.linspace(0.1, 1.0, 10)
+    points = []
+    accs = []
+    for keep in coverages:
+        n_keep = max(1, int(round(keep * len(corr))))
+        acc = float(corr[:n_keep].mean())
+        points.append({"coverage": float(keep), "accuracy": acc})
+        accs.append(acc)
+    return {"points": points, "area": float(np.trapezoid(accs, coverages))}
+
+
 def _live_r_for_case(
     case: dict[str, Any],
     *,
@@ -182,7 +230,10 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         "protocol_note": (
             "selection_biased: argmax pooled outer-OOF QWK over model×imputer. "
             "nested_unbiased: per outer fold pick model×imputer by inner QWK only. "
-            "pooled_oof vs mean_fold are both reported for every candidate."
+            "production (M10): model×imputer with best mean inner_qwk across outer folds "
+            "(not mode-of-winners); fold-winner instability reported separately. "
+            "pooled_oof vs mean_fold are both reported for every candidate. "
+            "Decoding (M8): argmax and median-of-distribution QWK compared on OOF."
         ),
     }
 
@@ -261,7 +312,7 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                     conf = fit_marginal_thresholds(y[calib_idx], p_cal, alpha=alpha)
                     conf.n_fit = int(len(fit_idx))
                 proba = _predict_proba_safe(pipe, X.iloc[te])
-                pred = proba.argmax(axis=1)
+                pred = argmax_grade(proba)
                 oof_pred[te] = pred
                 oof_proba[te] = proba
                 sets = [
@@ -269,6 +320,7 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                         proba[i],
                         alpha=alpha,
                         class_thresholds=None if conf is None else conf.class_thresholds,
+                        contiguous=True,
                     )
                     for i in range(len(te))
                 ]
@@ -301,6 +353,9 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                 )
 
             pooled = classification_report_dict(y, oof_pred, oof_proba)
+            # M8: median-of-distribution vs argmax on the same OOF probabilities
+            med_pred = median_of_distribution(oof_proba)
+            pooled_median = classification_report_dict(y, med_pred, oof_proba)
             cov_vals = [c["coverage"] for c in fold_coverage if c.get("coverage") is not None]
             size_vals = [c["mean_size"] for c in fold_coverage if c.get("mean_size") is not None]
             pooled["prediction_set_coverage"] = float(np.mean(cov_vals)) if cov_vals else None
@@ -308,6 +363,13 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
             mean_fold = _mean_fold_metrics(fold_metrics)
             results["models"][key] = {
                 "pooled_oof": pooled,
+                "pooled_oof_median_decode": pooled_median,
+                "decode_comparison": {
+                    "argmax_qwk": pooled.get("qwk"),
+                    "median_qwk": pooled_median.get("qwk"),
+                    "argmax_ordinal_mae": pooled.get("ordinal_mae"),
+                    "median_ordinal_mae": pooled_median.get("ordinal_mae"),
+                },
                 "mean_fold": mean_fold,
                 "overall": pooled,  # backward-compat alias = pooled
                 "folds": fold_metrics,
@@ -376,31 +438,75 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         )
 
     nested_pooled = classification_report_dict(y, nested_oof_pred, nested_oof_proba)
-    prod_from_nested = (
-        Counter(nested_fold_winners).most_common(1)[0][0]
-        if nested_fold_winners
-        else biased_name
+    winner_counts = Counter(nested_fold_winners)
+    mode_winner = (
+        winner_counts.most_common(1)[0][0] if nested_fold_winners else biased_name
     )
+    mode_count = int(winner_counts.most_common(1)[0][1]) if nested_fold_winners else 0
+
+    # M10: production = best mean inner_qwk across folds (pre-stated), not mode-of-winners
+    prod_by_mean_inner = None
+    best_mean_iq = -1e9
+    for key, meta in results["models"].items():
+        iq_m = meta.get("inner_qwk_mean")
+        if iq_m is None or not np.isfinite(float(iq_m)):
+            continue
+        if float(iq_m) > best_mean_iq:
+            best_mean_iq = float(iq_m)
+            prod_by_mean_inner = key
+
     results["nested_unbiased"] = {
         "pooled_oof": nested_pooled,
         "mean_fold": _mean_fold_metrics(
             [{**m, "conformal": {}} for m in nested_fold_metrics]
         ),
         "fold_winners": nested_fold_winners,
-        "production_model": prod_from_nested,
-        "note": "Unbiased: model×imputer selected inside each outer fold on inner QWK only.",
+        "mode_of_winners": mode_winner,
+        "production_model": prod_by_mean_inner or mode_winner,
+        "note": (
+            "Unbiased OOF: per outer fold pick by inner QWK. "
+            "Production artefact uses best mean inner_qwk (M10), not mode-of-winners."
+        ),
+    }
+    results["fold_winner_instability"] = {
+        "fold_winners": nested_fold_winners,
+        "unique_winners": len(set(nested_fold_winners)),
+        "mode_of_winners": mode_winner,
+        "mode_count": mode_count,
+        "mode_fraction": (
+            float(mode_count) / len(nested_fold_winners) if nested_fold_winners else None
+        ),
+        "winner_counts": dict(winner_counts),
+        "production_rule": "best_mean_inner_qwk",
+        "production_model": prod_by_mean_inner,
+        "production_inner_qwk_mean": best_mean_iq if prod_by_mean_inner else None,
+        "mode_differs_from_production": bool(
+            mode_winner and prod_by_mean_inner and mode_winner != prod_by_mean_inner
+        ),
     }
 
-    # Headline / production model = nested mode (honest); keep biased for comparison
-    best_name = prod_from_nested or biased_name
+    # Headline / production model = best mean inner (M10); keep biased for comparison
+    best_name = prod_by_mean_inner or mode_winner or biased_name
     results["best_model"] = best_name
     results["best_qwk"] = (
-        nested_pooled.get("qwk") if nested_pooled else results["selection_biased"]["pooled_oof"]["qwk"]
+        results["models"][best_name]["pooled_oof"].get("qwk")
+        if best_name and best_name in results["models"]
+        else (nested_pooled.get("qwk") if nested_pooled else None)
     )
     results["best_qwk_selection_biased"] = (
         results["selection_biased"]["pooled_oof"]["qwk"] if biased_name else None
     )
     results["best_qwk_nested_unbiased"] = nested_pooled.get("qwk")
+    # M8 summary table across all candidates
+    results["ordinal_decode_table"] = [
+        {
+            "model": key,
+            **(meta.get("decode_comparison") or {}),
+            "is_frank_hall": key.startswith("frank_hall"),
+            "is_ordinal_logistic": key.startswith("ordinal_logistic"),
+        }
+        for key, meta in results["models"].items()
+    ]
     best_params = (
         results["models"][best_name]["fold_params"][0]
         if best_name and results["models"].get(best_name, {}).get("fold_params")
@@ -451,32 +557,59 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                     method_size[m].append(float(cmp_[m]["mean_size"]))
                     per_class_cov[m].append(cmp_[m].get("per_class", {}))
 
-        # Aggregate comparison
+        # Aggregate comparison (include per-class for grade-3 Mondrian decision)
         agg_cmp: dict[str, Any] = {}
         for m in method_cov:
             if not method_cov[m]:
                 continue
+            # Merge per-class coverage across folds (mean)
+            per_class_agg: dict[str, Any] = {}
+            for pc in per_class_cov[m]:
+                for c, block in (pc or {}).items():
+                    per_class_agg.setdefault(c, {"coverage": [], "mean_size": [], "n": []})
+                    if block.get("coverage") is not None:
+                        per_class_agg[c]["coverage"].append(float(block["coverage"]))
+                    if block.get("mean_size") is not None:
+                        per_class_agg[c]["mean_size"].append(float(block["mean_size"]))
+                    if block.get("n") is not None:
+                        per_class_agg[c]["n"].append(int(block["n"]))
+            per_class_out = {
+                c: {
+                    "coverage": float(np.mean(v["coverage"])) if v["coverage"] else None,
+                    "mean_size": float(np.mean(v["mean_size"])) if v["mean_size"] else None,
+                    "n_mean": float(np.mean(v["n"])) if v["n"] else None,
+                }
+                for c, v in per_class_agg.items()
+            }
             agg_cmp[m] = {
                 "coverage": float(np.mean(method_cov[m])),
                 "mean_size": float(np.mean(method_size[m])),
                 "coverage_std": float(np.std(method_cov[m], ddof=1)) if len(method_cov[m]) > 1 else 0.0,
+                "per_class": per_class_out,
             }
-        chosen = "marginal_split"  # design choice (design_decisions_log); not picked by closeness to 0.90
+        class_counts_ex = (
+            fold_comparisons[0].get("class_calib_counts") if fold_comparisons else []
+        )
+        pick_payload = {
+            **agg_cmp,
+            "class_calib_counts": class_counts_ex,
+        }
+        chosen = pick_defensible_method(pick_payload, alpha=alpha)
         results["conformal"] = {
             "alpha": alpha,
             "method": chosen,
             "comparison": agg_cmp,
-            "class_calib_counts_example": (
-                fold_comparisons[0].get("class_calib_counts") if fold_comparisons else []
-            ),
+            "class_calib_counts_example": class_counts_ex,
+            "contiguous_ordinal_sets": True,
             "selection_note": (
-                "A priori marginal_split (simplest finite-sample guarantee). "
-                "Mondrian / CV+ reported in comparison; not selected by test coverage."
+                "M11: prefer Mondrian when grade-3 has ≥5 calib samples (class-conditional); "
+                "else coverage closest to 1−α with Mondrian tie-break. "
+                "Prediction sets forced contiguous on the ordinal grade scale."
             ),
         }
         conformal_method = chosen
     else:
-        conformal_method = "marginal_split"
+        conformal_method = "mondrian_split"
 
     # Recompute biased & nested headline coverage with chosen method
     def _recompute_coverage(key: str) -> dict[str, Any]:
@@ -605,6 +738,9 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
             best_oof_pred[te] = proba_te.argmax(axis=1)
             best_oof_proba[te] = proba_te
             fold_of_row[te] = fold
+            fold_ensemble = fit_fold_ensemble(
+                X, y, fit_idx, ranked, seed=seed, fold=fold, top_k=3
+            )
             for k, j in enumerate(te):
                 case = df.iloc[int(j)].to_dict()
                 R[j] = _live_r_for_case(
@@ -615,7 +751,7 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                     proba=proba_te[k],
                     cfg=live_cfg,
                     conformal=conf,
-                    ensemble=None,
+                    ensemble=fold_ensemble,
                 )
 
         y_correct = (best_oof_pred == y).astype(int)
@@ -641,7 +777,9 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
 
             mask = locked_feature_mask()
             feat_report = locked_feature_report()
-            fold_fusion = ReliabilityFusion().fit(
+            fold_fusion = ReliabilityFusion()
+            fold_fusion.conf_eps = float(cfg.get("fusion", {}).get("conf_eps", 1e-3))
+            fold_fusion.fit(
                 R[idx_fit], y_correct[idx_fit], feature_mask=mask, select_features=False
             )
             fold_fusion.feature_report = feat_report
@@ -679,9 +817,9 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
 
         mask = locked_feature_mask()
         feat_report = locked_feature_report()
-        fusion = ReliabilityFusion().fit(
-            R, y_correct, feature_mask=mask, select_features=False
-        )
+        fusion = ReliabilityFusion()
+        fusion.conf_eps = float(cfg.get("fusion", {}).get("conf_eps", 1e-3))
+        fusion.fit(R, y_correct, feature_mask=mask, select_features=False)
         fusion.feature_report = feat_report
         if fusion.is_fit:
             r_raw_all = np.array(
@@ -736,10 +874,32 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         results["fusion_mean_r_final"] = float(r_final_oof[held].mean())
         results["fusion_oof_accuracy_of_base"] = float(y_correct[held].mean())
         results["fusion_calibrated"] = fusion.calibrator is not None
+        results["fusion_calibration_method"] = fusion.calibration_method
+        results["fusion_calibration_n"] = int(fusion.calibration_n)
         results["fusion_crossfit_disjoint"] = True
         results["missing_d_confidence_note"] = (
             "See artifacts/baselines/fusion_missing_d_drop.json (Item 2)."
         )
+        # C4: risk–coverage max-prob vs calibrated R_final (held-out OOF)
+        max_prob = best_oof_proba[held].max(axis=1)
+        rc_max = _risk_coverage_curve(max_prob, y_correct[held])
+        rc_rf = _risk_coverage_curve(r_final_oof[held], y_correct[held])
+        results["risk_coverage_max_prob"] = rc_max
+        results["risk_coverage_r_final"] = rc_rf
+        a_max = rc_max.get("area")
+        a_rf = rc_rf.get("area")
+        results["risk_coverage_comparison"] = {
+            "max_prob_area": a_max,
+            "r_final_area": a_rf,
+            "r_final_minus_max_prob": (
+                None if a_max is None or a_rf is None else float(a_rf - a_max)
+            ),
+            "note": (
+                "Locked set A uses r_model only; R_final is a calibrated monotone "
+                "map of max-prob-like confidence. Near-zero Δ is expected collapse, "
+                "not proof agents add ranking signal."
+            ),
+        }
 
         bins = np.linspace(0, 1, 11)
         diagram = []

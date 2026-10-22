@@ -1,22 +1,48 @@
 {
   "predicted_grade": 2,
-  "prediction_probability": 0.818729573172379,
+  "predicted_intensity": "moderate",
+  "prediction_probability": 0.7159698865256184,
   "prediction_set": [
-    2
+    2,
+    3
   ],
-  "physics_consistency": 0.6166666666666666,
-  "input_reliability": 0.7882836447855734,
+  "prediction_set_intensities": [
+    "moderate",
+    "strong"
+  ],
+  "physics_consistency": 0.3333333333333333,
+  "input_reliability": 0.6238805970149254,
   "ood_status": "No",
-  "prediction_stability": "high",
-  "agent_disagreement": "low",
-  "final_system_confidence": 0.999999,
-  "decision": "Prediction accepted; routine monitoring recommended.",
-  "recommended_action": "accept",
+  "prediction_stability": "moderate",
+  "agent_disagreement": "inter_agent",
+  "inter_agent_disagreement": {
+    "ml_grade": 2,
+    "ml_intensity": "moderate",
+    "criteria_consensus_grade": null,
+    "criteria_intensity": "unknown",
+    "criteria_grades": {},
+    "ml_vs_criteria": false,
+    "critic_endorse": false,
+    "critic_rules_fired": [
+      "low_physics",
+      "b1_inconsistency",
+      "identity_violation",
+      "suspected_row_shift",
+      "validation_objection"
+    ],
+    "parties": [
+      "critic_vs_fusion_path"
+    ],
+    "has_disagreement": true
+  },
+  "final_system_confidence": 0.49,
+  "decision": "Forced stop at loop limit; abstain pending review.",
+  "recommended_action": "abstain",
   "probabilities": [
-    0.0078125,
-    0.06346759740606651,
-    0.818729573172379,
-    0.10999032942155443
+    0.007440528304118502,
+    0.05673730805599777,
+    0.7159698865256184,
+    0.219852277114265
   ],
   "route_trace": [
     "rules:data_quality",
@@ -24,11 +50,16 @@
     "rules:predict",
     "rules:uncertainty",
     "rules:extra_validation",
-    "rules:finalize"
+    "rules:critic",
+    "rules:recheck_physics",
+    "rules:critic",
+    "rules:forced_abstain",
+    "forced_finalize"
   ],
-  "abstained": false,
-  "critic_endorse": null,
-  "downgrade_reason": null,
+  "abstained": true,
+  "critic_endorse": false,
+  "downgrade_reason": "Critic severe rules ['identity_violation', 'suspected_row_shift']; escalated accept \u2192 abstain; consistency: abstain with R_final=0.999\u22650.95; clamped reported confidence to 0.490",
+  "consistency_note": "consistency: abstain with R_final=0.999\u22650.95; clamped reported confidence to 0.490",
   "physics_skipped": false,
   "recheck_payloads": {
     "alt_imputer": {
@@ -68,16 +99,43 @@
       "large_spread": false,
       "primary_imputer": "knn",
       "primary_grade": 2
+    },
+    "physics_tol": {
+      "tool": "physics_recheck_perturbed_tolerance",
+      "physics_score_stated": 0.2375,
+      "physics_score_tight": 0.08749999999999997,
+      "borderline_relations": [
+        "scf"
+      ],
+      "issues_stated": [
+        "b1 inconsistency: observed=0.15, expected=14.73",
+        "suspected_row_shift: listed B1 far from sigma_c/sigma_t (see rows 244\u2013246 pattern)"
+      ],
+      "issues_tight": [
+        "scf inconsistency: observed=0.4, expected=0.4045",
+        "b1 inconsistency: observed=0.15, expected=14.73",
+        "suspected_row_shift: listed B1 far from sigma_c/sigma_t (see rows 244\u2013246 pattern)"
+      ],
+      "low_physics": true
     }
   },
   "r_vector": {
-    "r_data": 0.7882836447855734,
-    "r_physics": 0.6166666666666666,
-    "r_model": 0.818729573172379,
-    "r_uncertainty": 0.731902548643969,
-    "r_stability": 0.9449998868932237,
+    "r_data": 0.6238805970149254,
+    "r_physics": 0.3333333333333333,
+    "r_model": 0.8064516129032258,
+    "r_uncertainty": 0.7383383137078254,
+    "r_stability": 0.52,
     "n_missing": 1.0,
     "d_observed": 0.0,
-    "r_final": 0.999999
-  }
+    "r_final": 0.49
+  },
+  "explanation": "Top held-out permutation features: wet, sigma_theta, scf, sigma_c, b1",
+  "critic_rules_fired": [
+    "low_physics",
+    "b1_inconsistency",
+    "identity_violation",
+    "suspected_row_shift",
+    "validation_objection"
+  ],
+  "delivered_planner": "rules_fsm"
 }

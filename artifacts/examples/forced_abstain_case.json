@@ -1,37 +1,54 @@
 {
-  "predicted_grade": 2,
-  "prediction_probability": 0.789930536244047,
-  "prediction_set": [
-    2
-  ],
-  "physics_consistency": 1.0,
-  "input_reliability": 0.7551384837774189,
+  "predicted_grade": null,
+  "predicted_intensity": "unknown",
+  "prediction_probability": null,
+  "prediction_set": [],
+  "prediction_set_intensities": [],
+  "physics_consistency": 0.6565656565656566,
+  "input_reliability": 0.6238805970149254,
   "ood_status": "No",
-  "prediction_stability": "high",
-  "agent_disagreement": "moderate",
-  "final_system_confidence": 0.7903946455562756,
+  "prediction_stability": "unknown",
+  "agent_disagreement": "low",
+  "inter_agent_disagreement": {
+    "ml_grade": null,
+    "ml_intensity": "unknown",
+    "criteria_consensus_grade": null,
+    "criteria_intensity": "unknown",
+    "criteria_grades": {},
+    "ml_vs_criteria": false,
+    "critic_endorse": null,
+    "critic_rules_fired": [],
+    "parties": [],
+    "has_disagreement": false
+  },
+  "final_system_confidence": 0.4883720930232558,
   "decision": "Forced stop at loop limit; abstain pending review.",
   "recommended_action": "abstain",
-  "probabilities": [
-    0.003925060573580097,
-    0.07513873822029703,
-    0.789930536244047,
-    0.1310056649620759
-  ],
+  "probabilities": [],
   "route_trace": [
     "rules:data_quality",
-    "rules:geomechanics",
-    "rules:predict",
-    "rules:uncertainty",
+    "rules:geomechanics_skipped",
+    "rules:forced_abstain",
     "forced_finalize"
   ],
   "abstained": true,
+  "critic_endorse": null,
+  "downgrade_reason": null,
+  "consistency_note": null,
+  "physics_skipped": true,
+  "recheck_payloads": {},
   "r_vector": {
-    "r_data": 0.7551384837774189,
-    "r_physics": 1.0,
-    "r_model": 0.789930536244047,
-    "r_uncertainty": 0.5772123349582554,
-    "r_stability": 0.8429456516541931,
-    "r_final": 0.7903946455562756
-  }
+    "r_data": 0.6238805970149254,
+    "r_physics": 0.6565656565656566,
+    "r_model": 0.56,
+    "r_uncertainty": 0.5096774193548387,
+    "r_stability": 0.52,
+    "n_missing": 8.0,
+    "d_observed": 0.0,
+    "r_final": 0.4883720930232558
+  },
+  "explanation": "Top held-out permutation features: wet, sigma_theta, scf, sigma_c, b1",
+  "critic_rules_fired": [],
+  "delivered_planner": "rules_fsm",
+  "example_protocol": "forced abstain: routing.max_loops=2 stops before predict/uncertainty; output from rules FSM (not hard-coded prose)"
 }

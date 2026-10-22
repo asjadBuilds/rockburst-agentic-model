@@ -10,9 +10,9 @@
   "ood_status": "No",
   "prediction_stability": "moderate",
   "agent_disagreement": "moderate",
-  "final_system_confidence": 0.999999,
-  "decision": "Prediction accepted; routine monitoring recommended.",
-  "recommended_action": "accept",
+  "final_system_confidence": 0.5,
+  "decision": "Confidence insufficient for routine accept; engineering verification recommended.",
+  "recommended_action": "engineering_verification",
   "probabilities": [
     0.0,
     0.10588733513198054,
@@ -39,6 +39,6 @@
     "r_stability": 0.6526699246488328,
     "n_missing": 0.0,
     "d_observed": 1.0,
-    "r_final": 0.999999
+    "r_final": 0.5
   }
 }

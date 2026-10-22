@@ -10,13 +10,15 @@ from typing import Any
 import numpy as np
 from sklearn.base import clone
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC, SVC
 
 from rockburst.eval.metrics import quadratic_weighted_kappa
+from rockburst.ml.ordinal import FrankHallOrdinalClassifier
 from rockburst.ml.pipelines import build_preprocess
 
 try:
@@ -45,22 +47,30 @@ except ImportError:  # pragma: no cover
     LogisticAT = None
 
 
-# Documented equal budget for every M1 family
-DEFAULT_N_TRIALS = 15
+# Slice 6 / M9: equal Optuna budget ≥50 trials per family (quick mode overrides)
+DEFAULT_N_TRIALS = 50
 
 SEARCH_SPACES_DOC = {
     "logistic": {"C": "loguniform(1e-2, 10)"},
     "svm": {
         "kernel": "categorical(linear, rbf)",
-        "C": "loguniform(1e-2, 10)",
-        "gamma": "loguniform(1e-3, 1) if rbf",
+        "C": "loguniform(1e-3, 100)",
+        "gamma": "loguniform(1e-4, 10) if rbf",
         "note": (
-            "Wrapped in CalibratedClassifierCV (sigmoid); reduced space vs full "
-            "SVC(probability=True) grid — equal n_trials, not removed."
+            "Wrapped in CalibratedClassifierCV (sigmoid); broader C/gamma vs Slice 5 "
+            "(M9 retune). Equal n_trials across families."
         ),
     },
     "rf": {"n_estimators": "int(50, 300)", "max_depth": "int(3, 12)"},
-    "extratrees": {"n_estimators": "int(50, 300)", "max_depth": "int(3, 12)"},
+    "mlp": {
+        "hidden_layer_sizes": "categorical((32,), (64,), (32, 16), (64, 32))",
+        "alpha": "loguniform(1e-5, 1e-1)",
+        "learning_rate_init": "loguniform(1e-4, 1e-2)",
+        "note": (
+            "Replaces ExtraTrees (M9): distinct inductive bias (shallow MLP) vs bagged trees; "
+            "avoids near-duplicate RF/ExtraTrees pair."
+        ),
+    },
     "xgboost": {
         "n_estimators": "int(50, 250)",
         "max_depth": "int(2, 6)",
@@ -77,6 +87,15 @@ SEARCH_SPACES_DOC = {
         "learning_rate": "loguniform(0.02, 0.2)",
     },
     "ordinal_logistic": {"alpha": "loguniform(1e-2, 10)"},
+    "frank_hall_rf": {
+        "n_estimators": "int(50, 200)",
+        "max_depth": "int(3, 10)",
+        "note": "Frank–Hall ordinal reduction with RF binary thresholds (M8).",
+    },
+    "frank_hall_logistic": {
+        "C": "loguniform(1e-2, 10)",
+        "note": "Frank–Hall ordinal reduction with logistic binary thresholds (M8).",
+    },
 }
 
 
@@ -105,7 +124,7 @@ def _suggest_estimator(trial: Any, name: str, seed: int) -> Any:
         )
     if name == "svm":
         kernel = trial.suggest_categorical("kernel", ["linear", "rbf"])
-        C = trial.suggest_float("C", 1e-2, 10.0, log=True)
+        C = trial.suggest_float("C", 1e-3, 100.0, log=True)
         if kernel == "linear":
             base = LinearSVC(
                 C=C,
@@ -115,7 +134,7 @@ def _suggest_estimator(trial: Any, name: str, seed: int) -> Any:
                 random_state=seed,
             )
         else:
-            gamma = trial.suggest_float("gamma", 1e-3, 1.0, log=True)
+            gamma = trial.suggest_float("gamma", 1e-4, 10.0, log=True)
             base = SVC(
                 C=C,
                 kernel="rbf",
@@ -131,13 +150,22 @@ def _suggest_estimator(trial: Any, name: str, seed: int) -> Any:
             class_weight="balanced_subsample",
             n_jobs=1,
         )
-    if name == "extratrees":
-        return ExtraTreesClassifier(
-            n_estimators=trial.suggest_int("n_estimators", 50, 300),
-            max_depth=trial.suggest_int("max_depth", 3, 12),
+    if name == "mlp":
+        hidden = trial.suggest_categorical(
+            "hidden_layer_sizes",
+            [(32,), (64,), (32, 16), (64, 32)],
+        )
+        return MLPClassifier(
+            hidden_layer_sizes=hidden,
+            alpha=trial.suggest_float("alpha", 1e-5, 1e-1, log=True),
+            learning_rate_init=trial.suggest_float(
+                "learning_rate_init", 1e-4, 1e-2, log=True
+            ),
+            max_iter=400,
+            early_stopping=True,
+            validation_fraction=0.15,
+            n_iter_no_change=15,
             random_state=seed,
-            class_weight="balanced",
-            n_jobs=1,
         )
     if name == "xgboost" and XGBClassifier is not None:
         return XGBClassifier(
@@ -171,6 +199,22 @@ def _suggest_estimator(trial: Any, name: str, seed: int) -> Any:
         )
     if name == "ordinal_logistic" and LogisticAT is not None:
         return LogisticAT(alpha=trial.suggest_float("alpha", 1e-2, 10.0, log=True))
+    if name == "frank_hall_rf":
+        base = RandomForestClassifier(
+            n_estimators=trial.suggest_int("n_estimators", 50, 200),
+            max_depth=trial.suggest_int("max_depth", 3, 10),
+            random_state=seed,
+            class_weight="balanced_subsample",
+            n_jobs=1,
+        )
+        return FrankHallOrdinalClassifier(base_estimator=base, n_classes=4)
+    if name == "frank_hall_logistic":
+        base = LogisticRegression(
+            C=trial.suggest_float("C", 1e-2, 10.0, log=True),
+            max_iter=2000,
+            class_weight="balanced",
+        )
+        return FrankHallOrdinalClassifier(base_estimator=base, n_classes=4)
     raise ValueError(f"Unknown or unavailable model: {name}")
 
 
@@ -189,9 +233,10 @@ def _predict_proba_safe(model, X) -> np.ndarray:
 
 
 def available_model_names(quick: bool = False) -> list[str]:
-    names = ["logistic", "svm", "rf", "extratrees"]
+    names = ["logistic", "svm", "rf", "mlp"]
     if LogisticAT is not None:
         names.append("ordinal_logistic")
+    names.extend(["frank_hall_logistic", "frank_hall_rf"])
     if XGBClassifier is not None:
         names.append("xgboost")
     if LGBMClassifier is not None:
@@ -199,7 +244,9 @@ def available_model_names(quick: bool = False) -> list[str]:
     if CatBoostClassifier is not None:
         names.append("catboost")
     if quick:
-        return [n for n in names if n in {"logistic", "rf", "lightgbm", "xgboost"}][:3] or names[:3]
+        return [n for n in names if n in {"logistic", "rf", "mlp", "frank_hall_logistic"}][
+            :3
+        ] or names[:3]
     return names
 
 
@@ -226,6 +273,7 @@ def _tuning_cache_key(
         "n": int(len(y)),
         "y_sum": int(np.asarray(y).sum()),
         "n_groups": int(len(np.unique(groups))),
+        "slice6": True,
     }
     raw = json.dumps(payload, sort_keys=True)
     return hashlib.sha256(raw.encode()).hexdigest()[:24]
@@ -293,12 +341,23 @@ def nested_optuna_select(
     study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
     best_est = _suggest_estimator(study.best_trial, model_name, seed)
     params = dict(study.best_params)
+    # Optuna may store tuple as list in JSON round-trip; normalise for MLP
+    if "hidden_layer_sizes" in params and isinstance(params["hidden_layer_sizes"], list):
+        params["hidden_layer_sizes"] = tuple(params["hidden_layer_sizes"])
     score = float(study.best_value)
     if cache_path is not None:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
+        # JSON-serialise tuples
+        ser_params = {
+            k: (list(v) if isinstance(v, tuple) else v) for k, v in params.items()
+        }
         cache_path.write_text(
             json.dumps(
-                {"best_params": params, "best_inner_qwk": score, "model_name": model_name},
+                {
+                    "best_params": ser_params,
+                    "best_inner_qwk": score,
+                    "model_name": model_name,
+                },
                 indent=2,
             )
         )
@@ -307,6 +366,9 @@ def nested_optuna_select(
 
 def estimator_from_params(name: str, params: dict[str, Any], seed: int) -> Any:
     """Build an estimator from a frozen Optuna param dict (no new search)."""
+    params = dict(params or {})
+    if "hidden_layer_sizes" in params and isinstance(params["hidden_layer_sizes"], list):
+        params["hidden_layer_sizes"] = tuple(params["hidden_layer_sizes"])
 
     class _T:
         def suggest_float(self, n, low, high, log=False):

@@ -1,0 +1,458 @@
+{
+  "m13_triplet_sensitivity": {
+    "n_triplets": 281,
+    "n_multi_row_triplets": 29,
+    "n_conflicting_grade_triplets": 21,
+    "top_span_examples": [
+      {
+        "triplet": {
+          "sigma_c": 30.0,
+          "sigma_t": 2.67,
+          "wet": 2.03
+        },
+        "n": 3,
+        "nos": [
+          69,
+          73,
+          77
+        ],
+        "grades": [
+          1,
+          2,
+          3
+        ],
+        "grade_span": 2
+      },
+      {
+        "triplet": {
+          "sigma_c": 150.0,
+          "sigma_t": 5.4,
+          "wet": 7.8
+        },
+        "n": 2,
+        "nos": [
+          18,
+          338
+        ],
+        "grades": [
+          0,
+          2
+        ],
+        "grade_span": 2
+      },
+      {
+        "triplet": {
+          "sigma_c": 180.0,
+          "sigma_t": 8.3,
+          "wet": 5.0
+        },
+        "n": 6,
+        "nos": [
+          6,
+          11,
+          14,
+          315,
+          316,
+          320
+        ],
+        "grades": [
+          2,
+          2,
+          2,
+          3,
+          3,
+          3
+        ],
+        "grade_span": 1
+      },
+      {
+        "triplet": {
+          "sigma_c": 86.3,
+          "sigma_t": 15.6,
+          "wet": 6.3
+        },
+        "n": 6,
+        "nos": [
+          134,
+          138,
+          142,
+          146,
+          150,
+          154
+        ],
+        "grades": [
+          2,
+          2,
+          3,
+          3,
+          3,
+          3
+        ],
+        "grade_span": 1
+      },
+      {
+        "triplet": {
+          "sigma_c": 61.1,
+          "sigma_t": 5.3,
+          "wet": 7.2
+        },
+        "n": 6,
+        "nos": [
+          135,
+          139,
+          143,
+          147,
+          151,
+          155
+        ],
+        "grades": [
+          2,
+          2,
+          3,
+          3,
+          3,
+          3
+        ],
+        "grade_span": 1
+      },
+      {
+        "triplet": {
+          "sigma_c": 99.2,
+          "sigma_t": 7.3,
+          "wet": 8.31
+        },
+        "n": 6,
+        "nos": [
+          136,
+          140,
+          144,
+          148,
+          152,
+          156
+        ],
+        "grades": [
+          2,
+          2,
+          3,
+          3,
+          3,
+          3
+        ],
+        "grade_span": 1
+      },
+      {
+        "triplet": {
+          "sigma_c": 91.3,
+          "sigma_t": 14.5,
+          "wet": 21.0
+        },
+        "n": 6,
+        "nos": [
+          137,
+          141,
+          145,
+          149,
+          153,
+          157
+        ],
+        "grades": [
+          2,
+          2,
+          3,
+          3,
+          3,
+          3
+        ],
+        "grade_span": 1
+      },
+      {
+        "triplet": {
+          "sigma_c": 110.0,
+          "sigma_t": 4.5,
+          "wet": 6.31
+        },
+        "n": 3,
+        "nos": [
+          66,
+          70,
+          74
+        ],
+        "grades": [
+          2,
+          2,
+          3
+        ],
+        "grade_span": 1
+      },
+      {
+        "triplet": {
+          "sigma_c": 120.0,
+          "sigma_t": 5.0,
+          "wet": 5.1
+        },
+        "n": 3,
+        "nos": [
+          68,
+          72,
+          76
+        ],
+        "grades": [
+          1,
+          2,
+          2
+        ],
+        "grade_span": 1
+      },
+      {
+        "triplet": {
+          "sigma_c": 170.0,
+          "sigma_t": 11.3,
+          "wet": 9.0
+        },
+        "n": 2,
+        "nos": [
+          1,
+          327
+        ],
+        "grades": [
+          2,
+          3
+        ],
+        "grade_span": 1
+      },
+      {
+        "triplet": {
+          "sigma_c": 220.0,
+          "sigma_t": 7.4,
+          "wet": 7.3
+        },
+        "n": 2,
+        "nos": [
+          2,
+          324
+        ],
+        "grades": [
+          1,
+          2
+        ],
+        "grade_span": 1
+      },
+      {
+        "triplet": {
+          "sigma_c": 165.0,
+          "sigma_t": 9.4,
+          "wet": 9.0
+        },
+        "n": 2,
+        "nos": [
+          3,
+          344
+        ],
+        "grades": [
+          1,
+          2
+        ],
+        "grade_span": 1
+      },
+      {
+        "triplet": {
+          "sigma_c": 176.0,
+          "sigma_t": 7.3,
+          "wet": 9.3
+        },
+        "n": 2,
+        "nos": [
+          4,
+          336
+        ],
+        "grades": [
+          2,
+          3
+        ],
+        "grade_span": 1
+      },
+      {
+        "triplet": {
+          "sigma_c": 88.7,
+          "sigma_t": 3.7,
+          "wet": 6.6
+        },
+        "n": 2,
+        "nos": [
+          5,
+          82
+        ],
+        "grades": [
+          2,
+          3
+        ],
+        "grade_span": 1
+      },
+      {
+        "triplet": {
+          "sigma_c": 180.0,
+          "sigma_t": 6.7,
+          "wet": 5.5
+        },
+        "n": 2,
+        "nos": [
+          7,
+          341
+        ],
+        "grades": [
+          1,
+          2
+        ],
+        "grade_span": 1
+      }
+    ]
+  },
+  "m14_label_policies": {
+    "as_given": {
+      "n": 344,
+      "n_dropped_vs_as_given": 0,
+      "headline_logistic_oof": {
+        "n": 344,
+        "qwk": 0.59994656734479,
+        "accuracy": 0.49127906976744184,
+        "ordinal_mae": 0.622093023255814,
+        "severe_misclassification_rate": 0.10755813953488372
+      },
+      "missing_d_vs_grade": {
+        "with_d": {
+          "n": 213,
+          "grade_counts": {
+            "0": 37,
+            "1": 66,
+            "2": 68,
+            "3": 42
+          },
+          "mean_grade": 1.539906103286385
+        },
+        "missing_d": {
+          "n": 131,
+          "grade_counts": {
+            "0": 13,
+            "1": 32,
+            "2": 55,
+            "3": 31
+          },
+          "mean_grade": 1.7938931297709924
+        }
+      }
+    },
+    "drop_rows_315_344": {
+      "n": 314,
+      "n_dropped_vs_as_given": 30,
+      "headline_logistic_oof": {
+        "n": 314,
+        "qwk": 0.592421945443556,
+        "accuracy": 0.5318471337579618,
+        "ordinal_mae": 0.5859872611464968,
+        "severe_misclassification_rate": 0.11146496815286625
+      },
+      "missing_d_vs_grade": {
+        "with_d": {
+          "n": 213,
+          "grade_counts": {
+            "0": 37,
+            "1": 66,
+            "2": 68,
+            "3": 42
+          },
+          "mean_grade": 1.539906103286385
+        },
+        "missing_d": {
+          "n": 101,
+          "grade_counts": {
+            "0": 13,
+            "1": 30,
+            "2": 47,
+            "3": 11
+          },
+          "mean_grade": 1.5544554455445545
+        }
+      }
+    },
+    "earliest_of_conflict": {
+      "n": 316,
+      "n_dropped_vs_as_given": 28,
+      "headline_logistic_oof": {
+        "n": 316,
+        "qwk": 0.6011490250696379,
+        "accuracy": 0.509493670886076,
+        "ordinal_mae": 0.5981012658227848,
+        "severe_misclassification_rate": 0.10126582278481013
+      },
+      "missing_d_vs_grade": {
+        "with_d": {
+          "n": 212,
+          "grade_counts": {
+            "0": 37,
+            "1": 65,
+            "2": 68,
+            "3": 42
+          },
+          "mean_grade": 1.5424528301886793
+        },
+        "missing_d": {
+          "n": 104,
+          "grade_counts": {
+            "0": 13,
+            "1": 30,
+            "2": 46,
+            "3": 15
+          },
+          "mean_grade": 1.6057692307692308
+        }
+      }
+    },
+    "missing_d_comparison": {
+      "as_given": {
+        "with_d": {
+          "n": 213,
+          "grade_counts": {
+            "0": 37,
+            "1": 66,
+            "2": 68,
+            "3": 42
+          },
+          "mean_grade": 1.539906103286385
+        },
+        "missing_d": {
+          "n": 131,
+          "grade_counts": {
+            "0": 13,
+            "1": 32,
+            "2": 55,
+            "3": 31
+          },
+          "mean_grade": 1.7938931297709924
+        }
+      },
+      "without_315_344": {
+        "with_d": {
+          "n": 213,
+          "grade_counts": {
+            "0": 37,
+            "1": 66,
+            "2": 68,
+            "3": 42
+          },
+          "mean_grade": 1.539906103286385
+        },
+        "missing_d": {
+          "n": 101,
+          "grade_counts": {
+            "0": 13,
+            "1": 30,
+            "2": 47,
+            "3": 11
+          },
+          "mean_grade": 1.5544554455445545
+        }
+      }
+    }
+  },
+  "note": "Headline QWK here uses untuned logistic (fast probe). Re-run `rockburst train` for production model\u00d7imputer under each policy if needed."
+}

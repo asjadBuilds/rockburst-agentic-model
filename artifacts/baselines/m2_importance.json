@@ -7,27 +7,141 @@
     "b1",
     "b2",
     "wet",
-    "d"
+    "d",
+    "observed_sigma_theta",
+    "observed_sigma_c",
+    "observed_sigma_t",
+    "observed_scf",
+    "observed_b1",
+    "observed_b2",
+    "observed_wet",
+    "observed_d"
   ],
   "importances_mean": [
-    0.072,
-    0.016000000000000014,
-    0.03418181818181816,
-    0.04072727272727272,
-    0.026909090909090903,
-    0.00436363636363637,
-    0.18181818181818182,
-    0.057454545454545446
+    0.0608695652173913,
+    0.02898550724637683,
+    0.0028985507246377163,
+    0.02898550724637685,
+    0.026086956521739157,
+    0.011594202898550754,
+    0.12173913043478261,
+    0.02028985507246377,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    4.4408920985006264e-17
   ],
   "importances_std": [
-    0.009593386151471197,
-    0.004363636363636347,
-    0.005442410744398457,
-    0.008418790474756537,
-    0.007125788342641964,
-    0.0035628941713209687,
-    0.014545454545454528,
-    0.010639082791511104
+    0.028102491927051186,
+    0.02049584873004485,
+    0.01690130984013134,
+    0.03175203231914005,
+    0.005797101449275343,
+    0.010845383729779553,
+    0.03502332166259297,
+    0.017391304347826084,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.012962712913042266
   ],
-  "fit_on": "first StratifiedGroupKFold train split only"
+  "ranked": [
+    {
+      "feature": "wet",
+      "importance_mean": 0.12173913043478261,
+      "importance_std": 0.03502332166259297
+    },
+    {
+      "feature": "sigma_theta",
+      "importance_mean": 0.0608695652173913,
+      "importance_std": 0.028102491927051186
+    },
+    {
+      "feature": "scf",
+      "importance_mean": 0.02898550724637685,
+      "importance_std": 0.03175203231914005
+    },
+    {
+      "feature": "sigma_c",
+      "importance_mean": 0.02898550724637683,
+      "importance_std": 0.02049584873004485
+    },
+    {
+      "feature": "b1",
+      "importance_mean": 0.026086956521739157,
+      "importance_std": 0.005797101449275343
+    },
+    {
+      "feature": "d",
+      "importance_mean": 0.02028985507246377,
+      "importance_std": 0.017391304347826084
+    },
+    {
+      "feature": "b2",
+      "importance_mean": 0.011594202898550754,
+      "importance_std": 0.010845383729779553
+    },
+    {
+      "feature": "sigma_t",
+      "importance_mean": 0.0028985507246377163,
+      "importance_std": 0.01690130984013134
+    },
+    {
+      "feature": "observed_d",
+      "importance_mean": 4.4408920985006264e-17,
+      "importance_std": 0.012962712913042266
+    },
+    {
+      "feature": "observed_sigma_theta",
+      "importance_mean": 0.0,
+      "importance_std": 0.0
+    },
+    {
+      "feature": "observed_sigma_t",
+      "importance_mean": 0.0,
+      "importance_std": 0.0
+    },
+    {
+      "feature": "observed_sigma_c",
+      "importance_mean": 0.0,
+      "importance_std": 0.0
+    },
+    {
+      "feature": "observed_scf",
+      "importance_mean": 0.0,
+      "importance_std": 0.0
+    },
+    {
+      "feature": "observed_b1",
+      "importance_mean": 0.0,
+      "importance_std": 0.0
+    },
+    {
+      "feature": "observed_b2",
+      "importance_mean": 0.0,
+      "importance_std": 0.0
+    },
+    {
+      "feature": "observed_wet",
+      "importance_mean": 0.0,
+      "importance_std": 0.0
+    }
+  ],
+  "top_features": [
+    "wet",
+    "sigma_theta",
+    "scf",
+    "sigma_c",
+    "b1"
+  ],
+  "model": "rf__iterative",
+  "protocol": "permutation_importance on held-out StratifiedGroupKFold test fold; pipeline fit only on fold train/fit indices"
 }

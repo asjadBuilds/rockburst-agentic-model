@@ -1,0 +1,153 @@
+{
+  "before": {
+    "fusion_r_final_ece": 0.1337601334438284,
+    "fusion_mean_r_final": 0.6503644905970019,
+    "fusion_brier": 0.22756171974755404,
+    "decision_thresholds": {
+      "abstain_r_final": 0.5,
+      "engineering_verification": 0.6000000000000001,
+      "accept_with_caution": 0.7000000000000001,
+      "accept_r_final": 0.7000000000000001
+    },
+    "fusion_calibration_method": null,
+    "fusion_calibration_n": null
+  },
+  "after": {
+    "fusion_coef": [
+      0.0,
+      0.0,
+      4.9222427230319425,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "fusion_intercept": -2.277803158079044,
+    "decision_thresholds": {
+      "abstain_r_final": 0.55,
+      "engineering_verification": 0.6500000000000001,
+      "accept_with_caution": 0.75,
+      "accept_r_final": 0.75
+    },
+    "fusion_calibration_method": "isotonic",
+    "fusion_calibration_n": 70,
+    "fusion_crossfit_calibration_n_mean": 55.2,
+    "fusion_crossfit_calibration_methods": [
+      "isotonic",
+      "isotonic",
+      "isotonic",
+      "isotonic",
+      "isotonic"
+    ],
+    "fusion_r_final_ece": 0.13356984716679776,
+    "fusion_brier": 0.22752000532696517,
+    "fusion_mean_r_final": 0.650250174163786,
+    "fusion_oof_accuracy_of_base": 0.6308139534883721,
+    "risk_coverage_max_prob": {
+      "points": [
+        {
+          "coverage": 0.1,
+          "accuracy": 0.9705882352941176
+        },
+        {
+          "coverage": 0.2,
+          "accuracy": 0.8985507246376812
+        },
+        {
+          "coverage": 0.30000000000000004,
+          "accuracy": 0.8543689320388349
+        },
+        {
+          "coverage": 0.4,
+          "accuracy": 0.7898550724637681
+        },
+        {
+          "coverage": 0.5,
+          "accuracy": 0.7383720930232558
+        },
+        {
+          "coverage": 0.6,
+          "accuracy": 0.7087378640776699
+        },
+        {
+          "coverage": 0.7000000000000001,
+          "accuracy": 0.6929460580912863
+        },
+        {
+          "coverage": 0.8,
+          "accuracy": 0.6763636363636364
+        },
+        {
+          "coverage": 0.9,
+          "accuracy": 0.6516129032258065
+        },
+        {
+          "coverage": 1.0,
+          "accuracy": 0.6308139534883721
+        }
+      ],
+      "area": 0.6811508378313184
+    },
+    "risk_coverage_r_final": {
+      "points": [
+        {
+          "coverage": 0.1,
+          "accuracy": 0.9117647058823529
+        },
+        {
+          "coverage": 0.2,
+          "accuracy": 0.8985507246376812
+        },
+        {
+          "coverage": 0.30000000000000004,
+          "accuracy": 0.8737864077669902
+        },
+        {
+          "coverage": 0.4,
+          "accuracy": 0.782608695652174
+        },
+        {
+          "coverage": 0.5,
+          "accuracy": 0.7441860465116279
+        },
+        {
+          "coverage": 0.6,
+          "accuracy": 0.6990291262135923
+        },
+        {
+          "coverage": 0.7000000000000001,
+          "accuracy": 0.6597510373443983
+        },
+        {
+          "coverage": 0.8,
+          "accuracy": 0.64
+        },
+        {
+          "coverage": 0.9,
+          "accuracy": 0.6451612903225806
+        },
+        {
+          "coverage": 1.0,
+          "accuracy": 0.6308139534883721
+        }
+      ],
+      "area": 0.6714362658134407
+    },
+    "risk_coverage_comparison": {
+      "max_prob_area": 0.6811508378313184,
+      "r_final_area": 0.6714362658134407,
+      "r_final_minus_max_prob": -0.00971457201787762,
+      "note": "r_model channel used as max-prob proxy (set A). Full max-prob needs retrain. Near-zero \u0394 = ranking collapse."
+    },
+    "zero_weight_flags": [
+      "r_data",
+      "r_physics",
+      "r_uncertainty",
+      "r_stability",
+      "n_missing",
+      "d_observed"
+    ],
+    "chosen_fusion_set": "A",
+    "protocol": "slice2 recalibrate from saved OOF R; fold-ensemble R rebuild requires `rockburst train`"
+  }
+}

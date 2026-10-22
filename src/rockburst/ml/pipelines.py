@@ -6,15 +6,17 @@ from typing import Any
 
 import numpy as np
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.experimental import enable_iterative_imputer  # noqa: F401
 from sklearn.impute import IterativeImputer, KNNImputer, SimpleImputer
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.svm import LinearSVC
 
+from rockburst.ml.ordinal import FrankHallOrdinalClassifier
 from rockburst.physics.relations import FEATURE_COLS
 
 try:
@@ -98,11 +100,28 @@ def get_model_zoo(quick: bool = False) -> dict[str, Any]:
             class_weight="balanced_subsample",
             n_jobs=1,
         ),
-        "extratrees": ExtraTreesClassifier(
-            n_estimators=100 if quick else 300,
+        "mlp": MLPClassifier(
+            hidden_layer_sizes=(64, 32),
+            alpha=1e-3,
+            max_iter=200 if quick else 400,
+            early_stopping=True,
             random_state=42,
-            class_weight="balanced",
-            n_jobs=1,
+        ),
+        "frank_hall_logistic": FrankHallOrdinalClassifier(
+            base_estimator=LogisticRegression(
+                max_iter=2000, class_weight="balanced", C=1.0
+            ),
+            n_classes=4,
+        ),
+        "frank_hall_rf": FrankHallOrdinalClassifier(
+            base_estimator=RandomForestClassifier(
+                n_estimators=80 if quick else 150,
+                max_depth=6,
+                random_state=42,
+                class_weight="balanced_subsample",
+                n_jobs=1,
+            ),
+            n_classes=4,
         ),
     }
     if LogisticAT is not None:

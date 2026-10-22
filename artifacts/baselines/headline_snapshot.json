@@ -1,0 +1,73 @@
+{
+  "best_model": "rf__iterative",
+  "n_trials": 50,
+  "production_qwk_pooled": 0.6823578790281211,
+  "nested_unbiased_qwk": 0.6972773091316367,
+  "nested_unbiased_accuracy": 0.6308139534883721,
+  "selection_biased_qwk": 0.7186941166955725,
+  "conformal_method": "mondrian_split",
+  "conformal_coverage": 0.9333333333333332,
+  "fold_winner_instability": {
+    "fold_winners": [
+      "lightgbm__median",
+      "lightgbm__median",
+      "catboost__knn",
+      "rf__iterative",
+      "lightgbm__iterative"
+    ],
+    "unique_winners": 4,
+    "mode_of_winners": "lightgbm__median",
+    "mode_count": 2,
+    "mode_fraction": 0.4,
+    "winner_counts": {
+      "lightgbm__median": 2,
+      "catboost__knn": 1,
+      "rf__iterative": 1,
+      "lightgbm__iterative": 1
+    },
+    "production_rule": "best_mean_inner_qwk",
+    "production_model": "rf__iterative",
+    "production_inner_qwk_mean": 0.6976148088999073,
+    "mode_differs_from_production": true
+  },
+  "ablation_M1_qwk": {
+    "mean": 0.6323707481745129,
+    "std": 0.030551656884589558,
+    "ci95_low": 0.5791605052859302,
+    "ci95_high": 0.6836747602042822,
+    "method": "grouped_bootstrap"
+  },
+  "ablation_M7_qwk": {
+    "mean": 0.6323707481745129,
+    "std": 0.030551656884589558,
+    "ci95_low": 0.5791605052859302,
+    "ci95_high": 0.6836747602042822,
+    "method": "grouped_bootstrap"
+  },
+  "ablation_M7_abstention": {
+    "mean": 0.5174418604651163,
+    "std": 0.018571698186311842,
+    "ci95_low": 0.48295329670329673,
+    "ci95_high": 0.5578535273647579,
+    "method": "grouped_bootstrap"
+  },
+  "agent_value_finding": {
+    "m5_m6_m7_qwk_identical": true,
+    "m5_m6_m7_abstention_identical": false,
+    "critic_fire_rate": 0.6133720930232558,
+    "coord_route_divergence_rate": 0.4186046511627907,
+    "m6_vs_m7_substantive_divergence_rate": 0.6133720930232558,
+    "m6_vs_m7_divergence_causes": {
+      "critic_only": 15,
+      "extra_validation_only": 0,
+      "recheck_only": 0,
+      "other_or_mixed": 196
+    },
+    "note": "Route divergence uses substantive actions only (extra_validation / recheck* / critic). If M5/M6/M7 remain indistinguishable on grades, agents may not change argmax; not tuned on test folds."
+  },
+  "source_files": [
+    "artifacts/baselines/m1_results.json",
+    "artifacts/baselines/ablation_results.json"
+  ],
+  "note": "Regenerate via scripts/generate_figures.py; reports must cite this snapshot or the JSONs."
+}

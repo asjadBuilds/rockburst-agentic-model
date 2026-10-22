@@ -1,0 +1,106 @@
+{
+  "predicted_grade": 0,
+  "predicted_intensity": "none",
+  "prediction_probability": 0.6621621621621622,
+  "prediction_set": [
+    0,
+    1,
+    2
+  ],
+  "prediction_set_intensities": [
+    "none",
+    "light",
+    "moderate"
+  ],
+  "physics_consistency": 0.6565656565656566,
+  "input_reliability": 0.6238805970149254,
+  "ood_status": "No",
+  "prediction_stability": "high",
+  "agent_disagreement": "inter_agent",
+  "inter_agent_disagreement": {
+    "ml_grade": 0,
+    "ml_intensity": "none",
+    "criteria_consensus_grade": null,
+    "criteria_intensity": "unknown",
+    "criteria_grades": {},
+    "ml_vs_criteria": false,
+    "critic_endorse": false,
+    "critic_rules_fired": [
+      "ensemble_disagreement",
+      "large_prediction_set",
+      "wide_conformal_edge",
+      "validation_objection"
+    ],
+    "parties": [
+      "critic_vs_fusion_path"
+    ],
+    "has_disagreement": true
+  },
+  "final_system_confidence": 0.6875,
+  "decision": "Predicted intensity: none (grade 0). Conformal set: {none, light, moderate} (grades [0, 1, 2]). System confidence R_final=0.688. Recommended action: abstain. Inter-agent disagreement: Critic objections (ensemble_disagreement, large_prediction_set, wide_conformal_edge, validation_objection). Inadequate confidence; abstain and request additional data/review. (Critic severe rules ['wide_conformal_edge']; escalated accept \u2192 abstain)",
+  "recommended_action": "abstain",
+  "probabilities": [
+    0.6621621621621622,
+    0.10810810810810811,
+    0.22972972972972974,
+    0.0
+  ],
+  "route_trace": [
+    "rules:data_quality",
+    "rules:geomechanics_skipped",
+    "rules:predict",
+    "rules:uncertainty",
+    "rules:critic",
+    "rules:recheck_model",
+    "rules:critic",
+    "rules:finalize"
+  ],
+  "abstained": true,
+  "critic_endorse": false,
+  "downgrade_reason": "Critic severe rules ['wide_conformal_edge']; escalated accept \u2192 abstain",
+  "consistency_note": null,
+  "physics_skipped": true,
+  "recheck_payloads": {
+    "cross_check": {
+      "tool": "cross_check_model_reprediction",
+      "cross_model": "ordinal_logistic",
+      "cross_grade": 1,
+      "cross_proba": [
+        0.37794026746189485,
+        0.4655997126689762,
+        0.14338606953124877,
+        0.01307395033788017
+      ],
+      "primary_grade": 0,
+      "grade_disagree": true,
+      "soft_disagreement": 0.37056555489874826,
+      "large_disagreement": true
+    }
+  },
+  "r_vector": {
+    "r_data": 0.6238805970149254,
+    "r_physics": 0.6565656565656566,
+    "r_model": 0.6666666666666666,
+    "r_uncertainty": 0.7619047619047619,
+    "r_stability": 0.6220472440944882,
+    "n_missing": 0.0,
+    "d_observed": 1.0,
+    "r_final": 0.6875
+  },
+  "explanation": "Top held-out permutation features: wet, sigma_theta, scf, sigma_c, b1",
+  "critic_rules_fired": [
+    "ensemble_disagreement",
+    "large_prediction_set",
+    "wide_conformal_edge",
+    "validation_objection"
+  ],
+  "delivered_planner": "rules_fsm",
+  "case_no": 77,
+  "example_protocol": "held-out fold model: case was in outer test fold; pipeline fit only on fold train/fit indices; rules FSM",
+  "fold_model": "rf__iterative",
+  "true_grade": 3,
+  "true_intensity": "strong",
+  "fold_max_prob": 0.6621621621621622,
+  "fold_pred_grade": 0,
+  "fold_index": 0
+}

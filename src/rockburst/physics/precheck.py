@@ -8,13 +8,16 @@ from rockburst.physics.relations import PhysicsCheckResult, check_case
 
 
 def _physics_kwargs(cfg: dict[str, Any] | None) -> dict[str, Any]:
+    from rockburst.physics.relations import DEFAULT_ABS_TOL, DEFAULT_REL_TOL
+
     p = (cfg or {}).get("physics", {})
     return {
-        "rel_tol": float(p.get("rel_tol", 0.05)),
-        "abs_tol": float(p.get("abs_tol", 0.05)),
+        "rel_tol": float(p.get("rel_tol", DEFAULT_REL_TOL)),
+        "abs_tol": float(p.get("abs_tol", DEFAULT_ABS_TOL)),
         "scf_ood_threshold": float(p.get("scf_ood_threshold", 2.0)),
         "wet_range": tuple(p.get("wet_range", [0.5, 40.0])),
         "d_range": tuple(p.get("d_range", [50.0, 2500.0])),
+        "b1_implausible_max": float(p.get("b1_implausible_max", 200.0)),
     }
 
 
@@ -26,7 +29,24 @@ def full_physics_result(
 
 
 def is_perfect_physics(res: PhysicsCheckResult) -> bool:
-    return float(res.r_physics) == 1.0 and len(res.issues) == 0
+    """Skip full geomechanics when identities hold and empirical ranges are clean.
+
+    Criteria disagreement may lower ``r_physics`` below 1.0 without forcing
+    a re-run — criteria are already computed inside ``check_case``. Missing or
+    out-of-range Wet/D still blocks skip (same as pre–Slice-3 behaviour).
+    """
+    if res.has_identity_violation or res.issues:
+        return False
+    emp = res.empirical_checks or {}
+    wet = emp.get("wet") or {}
+    depth = emp.get("d") or {}
+    if wet.get("status") == "missing" or depth.get("status") == "missing":
+        return False
+    if wet.get("in_range") is False or depth.get("in_range") is False:
+        return False
+    if emp.get("scf_ood"):
+        return False
+    return True
 
 
 def cheap_physics_precheck(case: dict[str, Any], cfg: dict[str, Any] | None = None) -> dict[str, Any]:

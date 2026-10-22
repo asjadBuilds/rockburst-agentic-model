@@ -1,7 +1,10 @@
 # Methodology — Agentic Rockburst Assessment
 
 ## Goal
-Predict rockburst intensity grade \(0\)–\(3\) while quantifying trust via data reliability, physics consistency, model uncertainty, stability, and agent disagreement. The controller may abstain.
+Predict rockburst intensity grade \(0\)–\(3\) (none / light / moderate / strong) while quantifying trust via data reliability, physics consistency, model uncertainty, stability, and agent disagreement. The controller may abstain.
+
+## Delivered system (M16 / brief §4.6)
+**Headline metrics and shipped examples use the deterministic rules FSM** (`use_llm=False`). A Gemini Flash planner remains available for optional routing (`--llm` + `GOOGLE_API_KEY`) but does not contribute to reported QWK, abstention, or example packages. All numerical outputs (physics identities, criteria grades, ML probabilities, conformal sets, fusion `R_final`) come from deterministic Python tools; the planner only chooses the next agent. This meets the brief’s agentic requirement via structured tools + a reproducible coordinator without LLM arithmetic. Historical Gemini routing compare is archived as `artifacts/baselines/llm_planner_comparison.STALE.json` (pointer in `llm_planner_comparison.json`); do not re-run for acceptance.
 
 ## Architecture
 
@@ -33,17 +36,95 @@ Typical happy path: `data_quality → (geomechanics | skip) → predict → unce
 
 Hard stop at `max_loops=8` → forced abstain. LLM planner actions that lack preconditions are tagged `rejected:` and fall back to rules.
 
-Planner: Gemini Flash (`configs/default.yaml` `gemini.planner_model`) when `--llm` and `GOOGLE_API_KEY` are set; otherwise identical **rule-based** predicates (default / offline). Trace tags: `llm:` / `rules:` / `fallback:` / `rejected:`.
+Planner: **rules FSM by default** (offline, reproducible). Optional Gemini Flash (`configs/default.yaml` `gemini.planner_model`) when `--llm` and `GOOGLE_API_KEY` are set. Trace tags: `llm:` / `rules:` / `fallback:` / `rejected:`. Engineering decision text names intensity, conformal set, `R_final`, and action; consistency guards block abstain with near-certain `R_final` (M15).
 
-## Agents and tools
+## Agents and tools (summary)
+
 | Agent | Deterministic tools | Key outputs |
 |-------|---------------------|-------------|
-| Data Quality | IQR, IsolationForest, near-duplicate search (raw-feature relative tolerance; train-fold reference excluding self/`dup_group_id`), missingness | `R_data`, OOD flag |
-| Geomechanics | Exact `SCF`, `B1`, `B2`; empirical Wet/D ranges | `R_physics` |
-| Predictive | Leakage-safe sklearn/boosting/SVM pipelines (nested Optuna) | grade, probs, `R_model` |
-| Uncertainty | Entropy, ensemble disagreement, **split conformal** (finite-sample quantile), perturbations | `R_uncertainty`, `R_stability`, prediction set |
-| Critic | Contradiction rules | `request_recheck` |
-| Fusion | Cross-fit non-neg logistic + isotonic; locked set **A** (`r_model` only) | `R_final`, decision (unfitted → abstain) |
+| Data Quality | IQR, IsolationForest, Mahalanobis/kNN OOD, combo/scale checks, near-dup + conflicting labels | `R_data`, OOD flag |
+| Geomechanics | Exact SCF/B1/B2; Russenes/Kidybinski/brittleness criteria; Wet/D ranges | `R_physics`, criteria grades |
+| Predictive | Leakage-safe pipelines (nested Optuna ≥50) | grade, probs, `R_model` |
+| Uncertainty | Entropy, ensemble TV, Mondrian/marginal conformal, primary-only perturbations | `R_uncertainty`, `R_stability`, set |
+| Critic | Contradiction rules; escalate/downgrade | `request_recheck`, `endorse` |
+| Fusion | Non-neg logistic + calibration; set **A** | `R_final`, decision |
+
+### Full agent specifications (m3)
+
+**Data Quality** (`agents/tools.py` → `score_data_quality`).  
+- Role: score input integrity vs train-fold reference.  
+- Inputs: case dict; fold reference excluding self/`dup_group_id`.  
+- Outputs: `DataQualityOutput` (`data_reliability`, `ood_flag`, `missing_features`, `near_duplicates`, `conflicting_near_dup_labels`, `ood_scores`, `issues`).  
+- Tools: IQR bounds; IsolationForest + Mahalanobis + kNN OOD; SCF/B1 combo + scale ranges; near-dup with conflicting-label flag.  
+- Triggers: always early in route.  
+- Failure: missing reference → conservative issues; detectors skipped logged.
+
+**Geomechanics** (`physics/relations.check_case`, `physics/criteria`).  
+- Role: exact identities + empirical intensity criteria.  
+- Inputs: case stresses/derived features; tolerances from config.  
+- Outputs: `PhysicsOutput` (`physics_score`, exact/empirical checks incl. criteria as-given & recomputed).  
+- Tools: SCF/B1/B2 identities; Russenes (SCF), Kidybinski (Wet), brittleness (B1/B2); row-shift / implausible B1 flags.  
+- Triggers: unless physics-skip precheck passes.  
+- Failure: missing primaries → lower score / skip criteria.
+
+**Predictive** (`ml/` pipelines + fold or production joblib).  
+- Role: ordinal grade probabilities.  
+- Inputs: feature frame with `observed_*` indicators.  
+- Outputs: `PredictiveOutput` (grade, probs, `r_model`).  
+- Tools: sklearn/boosting/SVM/MLP/Frank–Hall; nested Optuna.  
+- Failure: unfitted → route cannot finalize meaningfully.
+
+**Uncertainty** (`uncertainty/`).  
+- Role: conformal sets, stability, disagreement.  
+- Inputs: predictive probs; fold ensemble; conformal state.  
+- Outputs: `UncertaintyOutput` (set, disagreement, stability, entropy).  
+- Tools: Mondrian/marginal split conformal (contiguous sets); mild/strong perturbations on primaries only (recompute derived).  
+- Failure: empty calib → APS fallback.
+
+**Critic** (`run_critic`).  
+- Role: independent contradiction / recheck requests.  
+- Inputs: DQ, physics, pred, unc, validation objections.  
+- Outputs: `CriticOutput` (challenges, `request_recheck`, `endorse`, `escalate_abstain`, `rules_fired`).  
+- Tools: rule predicates only (no new ML fit).  
+- Failure modes: unresolved → downgrade or escalate to abstain (severe rules).
+
+**Coordinator** (`graph/runner.py`).  
+- Custom rules FSM (not LangGraph runtime). Optional Gemini chooses next action only.  
+- Termination: finalize; or `max_loops` → forced abstain (C2).
+
+## Reliability fusion equations (m4)
+
+Reliability vector (locked production mask = set **A** activates `r_model` only; others reported):
+
+\[
+\mathbf{r} = (r_{\mathrm{data}}, r_{\mathrm{physics}}, r_{\mathrm{model}}, r_{\mathrm{uncertainty}}, r_{\mathrm{stability}})
+\]
+
+**Stacker** (non-negative logistic on OOF correctness \(y\in\{0,1\}\)):
+
+\[
+s = \mathbf{w}^\top (\mathbf{r} \odot \mathbf{m}) + b,\quad w_i \ge 0,\quad
+R_{\mathrm{raw}} = \sigma(s)
+\]
+
+with mask \(\mathbf{m}\) for set A. **Calibration:** isotonic or Platt on inner scores → \(R_{\mathrm{final}}\in(\varepsilon,1-\varepsilon)\).
+
+**Decision bands** (learned thresholds \(t_{\cdot}\), default serving from `fusion.joblib`):
+
+\[
+\begin{align*}
+R_{\mathrm{final}} &< t_{\mathrm{abstain}} &&\Rightarrow \texttt{abstain}\\
+t_{\mathrm{abstain}} \le R_{\mathrm{final}} &< t_{\mathrm{eng}} &&\Rightarrow \texttt{engineering\_verification}\\
+t_{\mathrm{eng}} \le R_{\mathrm{final}} &< t_{\mathrm{caution}} &&\Rightarrow \texttt{accept\_with\_caution}\\
+R_{\mathrm{final}} &\ge t_{\mathrm{accept}} &&\Rightarrow \texttt{accept}
+\end{align*}
+\]
+
+**Hard gates** (override): large set ∧ low stability; high ensemble disagreement ∧ mid \(R_{\mathrm{final}}\); OOD ∧ weak physics ∧ weak \(r_{\mathrm{model}}\).
+
+**Critic downgrade / escalate:** if `endorse=False` and severe rules → `abstain`; else one-step downgrade along accept → caution → engineering_verification → abstain.
+
+**Consistency (M15):** if action=`abstain` and \(R_{\mathrm{final}}\ge 0.95\), clamp reported \(R_{\mathrm{final}}\) (keep abstain).
 
 ## Near-duplicate grouping
 `dup_group_id` is assigned by relative-tolerance matching on raw measured inputs
@@ -59,22 +140,20 @@ B_2=(\sigma_c-\sigma_t)/(\sigma_c+\sigma_t)
 \]
 Wet and depth \(D\) are empirical tendencies only.
 
-## Reliability fusion
-The implemented formula can take several reliability channels, but the **final** fusion reduces to calibrated max-probability (feature set **A** = `r_model` only). Sets C/D gave nominally better calibration (ECE 0.104 vs 0.134, Brier 0.207 vs 0.228) and area (0.687 vs 0.671) but not significantly (paired CI of A vs best [−0.033, +0.002]), so the simpler set was chosen by a rule fixed in advance. `r_data`, `r_physics`, and `r_stability` are reported flags and carry no significant extra signal on this dataset.
+## Reliability fusion (narrative)
 
-Stacker weights are learned on **out-of-fold** correctness with the same feature path as serving; coefficients are non-negative; thresholds are selected on held-out OOF — never on the outer test fold. Mean \(R_{\mathrm{final}}\) (0.650) exceeds base accuracy (~0.57–0.59), so the system remains overconfident by about 7–8 points.
+The **final** fusion reduces to calibrated max-probability (feature set **A** = `r_model` only) after held-out set comparison. Other \(R_*\) channels remain reported flags. See equations above (m4). Current risk–coverage: max-prob area exceeds \(R_{\mathrm{final}}\) under set A (`ablation_results.json`) — negative C4 result retained.
 
 ## Conformal prediction
 Grouped **split conformal** with nonconformity \(1-p_y\) and finite-sample quantile
-\(\lceil(n+1)(1-\alpha)\rceil/n\). Mondrian, marginal, and grouped CV+ are compared on outer OOF;
-the method closest to nominal \(1-\alpha\) without test-fold tuning is retained (currently **marginal split**).
-Calibration holdouts are group-aware and disjoint from model fit and fusion training.
+\(\lceil(n+1)(1-\alpha)\rceil/n\). Mondrian, marginal, and grouped CV+ are compared on outer OOF.
+Production prefers **Mondrian** when grade-3 has enough calibration mass (class-conditional coverage); prediction sets are forced **contiguous** on the ordinal grade scale (M11). Calibration holdouts are group-aware and disjoint from model fit and fusion training.
 
 ## Nested tuning and selection (M1)
-Outer `StratifiedGroupKFold` evaluates; inner Optuna selects hyperparameters (`tuning.n_trials` equal per family, including SVM via `CalibratedClassifierCV`).
+Outer `StratifiedGroupKFold` evaluates; inner Optuna selects hyperparameters (`tuning.n_trials` ≥50 equal per family, including retuned RBF SVM and MLP replacing ExtraTrees).
 **Selection-biased** score: choose model×imputer by pooled outer OOF QWK (optimistic).
 **Nested-unbiased** score: per outer fold choose model×imputer by inner QWK only, then score outer test.
-Both are reported; production artefact uses the nested fold-winner mode. Full candidate table is written to `m1_results.json`.
+Both are reported; **production artefact = best mean inner QWK across folds** (M10), not mode-of-winners; fold-winner instability is logged. Full candidate table + ordinal decode comparison (argmax vs median-of-distribution; Frank–Hall) in `m1_results.json`.
 
 ## Ablation definitions (identical folds)
 | ID | System |
@@ -91,4 +170,15 @@ Repeated grouped OOF (`cv.n_repeats≥5`). Confidence intervals use **grouped bo
 M5–M7 inject fold-trained pipelines via `cfg["_fold_pipeline"]`. Accepted vs abstained metrics and risk–coverage curves quantify risk control when point QWK is flat.
 
 ## Leakage guard
-Imputation, scaling, and model fitting occur inside training folds only. Target is never used for imputation. Reference statistics for quality tools exclude the evaluated case and its `dup_group_id`. Near-duplicate groups stay in the same fold via `StratifiedGroupKFold`.
+Imputation, scaling, and model fitting occur inside training folds only. Target is never used for imputation. Reference statistics for quality tools exclude the evaluated case and its `dup_group_id`. Near-duplicate groups stay in the same fold via `StratifiedGroupKFold`. Ablation keeps fold fusion **in memory** (does not overwrite `fusion.joblib`) (m9/M6).
+
+## Environment and pins (m5, m8)
+
+- **Tested Python:** 3.12 (see `environment.yml`); `pyproject.toml` requires `>=3.12`.
+- **Used for figures / explainability:** matplotlib, seaborn; permutation importance (shap available for optional deep dives).
+- **Not used at runtime:** `langgraph`, `langchain-core` (orchestrator is a custom rules FSM in `graph/runner.py`, historically described as “LangGraph-style”); `imbalanced-learn` unused. Kept optional for experimentation; safe to omit from a minimal install.
+- **Delivery hygiene (m7):** exclude `.cursor/`, `catboost_info/`, `reports/claude_agent_context_pack.md`, `.venv/`, and `artifacts/planner_cache/` from client zips (dev/cache only).
+
+## Paths (m6)
+
+Reports and scripts use repository-relative paths via `rockburst.config.resolve_path`. Regenerated examples should not embed machine-local absolute prefixes; if any legacy JSON still does, treat as stale and regenerate with `scripts/generate_examples.py`.

@@ -1,47 +1,151 @@
 {
   "predicted_grade": 1,
-  "prediction_probability": 0.8128194430878152,
+  "predicted_intensity": "light",
+  "prediction_probability": 0.7710820061388827,
   "prediction_set": [
     1,
-    2
+    2,
+    3
+  ],
+  "prediction_set_intensities": [
+    "light",
+    "moderate",
+    "strong"
   ],
   "physics_consistency": 0.3333333333333333,
-  "input_reliability": 0.8512113588149215,
+  "input_reliability": 0.8888888888888888,
   "ood_status": "No",
   "prediction_stability": "high",
-  "agent_disagreement": "low",
-  "final_system_confidence": 0.999999,
-  "decision": "Accept with caution; verify key measurements. (Critic unresolved (endorse=False, recheck=physics); downgraded accept \u2192 accept_with_caution)",
-  "recommended_action": "accept_with_caution",
+  "agent_disagreement": "inter_agent",
+  "inter_agent_disagreement": {
+    "ml_grade": 1,
+    "ml_intensity": "light",
+    "criteria_consensus_grade": 2,
+    "criteria_intensity": "moderate",
+    "criteria_grades": {
+      "russenes": 3,
+      "kidybinski": 1,
+      "brittleness_b1": 3,
+      "brittleness_b2": 1
+    },
+    "ml_vs_criteria": true,
+    "critic_endorse": false,
+    "critic_rules_fired": [
+      "low_physics",
+      "large_prediction_set",
+      "wide_conformal_edge",
+      "b1_inconsistency",
+      "identity_violation",
+      "suspected_row_shift",
+      "ml_vs_criteria"
+    ],
+    "parties": [
+      "ml_vs_criteria",
+      "critic_vs_fusion_path",
+      "critic_flags_ml_vs_criteria"
+    ],
+    "has_disagreement": true
+  },
+  "final_system_confidence": 0.49,
+  "decision": "Forced stop at loop limit; abstain pending review.",
+  "recommended_action": "abstain",
   "probabilities": [
-    0.0005432427610114192,
-    0.8128194430878152,
-    0.12832897380744246,
-    0.05830834034373086
+    0.0006598261257751909,
+    0.7710820061388827,
+    0.17634036014411886,
+    0.05191780759122289
   ],
   "route_trace": [
     "rules:data_quality",
     "rules:geomechanics",
     "rules:predict",
     "rules:uncertainty",
+    "rules:extra_validation",
     "rules:critic",
-    "rejected:recheck_physics",
-    "fallback:critic",
-    "rules:finalize"
+    "rules:recheck_model",
+    "rules:critic",
+    "rules:forced_abstain",
+    "forced_finalize"
   ],
-  "abstained": false,
+  "abstained": true,
   "critic_endorse": false,
-  "downgrade_reason": "Critic unresolved (endorse=False, recheck=physics); downgraded accept \u2192 accept_with_caution",
+  "downgrade_reason": "Critic severe rules ['identity_violation', 'ml_vs_criteria', 'suspected_row_shift', 'wide_conformal_edge']; escalated accept \u2192 abstain; consistency: abstain with R_final=0.999\u22650.95; clamped reported confidence to 0.490",
+  "consistency_note": "consistency: abstain with R_final=0.999\u22650.95; clamped reported confidence to 0.490",
   "physics_skipped": false,
-  "recheck_payloads": {},
+  "recheck_payloads": {
+    "alt_imputer": {
+      "tool": "alt_imputer_reprediction",
+      "imputers": [
+        "median",
+        "knn",
+        "iterative"
+      ],
+      "probas": {
+        "median": [
+          0.0,
+          0.82,
+          0.14,
+          0.04
+        ],
+        "knn": [
+          0.01,
+          0.87,
+          0.08,
+          0.04
+        ],
+        "iterative": [
+          0.0,
+          0.85,
+          0.09,
+          0.06
+        ]
+      },
+      "grades": {
+        "median": 1,
+        "knn": 1,
+        "iterative": 1
+      },
+      "prob_spread": 0.060000000000000026,
+      "grade_flip": false,
+      "large_spread": false,
+      "primary_imputer": "knn",
+      "primary_grade": 1
+    },
+    "cross_check": {
+      "tool": "cross_check_model_reprediction",
+      "cross_model": "ordinal_logistic",
+      "cross_grade": 1,
+      "cross_proba": [
+        0.12889636358737885,
+        0.427930426055102,
+        0.3848505105908261,
+        0.05832269976669302
+      ],
+      "primary_grade": 1,
+      "grade_disagree": false,
+      "soft_disagreement": 0.3431515800837808,
+      "large_disagreement": false
+    }
+  },
   "r_vector": {
-    "r_data": 0.8512113588149215,
+    "r_data": 0.8888888888888888,
     "r_physics": 0.3333333333333333,
-    "r_model": 0.8128194430878152,
-    "r_uncertainty": 0.7395659344181936,
-    "r_stability": 0.9468942607069383,
+    "r_model": 0.8064516129032258,
+    "r_uncertainty": 0.8095238095238095,
+    "r_stability": 0.7777777777777778,
     "n_missing": 0.0,
     "d_observed": 1.0,
-    "r_final": 0.999999
-  }
+    "r_final": 0.49
+  },
+  "explanation": "Top held-out permutation features: wet, sigma_theta, scf, sigma_c, b1",
+  "critic_rules_fired": [
+    "low_physics",
+    "large_prediction_set",
+    "wide_conformal_edge",
+    "b1_inconsistency",
+    "identity_violation",
+    "suspected_row_shift",
+    "ml_vs_criteria"
+  ],
+  "delivered_planner": "rules_fsm"
 }

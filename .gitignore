@@ -14,3 +14,6 @@ build/
 requirements-unpinned.bak.txt
 artifacts/tuning_cache/
 logs/
+# Training scratch / editor (exclude from client delivery zips — m7)
+catboost_info/
+.cursor/

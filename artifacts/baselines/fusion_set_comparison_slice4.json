@@ -1,0 +1,136 @@
+{
+  "sets": {
+    "A": {
+      "features": [
+        "r_model"
+      ],
+      "area": 0.6714362658134407,
+      "ece": 0.13356984716679776,
+      "brier": 0.22752000532696517,
+      "mean_r_final": 0.650250174163786,
+      "delta_vs_best_ci": [
+        -0.022679182582572403,
+        0.016500417393549748
+      ]
+    },
+    "B": {
+      "features": [
+        "r_model",
+        "n_missing"
+      ],
+      "area": 0.6671365562588598,
+      "ece": 0.11675436800066653,
+      "brier": 0.22276431338367803,
+      "mean_r_final": 0.6476499284683558,
+      "delta_vs_best_ci": [
+        -0.021005506663932347,
+        0.012763428472130292
+      ]
+    },
+    "C": {
+      "features": [
+        "r_data",
+        "r_physics",
+        "r_model",
+        "r_uncertainty",
+        "r_stability",
+        "n_missing"
+      ],
+      "area": 0.6722087802634513,
+      "ece": 0.12284402662510335,
+      "brier": 0.2280937076732498,
+      "mean_r_final": 0.6534603673697641,
+      "delta_vs_best_ci": [
+        0.0,
+        0.0
+      ]
+    },
+    "D": {
+      "features": [
+        "r_data",
+        "r_physics",
+        "r_model",
+        "r_uncertainty",
+        "r_stability",
+        "n_missing",
+        "d_observed"
+      ],
+      "area": 0.6722087802634513,
+      "ece": 0.12283473208226015,
+      "brier": 0.22808115567501588,
+      "mean_r_final": 0.6534658279675059,
+      "delta_vs_best_ci": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "best_by_area": "C",
+  "tied_with_best": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "chosen_set": "A",
+  "locked_production_set": "A",
+  "selection_rule": "Among sets whose \u0394-area CI vs best contains 0, choose simplest (order ['A', 'B', 'C', 'D']).",
+  "agents_add_calibrated_reliability_signal": false,
+  "finding": "Still set A (r_model only): agent R_* channels add no calibrated ranking signal under the pre-registered rule.",
+  "coef_bootstrap_cis": {
+    "coef_mean": [
+      0.0,
+      0.0,
+      5.174168808007318,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "coef_ci": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        3.3522987297342315,
+        7.18876110749032
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "intercept_mean": -2.345142095971753,
+    "intercept_ci": [
+      -3.297352942021422,
+      -1.3732523264661143
+    ],
+    "names": [
+      "r_data",
+      "r_physics",
+      "r_model",
+      "r_uncertainty",
+      "r_stability",
+      "n_missing",
+      "d_observed"
+    ]
+  },
+  "note": "OOF R matrix may predate Slice 3 physics changes; full train refreshes R."
+}

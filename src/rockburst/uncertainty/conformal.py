@@ -130,13 +130,26 @@ def fit_cv_plus_thresholds(
     )
 
 
+def make_contiguous_ordinal_set(grades: list[int]) -> list[int]:
+    """Fill gaps so ordinal prediction sets are contiguous (Slice 6 / M11)."""
+    if not grades:
+        return []
+    lo, hi = int(min(grades)), int(max(grades))
+    return list(range(lo, hi + 1))
+
+
 def conformal_prediction_set(
     proba: np.ndarray,
     *,
     alpha: float = 0.1,
     class_thresholds: np.ndarray | None = None,
+    contiguous: bool = True,
 ) -> list[int]:
-    """Prediction set from fitted thresholds, else APS fallback."""
+    """Prediction set from fitted thresholds, else APS fallback.
+
+    When ``contiguous`` (default), fill holes so sets are ordinal intervals —
+    required for ordered rockburst grades (M11).
+    """
     p = np.asarray(proba, dtype=float).ravel()
     if class_thresholds is not None:
         thr = np.asarray(class_thresholds, dtype=float).ravel()
@@ -146,15 +159,19 @@ def conformal_prediction_set(
                 (0, len(p) - len(thr)),
                 constant_values=thr[-1] if len(thr) else 1.0,
             )
-        return [int(c) for c in range(len(p)) if (1.0 - p[c]) <= thr[c]]
-    order = np.argsort(-p)
-    s = 0.0
-    chosen: list[int] = []
-    for idx in order:
-        chosen.append(int(idx))
-        s += p[idx]
-        if s >= 1.0 - alpha:
-            break
+        chosen = [int(c) for c in range(len(p)) if (1.0 - p[c]) <= thr[c]]
+    else:
+        order = np.argsort(-p)
+        s = 0.0
+        chosen = []
+        for idx in order:
+            chosen.append(int(idx))
+            s += p[idx]
+            if s >= 1.0 - alpha:
+                break
+        chosen = sorted(chosen)
+    if contiguous:
+        return make_contiguous_ordinal_set(chosen)
     return sorted(chosen)
 
 
@@ -215,22 +232,45 @@ def compare_conformal_methods(
     return out
 
 
-def pick_defensible_method(comparison: dict[str, Any], *, alpha: float = 0.1) -> str:
-    """Prefer coverage closest to nominal; break ties favoring smaller mean set size."""
+def pick_defensible_method(
+    comparison: dict[str, Any],
+    *,
+    alpha: float = 0.1,
+    prefer_mondrian_grade3: bool = True,
+    min_grade3_calib: int = 5,
+) -> str:
+    """Select conformal method for production (Slice 6 / M11).
+
+    Prefer Mondrian when grade-3 (strong) has enough calibration mass so
+    class-conditional coverage is meaningful; otherwise fall back to
+    coverage-closest-to-nominal with smaller mean set size as tie-break.
+    Resolves prior contradiction of hard-coding marginal while documenting Mondrian.
+    """
+    counts = comparison.get("class_calib_counts") or []
+    mondrian = comparison.get("mondrian_split") or {}
+    grade3_n = int(counts[3]) if len(counts) > 3 else 0
+    if prefer_mondrian_grade3 and mondrian.get("coverage") is not None:
+        per = (mondrian.get("per_class") or {}).get("3") or {}
+        if grade3_n >= min_grade3_calib and per.get("coverage") is not None:
+            return "mondrian_split"
+
     nominal = 1.0 - alpha
     candidates = []
-    for name in ("marginal_split", "mondrian_split", "cv_plus_grouped"):
+    for name in ("mondrian_split", "marginal_split", "cv_plus_grouped"):
         block = comparison.get(name)
         if not block or block.get("coverage") is None:
             continue
+        # Slight preference for Mondrian when coverages are equally close
+        mondrian_tie = 0 if name == "mondrian_split" else 1
         candidates.append(
             (
                 abs(float(block["coverage"]) - nominal),
                 float(block.get("mean_size") or 99),
+                mondrian_tie,
                 name,
             )
         )
     if not candidates:
-        return "marginal_split"
+        return "mondrian_split"
     candidates.sort()
-    return candidates[0][2]
+    return candidates[0][3]

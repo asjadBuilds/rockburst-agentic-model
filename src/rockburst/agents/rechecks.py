@@ -49,9 +49,12 @@ def physics_recheck_perturbed_tolerance(
 
     Returns borderline flags — information the first-pass physics tool does not emit.
     """
+    from rockburst.physics.relations import DEFAULT_ABS_TOL, DEFAULT_REL_TOL
+
     p = cfg.get("physics", {})
-    base_rel = float(p.get("rel_tol", 0.05))
-    base_abs = float(p.get("abs_tol", 0.05))
+    base_rel = float(p.get("rel_tol", DEFAULT_REL_TOL))
+    base_abs = float(p.get("abs_tol", DEFAULT_ABS_TOL))
+    b1_max = float(p.get("b1_implausible_max", 200.0))
     # Band: tighter (0.5x) and stated (1x); borderline = ok at stated, fail at tighter
     tight = check_case(
         case,
@@ -60,6 +63,7 @@ def physics_recheck_perturbed_tolerance(
         scf_ood_threshold=p.get("scf_ood_threshold", 2.0),
         wet_range=tuple(p.get("wet_range", [0.5, 40.0])),
         d_range=tuple(p.get("d_range", [50.0, 2500.0])),
+        b1_implausible_max=b1_max,
     )
     stated = check_case(
         case,
@@ -68,6 +72,7 @@ def physics_recheck_perturbed_tolerance(
         scf_ood_threshold=p.get("scf_ood_threshold", 2.0),
         wet_range=tuple(p.get("wet_range", [0.5, 40.0])),
         d_range=tuple(p.get("d_range", [50.0, 2500.0])),
+        b1_implausible_max=b1_max,
     )
     borderline: list[str] = []
     for name in ("scf", "b1", "b2"):
@@ -228,10 +233,28 @@ def cross_check_model_reprediction(
 def needs_extra_validation(
     data_q: Any,
     cfg: dict[str, Any] | None = None,
+    phys: Any | None = None,
 ) -> bool:
-    """Pre-registered extra-validation gate."""
+    """Pre-registered extra-validation gate (M2: also on identity violations)."""
     cfg = cfg or {}
     cut = float(cfg.get("routing", {}).get("extra_validation_r_data", 0.55))
+    if phys is not None:
+        issues = list(getattr(phys, "issues", []) or [])
+        if any(
+            key in i
+            for i in issues
+            for key in (
+                "inconsistency",
+                "implausible_sigma_c_over_sigma_t",
+                "suspected_row_shift",
+            )
+        ):
+            return True
+        exact = getattr(phys, "exact_checks", {}) or {}
+        if any(
+            isinstance(c, dict) and c.get("ok") is False for c in exact.values()
+        ):
+            return True
     if data_q is None:
         return False
     missing = list(getattr(data_q, "missing_features", []) or [])

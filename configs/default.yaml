@@ -30,7 +30,8 @@ cv:
   n_repeats: 5
 
 tuning:
-  n_trials: 8
+  # Slice 6 / M9: ≥50 Optuna trials per model family (equal budget)
+  n_trials: 50
 
 gemini:
   planner_model: gemini-3.5-flash
@@ -42,11 +43,14 @@ gemini:
   # switched to gemini-3.5-flash to finish the ≥30-case comparison.
 
 physics:
-  rel_tol: 0.05
-  abs_tol: 0.05
+  # M2: source rounding (~0.006 abs) or 2% relative on SCF/B1/B2 identities
+  rel_tol: 0.02
+  abs_tol: 0.006
   scf_ood_threshold: 2.0
   wet_range: [0.5, 40.0]
   d_range: [50.0, 2500.0]
+  # Flag σc/σt above this (row 288 pattern); listed B1 may still look plausible
+  b1_implausible_max: 200.0
 
 quality:
   iqr_factor: 3.0
@@ -63,11 +67,16 @@ uncertainty:
 routing:
   max_loops: 8
   disagreement_threshold: 0.35
-  abstain_r_final: 0.45
-  accept_r_final: 0.70
   large_set_size: 3
   # Design log (reports/design_decisions_log.md): extra validation when R_data < cut
   extra_validation_r_data: 0.55
+  # Decision bands come from fusion.joblib (learned). Do not set abstain_r_final /
+  # accept_r_final here — serving ignores hand-set overrides unless explicitly enabled:
+  # override_decision_thresholds: true
+  # abstain_r_final: 0.45
+  # engineering_verification: 0.55
+  # accept_with_caution: 0.65
+  # accept_r_final: 0.70
 
 fusion:
   decisions:
@@ -75,3 +84,5 @@ fusion:
     - accept_with_caution
     - engineering_verification
     - abstain
+  # Confidence floor/ceiling after calibration (avoid exact 0/1 reporting)
+  conf_eps: 0.001

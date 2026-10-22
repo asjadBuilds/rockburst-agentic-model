@@ -1,22 +1,45 @@
 {
   "predicted_grade": 3,
-  "prediction_probability": 0.96875,
+  "predicted_intensity": "strong",
+  "prediction_probability": 0.9851377679437644,
   "prediction_set": [
     3
   ],
-  "physics_consistency": 0.85,
-  "input_reliability": 0.5694490999265583,
+  "prediction_set_intensities": [
+    "strong"
+  ],
+  "physics_consistency": 0.3333333333333333,
+  "input_reliability": 0.6238805970149254,
   "ood_status": "Yes",
   "prediction_stability": "high",
-  "agent_disagreement": "low",
-  "final_system_confidence": 0.999999,
-  "decision": "Accept with caution; verify key measurements. (Critic unresolved (endorse=False, recheck=data); downgraded accept \u2192 accept_with_caution)",
+  "agent_disagreement": "inter_agent",
+  "inter_agent_disagreement": {
+    "ml_grade": 3,
+    "ml_intensity": "strong",
+    "criteria_consensus_grade": null,
+    "criteria_intensity": "unknown",
+    "criteria_grades": {},
+    "ml_vs_criteria": false,
+    "critic_endorse": false,
+    "critic_rules_fired": [
+      "low_physics",
+      "physics_vs_model_confidence",
+      "ood_overconfident",
+      "validation_objection"
+    ],
+    "parties": [
+      "critic_vs_fusion_path"
+    ],
+    "has_disagreement": true
+  },
+  "final_system_confidence": 0.999,
+  "decision": "Predicted intensity: strong (grade 3). Conformal set: {strong} (grades [3]). System confidence R_final=0.999. Recommended action: accept_with_caution. Inter-agent disagreement: Critic objections (low_physics, physics_vs_model_confidence, ood_overconfident, validation_objection). Accept with caution; verify key measurements. (Critic unresolved (endorse=False, recheck=physics); downgraded accept \u2192 accept_with_caution)",
   "recommended_action": "accept_with_caution",
   "probabilities": [
     0.0,
     0.0,
-    0.03125,
-    0.96875
+    0.014862232056235766,
+    0.9851377679437644
   ],
   "route_trace": [
     "rules:data_quality",
@@ -24,23 +47,46 @@
     "rules:predict",
     "rules:uncertainty",
     "rules:critic",
-    "rejected:recheck_data",
-    "fallback:critic",
+    "rules:recheck_physics",
+    "rules:critic",
     "rules:finalize"
   ],
   "abstained": false,
   "critic_endorse": false,
-  "downgrade_reason": "Critic unresolved (endorse=False, recheck=data); downgraded accept \u2192 accept_with_caution",
+  "downgrade_reason": "Critic unresolved (endorse=False, recheck=physics); downgraded accept \u2192 accept_with_caution",
+  "consistency_note": null,
   "physics_skipped": false,
-  "recheck_payloads": {},
+  "recheck_payloads": {
+    "physics_tol": {
+      "tool": "physics_recheck_perturbed_tolerance",
+      "physics_score_stated": 0.30000000000000004,
+      "physics_score_tight": 0.30000000000000004,
+      "borderline_relations": [],
+      "issues_stated": [
+        "SCF OOD (> 2.0): 2.61"
+      ],
+      "issues_tight": [
+        "SCF OOD (> 2.0): 2.61"
+      ],
+      "low_physics": true
+    }
+  },
   "r_vector": {
-    "r_data": 0.5694490999265583,
-    "r_physics": 0.85,
-    "r_model": 0.96875,
-    "r_uncertainty": 0.9398133026822677,
-    "r_stability": 0.98171875,
+    "r_data": 0.6238805970149254,
+    "r_physics": 0.3333333333333333,
+    "r_model": 0.999,
+    "r_uncertainty": 0.999,
+    "r_stability": 0.6220472440944882,
     "n_missing": 0.0,
     "d_observed": 1.0,
-    "r_final": 0.999999
-  }
+    "r_final": 0.999
+  },
+  "explanation": "Top held-out permutation features: wet, sigma_theta, scf, sigma_c, b1",
+  "critic_rules_fired": [
+    "low_physics",
+    "physics_vs_model_confidence",
+    "ood_overconfident",
+    "validation_objection"
+  ],
+  "delivered_planner": "rules_fsm"
 }

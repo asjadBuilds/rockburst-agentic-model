@@ -12,6 +12,8 @@ class DataQualityOutput(BaseModel):
     ood_flag: bool
     missing_features: list[str] = []
     near_duplicates: list[int] = []
+    conflicting_near_dup_labels: bool = False
+    ood_scores: dict[str, float] = Field(default_factory=dict)
     issues: list[str] = []
 
 
@@ -45,6 +47,8 @@ class CriticOutput(BaseModel):
     contradictions: list[str] = []
     request_recheck: Literal["none", "physics", "data", "model"] = "none"
     endorse: bool = True
+    rules_fired: list[str] = []
+    escalate_abstain: bool = False
 
 
 class AssessmentOutput(BaseModel):

@@ -1,23 +1,40 @@
 {
   "predicted_grade": 0,
-  "prediction_probability": 0.8046875,
+  "predicted_intensity": "none",
+  "prediction_probability": 0.7416534181240063,
   "prediction_set": [
     0,
     1
   ],
-  "physics_consistency": 1.0,
-  "input_reliability": 0.8012172490521734,
+  "prediction_set_intensities": [
+    "none",
+    "light"
+  ],
+  "physics_consistency": 0.6565656565656566,
+  "input_reliability": 0.6238805970149254,
   "ood_status": "No",
   "prediction_stability": "high",
   "agent_disagreement": "low",
-  "final_system_confidence": 0.999999,
-  "decision": "Prediction accepted; routine monitoring recommended.",
+  "inter_agent_disagreement": {
+    "ml_grade": 0,
+    "ml_intensity": "none",
+    "criteria_consensus_grade": null,
+    "criteria_intensity": "unknown",
+    "criteria_grades": {},
+    "ml_vs_criteria": false,
+    "critic_endorse": null,
+    "critic_rules_fired": [],
+    "parties": [],
+    "has_disagreement": false
+  },
+  "final_system_confidence": 0.999,
+  "decision": "Predicted intensity: none (grade 0). Conformal set: {none, light} (grades [0, 1]). System confidence R_final=0.999. Recommended action: accept. Prediction accepted; routine monitoring recommended.",
   "recommended_action": "accept",
   "probabilities": [
-    0.8046875,
-    0.1484375,
-    0.0390625,
-    0.0078125
+    0.7416534181240063,
+    0.2178060413354531,
+    0.04054054054054054,
+    0.0
   ],
   "route_trace": [
     "rules:data_quality",
@@ -29,19 +46,25 @@
   "abstained": false,
   "critic_endorse": null,
   "downgrade_reason": null,
+  "consistency_note": null,
   "physics_skipped": true,
   "recheck_payloads": {},
   "r_vector": {
-    "r_data": 0.8012172490521734,
-    "r_physics": 1.0,
-    "r_model": 0.8046875,
-    "r_uncertainty": 0.7305386348353198,
-    "r_stability": 0.9818359375,
+    "r_data": 0.6238805970149254,
+    "r_physics": 0.6565656565656566,
+    "r_model": 0.8064516129032258,
+    "r_uncertainty": 0.8095238095238095,
+    "r_stability": 0.8125,
     "n_missing": 0.0,
     "d_observed": 1.0,
-    "r_final": 0.999999
+    "r_final": 0.999
   },
-  "example_protocol": "held-out fold model: case was in outer test fold; pipeline fit only on fold train/fit indices",
-  "fold_model": "rf__median",
-  "true_grade": 0
+  "explanation": "Top held-out permutation features: wet, sigma_theta, scf, sigma_c, b1",
+  "critic_rules_fired": [],
+  "delivered_planner": "rules_fsm",
+  "case_no": 48,
+  "example_protocol": "held-out fold model: case was in outer test fold; pipeline fit only on fold train/fit indices; rules FSM",
+  "fold_model": "rf__iterative",
+  "true_grade": 0,
+  "true_intensity": "none"
 }

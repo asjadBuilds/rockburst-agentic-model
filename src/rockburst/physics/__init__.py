@@ -1,17 +1,41 @@
+from rockburst.physics.criteria import (
+    criteria_grades_for_case,
+    kidybinski_grade,
+    russenes_grade,
+)
 from rockburst.physics.relations import (
+    DERIVED_FEATURES,
     FEATURE_COLS,
+    PHYSICAL_MISSING_MASKS,
+    PRIMARY_FEATURES,
     PhysicsCheckResult,
+    apply_missing_mask,
     check_case,
     compute_b1,
     compute_b2,
     compute_scf,
+    diagnose_row_shift_block,
+    reconstruct_missing_from_physics,
+    with_as_given,
+    with_recomputed_derived,
 )
 
 __all__ = [
+    "DERIVED_FEATURES",
     "FEATURE_COLS",
+    "PHYSICAL_MISSING_MASKS",
+    "PRIMARY_FEATURES",
     "PhysicsCheckResult",
+    "apply_missing_mask",
     "check_case",
     "compute_b1",
     "compute_b2",
     "compute_scf",
+    "criteria_grades_for_case",
+    "diagnose_row_shift_block",
+    "kidybinski_grade",
+    "reconstruct_missing_from_physics",
+    "russenes_grade",
+    "with_as_given",
+    "with_recomputed_derived",
 ]

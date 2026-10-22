@@ -1,22 +1,38 @@
 {
   "predicted_grade": 0,
-  "prediction_probability": 0.953125,
+  "predicted_intensity": "none",
+  "prediction_probability": 0.9261780104712041,
   "prediction_set": [
     0
   ],
-  "physics_consistency": 1.0,
-  "input_reliability": 0.7509010150613369,
+  "prediction_set_intensities": [
+    "none"
+  ],
+  "physics_consistency": 0.6565656565656566,
+  "input_reliability": 0.6238805970149254,
   "ood_status": "No",
   "prediction_stability": "high",
   "agent_disagreement": "low",
-  "final_system_confidence": 0.999999,
-  "decision": "Prediction accepted; routine monitoring recommended.",
+  "inter_agent_disagreement": {
+    "ml_grade": 0,
+    "ml_intensity": "none",
+    "criteria_consensus_grade": null,
+    "criteria_intensity": "unknown",
+    "criteria_grades": {},
+    "ml_vs_criteria": false,
+    "critic_endorse": null,
+    "critic_rules_fired": [],
+    "parties": [],
+    "has_disagreement": false
+  },
+  "final_system_confidence": 0.999,
+  "decision": "Predicted intensity: none (grade 0). Conformal set: {none} (grades [0]). System confidence R_final=0.999. Recommended action: accept. Prediction accepted; routine monitoring recommended.",
   "recommended_action": "accept",
   "probabilities": [
-    0.953125,
-    0.03125,
-    0.0078125,
-    0.0078125
+    0.9261780104712041,
+    0.045454545454545456,
+    0.028367444074250358,
+    0.0
   ],
   "route_trace": [
     "rules:data_quality",
@@ -28,19 +44,22 @@
   "abstained": false,
   "critic_endorse": null,
   "downgrade_reason": null,
+  "consistency_note": null,
   "physics_skipped": true,
   "recheck_payloads": {},
   "r_vector": {
-    "r_data": 0.7509010150613369,
-    "r_physics": 1.0,
-    "r_model": 0.953125,
-    "r_uncertainty": 0.9005077074593878,
-    "r_stability": 0.987578125,
+    "r_data": 0.6238805970149254,
+    "r_physics": 0.6565656565656566,
+    "r_model": 0.999,
+    "r_uncertainty": 0.999,
+    "r_stability": 0.8125,
     "n_missing": 0.0,
     "d_observed": 1.0,
-    "r_final": 0.999999
+    "r_final": 0.999
   },
+  "explanation": "Top held-out permutation features: wet, sigma_theta, scf, sigma_c, b1",
+  "critic_rules_fired": [],
+  "delivered_planner": "rules_fsm",
   "trace_path": "/home/leviathan/Workspace/agentic-rockburst-model/artifacts/traces/case_67.json",
-  "example_protocol": "production model, case seen in training (full-data refit of best_baseline.joblib)",
-  "stale_note": "production showcase; case may have been seen in full-data refit"
+  "example_protocol": "production model, case seen in training (full-data refit of best_baseline.joblib); rules FSM"
 }
