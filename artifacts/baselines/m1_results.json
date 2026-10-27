@@ -7,9 +7,8 @@
   "mode": "full",
   "run_metadata": {
     "mode": "full",
-    "date_utc": "2026-10-27T23:03:47Z",
-    "git_hash": "179d6efbdf9cd86f8d940c52be60f5e90e14b578",
-    "git_dirty": true,
+    "git_hash": "b48325e17c103536c6fe0ebf3ba59d476d4420aa",
+    "git_dirty": false,
     "rockburst_version": "0.1.0",
     "package_versions": {
       "numpy": "2.5.3",
@@ -30,7 +29,10 @@
     "n_outer": 5,
     "n_inner": 3,
     "n_trials": 50,
-    "best_model": "lightgbm__median"
+    "best_model": "lightgbm__median",
+    "started_date_utc": "2026-10-27T23:16:43Z",
+    "completed_date_utc": "2026-10-27T23:18:44Z",
+    "git_state_scope": "captured before generated artefacts were written"
   },
   "search_spaces": {
     "logistic": {
