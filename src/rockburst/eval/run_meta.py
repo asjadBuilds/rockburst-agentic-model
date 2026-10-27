@@ -128,3 +128,28 @@ def build_run_metadata(
     if extra:
         meta.update(extra)
     return meta
+
+
+def finalize_run_metadata(
+    started: dict[str, Any],
+    *,
+    mode: str,
+    command: str,
+    extra: dict[str, Any] | None = None,
+    config: dict[str, Any] | None = None,
+    input_paths: list[str | Path] | None = None,
+) -> dict[str, Any]:
+    """Refresh completion metadata while preserving start-of-run provenance."""
+    completed = build_run_metadata(
+        mode=mode,
+        command=command,
+        extra=extra,
+        config=config,
+        input_paths=input_paths,
+    )
+    completed["started_date_utc"] = started.get("date_utc")
+    completed["completed_date_utc"] = completed.pop("date_utc")
+    completed["git_hash"] = started.get("git_hash")
+    completed["git_dirty"] = started.get("git_dirty")
+    completed["git_state_scope"] = "captured before generated artefacts were written"
+    return completed

@@ -7,8 +7,9 @@
   "mode": "full",
   "run_metadata": {
     "mode": "full",
-    "date_utc": "2026-10-27T10:30:08Z",
-    "git_hash": "3db99c9d5e6145a9590ccf7403ede1f74b608855",
+    "date_utc": "2026-10-27T23:03:47Z",
+    "git_hash": "179d6efbdf9cd86f8d940c52be60f5e90e14b578",
+    "git_dirty": true,
     "rockburst_version": "0.1.0",
     "package_versions": {
       "numpy": "2.5.3",
@@ -22,6 +23,10 @@
       "lightgbm": "4.7.0"
     },
     "command": "rockburst train",
+    "configuration_sha256": "a40baeb5dbfe6743400ce14414837436bb9571cccf81820550764b4e8d307e8f",
+    "input_sha256": {
+      "data/processed/rockburst_processed.csv": "5be436a3711623b2c40ceb0c7cb7be5e19ccc15bfb323d6fcb7f7197d797f54d"
+    },
     "n_outer": 5,
     "n_inner": 3,
     "n_trials": 50,
@@ -38106,7 +38111,7 @@
     "colsample_bytree": 0.600324720304878,
     "reg_lambda": 1.043554439188085
   },
-  "model_path": "/home/leviathan/Workspace/agentic-rockburst-model/artifacts/models/best_baseline.joblib",
+  "model_path": "artifacts/models/best_baseline.joblib",
   "conformal_state": {
     "alpha": 0.1,
     "class_thresholds": [
@@ -38125,7 +38130,7 @@
       15
     ]
   },
-  "ensemble_path": "/home/leviathan/Workspace/agentic-rockburst-model/artifacts/models/ensemble.joblib",
+  "ensemble_path": "artifacts/models/ensemble.joblib",
   "fusion_set_comparison": {
     "sets": {
       "A": {
@@ -38597,7 +38602,7 @@
           "n_boot": 200
         }
       },
-      "note": "AUROC of raw R_* vs OOF correctness. Near-chance r_data/r_physics justifies keeping locked set A unless set compare wins on RC area."
+      "note": "AUROC of raw R_* vs OOF correctness. A reliability channel whose grouped-bootstrap CI lies wholly below 0.5 is excluded if the declared set-selection rule would otherwise activate it."
     },
     "fold_coef_sensitivity": [
       {
@@ -38670,7 +38675,7 @@
   },
   "fusion_crossfit_n_folds": 5,
   "fusion_crossfit_disjoint_ok": true,
-  "fusion_path": "/home/leviathan/Workspace/agentic-rockburst-model/artifacts/models/fusion.joblib",
+  "fusion_path": "artifacts/models/fusion.joblib",
   "fusion_protocol": "declared A-D set selected by risk-coverage rule; production stacker and calibrator fitted and reported on the identical served raw-score path; fold-stacker outputs retained only as diagnostics (RC3)",
   "fusion_calibration_protocol": "production_stacker_raw_oof_single_serve_path",
   "fusion_coef": [
@@ -39014,7 +39019,7 @@
         "n_boot": 200
       }
     },
-    "note": "AUROC of raw R_* vs OOF correctness. Near-chance r_data/r_physics justifies keeping locked set A unless set compare wins on RC area."
+    "note": "AUROC of raw R_* vs OOF correctness. A reliability channel whose grouped-bootstrap CI lies wholly below 0.5 is excluded if the declared set-selection rule would otherwise activate it."
   },
   "decision_thresholds_nonempty": true,
   "base_probability_calibration": {

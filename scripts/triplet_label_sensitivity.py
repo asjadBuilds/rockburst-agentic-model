@@ -28,7 +28,7 @@ sys.path.insert(0, str(ROOT / "src"))
 import pandas as pd
 
 from rockburst.config import load_config, resolve_path
-from rockburst.eval.run_meta import build_run_metadata
+from rockburst.eval.run_meta import build_run_metadata, finalize_run_metadata
 from rockburst.eval.sensitivity import (
     assign_triplet_group_ids,
     evaluate_m1_m7,
@@ -72,6 +72,12 @@ def main() -> int:
     rel_tol = float(cfg.get("quality", {}).get("near_dup_rel_tol", 0.05))
     mode = "quick" if args.quick else "full"
     cmd = "scripts/triplet_label_sensitivity.py" + (" --quick" if args.quick else "")
+    started_metadata = build_run_metadata(
+        mode=mode,
+        command=cmd,
+        config=cfg,
+        input_paths=[path],
+    )
 
     # --- RM12: triplet-grouped CV headlines ---
     _X, _y, dup_groups = prepare_xy(df)
@@ -125,7 +131,8 @@ def main() -> int:
     }
 
     out_blob = {
-        "run_metadata": build_run_metadata(
+        "run_metadata": finalize_run_metadata(
+            started_metadata,
             mode=mode,
             command=cmd,
             extra={

@@ -28,7 +28,7 @@ from rockburst.eval.metrics import (
     reliability_diagram_bins,
     severe_misclassification_rate,
 )
-from rockburst.eval.run_meta import build_run_metadata
+from rockburst.eval.run_meta import build_run_metadata, finalize_run_metadata
 from rockburst.fusion.features import compute_reliability_features  # noqa: F401 — shared path
 from rockburst.fusion.fold_oof import fit_fold_fusion_oof
 from rockburst.graph.runner import run_graph
@@ -1077,7 +1077,8 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
     )
 
     # Refresh Rm8 metadata at write time (evaluate can take hours).
-    results["run_metadata"] = build_run_metadata(
+    results["run_metadata"] = finalize_run_metadata(
+        results["run_metadata"],
         mode="quick" if quick else "full",
         command="rockburst evaluate" + (" --quick" if quick else ""),
         extra={

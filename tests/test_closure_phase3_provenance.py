@@ -4,7 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 
-from rockburst.eval.run_meta import build_run_metadata
+from rockburst.eval.run_meta import build_run_metadata, finalize_run_metadata
 from rockburst.ml.train import _repo_relative_artifact
 
 
@@ -53,6 +53,22 @@ def test_training_artifact_label_is_repository_relative(tmp_path):
     assert _repo_relative_artifact(model, {"_root": str(tmp_path)}) == (
         "artifacts/models/fusion.joblib"
     )
+
+
+def test_completion_metadata_preserves_start_git_state(monkeypatch):
+    started = {
+        "date_utc": "2026-01-01T00:00:00Z",
+        "git_hash": "clean-checkpoint",
+        "git_dirty": False,
+    }
+    monkeypatch.setattr("rockburst.eval.run_meta._git_hash", lambda: "later")
+    monkeypatch.setattr("rockburst.eval.run_meta._git_dirty", lambda: True)
+    completed = finalize_run_metadata(started, mode="full", command="test")
+    assert completed["git_hash"] == "clean-checkpoint"
+    assert completed["git_dirty"] is False
+    assert completed["started_date_utc"] == "2026-01-01T00:00:00Z"
+    assert completed["completed_date_utc"]
+    assert completed["git_state_scope"] == "captured before generated artefacts were written"
 
 
 def test_client_scanner_catches_baseline_notebook_and_report_paths(tmp_path):

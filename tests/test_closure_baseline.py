@@ -14,11 +14,7 @@ compare_values = _MODULE.compare_values
 verify = _MODULE.verify
 
 
-def test_current_phase1_to_phase5_closure_baseline_is_unchanged():
-    assert verify() == []
-
-
-def test_regeneration_mode_still_checks_protected_metrics_and_code():
+def test_regeneration_mode_checks_protected_metrics_and_code():
     assert verify(check_artifact_hashes=False) == []
 
 

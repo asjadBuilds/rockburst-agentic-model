@@ -22,7 +22,7 @@ from rockburst.eval.metrics import (
     classification_report_dict,
     quadratic_weighted_kappa,
 )
-from rockburst.eval.run_meta import build_run_metadata
+from rockburst.eval.run_meta import build_run_metadata, finalize_run_metadata
 from rockburst.fusion.features import compute_r_model, compute_reliability_features
 from rockburst.fusion.stacker import ReliabilityFusion, select_decision_thresholds
 from rockburst.ml.ordinal import argmax_grade, median_of_distribution
@@ -1130,7 +1130,8 @@ def train_baselines(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         results["criterion_label_agreement"] = {"error": str(exc)}
 
     # Refresh Rm8 metadata at write time (train can take hours).
-    results["run_metadata"] = build_run_metadata(
+    results["run_metadata"] = finalize_run_metadata(
+        results["run_metadata"],
         mode="quick" if quick else "full",
         command="rockburst train" + (" --quick" if quick else ""),
         extra={

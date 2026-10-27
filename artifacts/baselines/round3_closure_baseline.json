@@ -6,13 +6,13 @@
     "src/rockburst/agents/rechecks.py": "4c1737711b00600704df14eca047485c954555692c50461677bc1d238d2603dd",
     "src/rockburst/agents/schemas.py": "25c8222416ea07a81f33a3befff722113a52d7916775d1803e15ab847dbba4b0",
     "src/rockburst/agents/tools.py": "262496166847c426e7ad20eea4f64d22b479719706a6f0c61f8b1b0ed1d206b6",
-    "src/rockburst/eval/ablation.py": "6004c228282588985f53e926ccf93ab2dfb0102f680697236e03e4ccab4f911e",
+    "src/rockburst/eval/ablation.py": "36fcc51072b66c86f1bfc58583898ae3e137886c05243df38faff2084ef46b9e",
     "src/rockburst/eval/metrics.py": "9092e48e053799be791db357b37f59d8873712f1a5f6c911c27116b64ff5b562",
     "src/rockburst/fusion/features.py": "6cbc09b54824a4f7c730454bf5b7116fe40bb2c7b9b4691310d723caf07f395e",
     "src/rockburst/fusion/stacker.py": "041623f5e362ac4e80eae97cc39212ac4c179e271eabbcf183a9ddb0db3564ad",
     "src/rockburst/graph/runner.py": "043e7c37fcf4579312ba15be068de705750c7902770b1f0b655fe8a6baad5b75",
     "src/rockburst/ml/pipelines.py": "a7969c1488449bb8feea8ded902ebcc339b4213fafcdcc69dcc79494ae8f88ff",
-    "src/rockburst/ml/train.py": "45021707f7aa1976b460df672d667d2092cae2232632540419b4e0bec4a6c358",
+    "src/rockburst/ml/train.py": "92f73c4cbec6a529bd6703964988f20092aa615c7eaf852c7f43dba6cd7d8f02",
     "src/rockburst/ml/tuning.py": "9fce654dfce8ec219e87e9308b88de735a30f81febdbe095835bc96d99822176",
     "src/rockburst/physics/criteria.py": "3e322e59e19991cb22dd664a4f99c656936d0ec9b1756f280ded59ba13f19aa1",
     "src/rockburst/physics/precheck.py": "6fadca22bea196ca0b99d631b9b11bd9ed206c8acc270d6d74d2962665ad57ad",
@@ -45,8 +45,13 @@
     "phase4": {
       "src/rockburst/eval/ablation.py": {
         "before": "d49a900f959a94ac02064b6cd3dc041a7065d1d3c613dba24a717be87bc97441",
-        "after": "6004c228282588985f53e926ccf93ab2dfb0102f680697236e03e4ccab4f911e",
-        "scope": "report-only confusion matrices, reliability bins, entropy risk-coverage, and grouped-bootstrap curve bands; existing predictions and headline metric formulas unchanged"
+        "after": "36fcc51072b66c86f1bfc58583898ae3e137886c05243df38faff2084ef46b9e",
+        "scope": "report-only confusion matrices, reliability bins, entropy risk-coverage, grouped-bootstrap curve bands, and start-of-run provenance preservation; existing predictions and headline metric formulas unchanged"
+      },
+      "src/rockburst/ml/train.py": {
+        "before": "45021707f7aa1976b460df672d667d2092cae2232632540419b4e0bec4a6c358",
+        "after": "92f73c4cbec6a529bd6703964988f20092aa615c7eaf852c7f43dba6cd7d8f02",
+        "scope": "preserve start-of-run commit and dirty flag when refreshing completion metadata; training behavior unchanged"
       }
     }
   },
