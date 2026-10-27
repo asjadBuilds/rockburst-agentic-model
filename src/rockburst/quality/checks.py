@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import StandardScaler
 
 from rockburst.physics.relations import FEATURE_COLS
 from rockburst.quality.near_dup import (
@@ -18,13 +19,14 @@ from rockburst.quality.near_dup import (
 
 
 # Typical underground rock-mechanics MPa / ratio ranges (sanity, not hard physics)
+# B2 ∈ (0, 1) by definition for σc > σt > 0 (RM6).
 _SCALE_BOUNDS: dict[str, tuple[float, float]] = {
     "sigma_theta": (0.1, 500.0),
     "sigma_c": (0.5, 400.0),
     "sigma_t": (0.01, 50.0),
     "scf": (0.0, 5.0),
     "b1": (0.5, 200.0),
-    "b2": (0.0, 50.0),
+    "b2": (0.0, 1.0),
     "wet": (0.1, 80.0),
     "d": (10.0, 5000.0),
 }
@@ -42,30 +44,33 @@ def _mahalanobis_ood_score(X: np.ndarray, x_case: np.ndarray) -> tuple[float, bo
     """Return (reliability in [0,1], is_ood). Higher reliability = more in-distribution."""
     if len(X) < 10:
         return 1.0, False
-    mu = X.mean(axis=0)
-    xc = x_case - mu
+    # Standardise so ridge is scale-free (RM6).
+    scaler = StandardScaler()
+    Xs = scaler.fit_transform(X)
+    xc = scaler.transform(x_case.reshape(1, -1)).ravel()
     try:
-        cov = np.cov(X, rowvar=False)
-        # Shrink diagonal for stability
+        cov = np.cov(Xs, rowvar=False)
         cov = cov + 1e-3 * np.eye(cov.shape[0])
         inv = np.linalg.pinv(cov)
         d2 = float(xc @ inv @ xc)
     except Exception:  # noqa: BLE001
         return 1.0, False
-    # Chi-square-ish: p≈0.99 for 8-df is ~20; map distance to reliability
     r = float(np.exp(-0.5 * max(d2, 0.0) / max(X.shape[1], 1)))
     return r, d2 > 25.0
 
 
 def _knn_ood_score(X: np.ndarray, x_case: np.ndarray, k: int = 5) -> tuple[float, bool]:
+    """kNN OOD on standardised features so D (metres) does not dominate (RM6)."""
     if len(X) < k + 1:
         return 1.0, False
+    scaler = StandardScaler()
+    Xs = scaler.fit_transform(X)
+    xc = scaler.transform(x_case.reshape(1, -1))
     nn = NearestNeighbors(n_neighbors=k, metric="euclidean")
-    nn.fit(X)
-    dists, _ = nn.kneighbors(x_case.reshape(1, -1))
+    nn.fit(Xs)
+    dists, _ = nn.kneighbors(xc)
     mean_d = float(dists.mean())
-    # Reference pairwise scale
-    sample = X if len(X) <= 200 else X[np.random.default_rng(0).choice(len(X), 200, replace=False)]
+    sample = Xs if len(Xs) <= 200 else Xs[np.random.default_rng(0).choice(len(Xs), 200, replace=False)]
     ref_nn = NearestNeighbors(n_neighbors=min(k, len(sample) - 1), metric="euclidean")
     ref_nn.fit(sample)
     ref_d, _ = ref_nn.kneighbors(sample)
@@ -114,6 +119,11 @@ def combination_scale_issues(case: dict[str, Any], *, rel_tol: float = 0.05) -> 
         if val is None or not np.isfinite(float(val)):
             continue
         v = float(val)
+        # B2 open interval (0, 1) — endpoints invalid for rocks (RM6).
+        if feat == "b2":
+            if not (lo < v < hi):
+                issues.append(f"scale_out_of_range={feat}:{v:g} not in ({lo:g},{hi:g})")
+            continue
         if v < lo or v > hi:
             issues.append(f"scale_out_of_range={feat}:{v:g} not in [{lo:g},{hi:g}]")
     return issues
@@ -136,23 +146,20 @@ def score_data_quality(
     near_dup_atol: float | None = None,  # legacy unused
     group_col: str = "dup_group_id",
 ) -> dict[str, Any]:
-    """Score one case against a reference set.
+    """Score one case against a fold-training reference.
 
-    Caller must pass a training-fold reference that already excludes the case
-    and its ``dup_group_id`` (see ``build_fold_reference``). This function also
-    drops matching ``no`` / group rows defensively.
+    Caller should pass a training-fold reference that excludes the case by
+    ``no`` (see ``build_fold_reference``). Same-``dup_group_id`` neighbours are
+    **kept** so near-duplicate conflict detection can fire (RM3).
 
-    Near-duplicate detection uses the same raw-feature relative tolerance as
-    ``assign_dup_groups``.
+    Near-duplicate conflict uses **only training near-dup labels** — never the
+    case's own ``rockburst_grade`` (unknown at inference; would leak in eval).
     """
-    del near_dup_rtol, near_dup_atol  # legacy kwargs accepted for call-site compat
+    del near_dup_rtol, near_dup_atol, group_col  # legacy kwargs accepted for compat
     ref = reference.copy()
     case_no = case.get("no")
     if case_no is not None and "no" in ref.columns:
         ref = ref[ref["no"].astype(int) != int(case_no)]
-    case_gid = case.get(group_col)
-    if case_gid is not None and group_col in ref.columns:
-        ref = ref[ref[group_col] != case_gid]
 
     issues: list[str] = []
     missing = [
@@ -186,6 +193,7 @@ def score_data_quality(
 
     near_dups: list[int] = []
     conflicting_near_dup_labels = False
+    train_near_dup_grades: list[int] = []
     vec_raw = np.array([float(case.get(c, np.nan)) for c in RAW_DUP_COLS], dtype=float)
     vec_all = np.array([float(case.get(c, np.nan)) for c in FEATURE_COLS], dtype=float)
     if len(ref) > 0:
@@ -196,17 +204,13 @@ def score_data_quality(
                 near_dups.append(int(nos[i]))
     if near_dups:
         issues.append(f"near_duplicates={near_dups[:10]}")
-        # M5: near-duplicates with conflicting rockburst grades (label noise signal)
+        # RM3: conflict among *training* near-dup labels only — never case label.
         if "rockburst_grade" in ref.columns and "no" in ref.columns:
-            grades: list[int] = []
-            case_g = case.get("rockburst_grade")
-            if case_g is not None and np.isfinite(float(case_g)):
-                grades.append(int(case_g))
             for no in near_dups:
                 hit = ref.loc[ref["no"].astype(int) == int(no), "rockburst_grade"]
-                if len(hit):
-                    grades.append(int(hit.iloc[0]))
-            if len(set(grades)) > 1:
+                if len(hit) and np.isfinite(float(hit.iloc[0])):
+                    train_near_dup_grades.append(int(hit.iloc[0]))
+            if len(set(train_near_dup_grades)) > 1:
                 conflicting_near_dup_labels = True
                 issues.append("conflicting_near_dup_labels")
 
@@ -243,8 +247,10 @@ def score_data_quality(
     except Exception as exc:  # noqa: BLE001
         issues.append(f"ood_detectors_skipped={exc}")
 
-    # Ensemble OOD reliability: mean of IF / Mahalanobis / kNN (M12 comparison)
+    # Ensemble OOD: mean of IF / Mahalanobis / kNN (RM6). Combination justified
+    # as equal-weight ensemble until Phase-5 AUROC-for-errors selects a subset.
     r_ood = float(np.mean([r_iforest, r_mahal, r_knn]))
+    ood_votes = int(ood_if) + int(ood_mahal) + int(ood_knn) + int(ood)
     conflict_pen = 0.1 if conflicting_near_dup_labels else 0.0
     combo_pen = 0.08 * sum(1 for i in issues if i.startswith("combo_"))
     scale_pen = 0.05 * sum(1 for i in issues if i.startswith("scale_out_of_range"))
@@ -270,8 +276,18 @@ def score_data_quality(
             "mahalanobis": r_mahal,
             "knn": r_knn,
         },
+        "ood_combination": {
+            "method": "mean_equal_weight",
+            "detectors": ["isolation_forest", "mahalanobis", "knn", "scf_threshold"],
+            "votes": ood_votes,
+            "justification": (
+                "Equal-weight mean of standardised Mahalanobis/kNN + IF + SCF "
+                "threshold until fold AUROC-for-errors selects a subset (RM6)."
+            ),
+        },
         "missing_features": missing,
         "near_duplicates": near_dups[:20],
         "conflicting_near_dup_labels": conflicting_near_dup_labels,
+        "train_near_dup_grades": train_near_dup_grades[:20],
         "issues": issues,
     }

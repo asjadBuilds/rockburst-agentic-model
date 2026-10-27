@@ -11,7 +11,6 @@ from sklearn.base import clone
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.pipeline import Pipeline
 
-from rockburst.agents.schemas import PredictiveOutput
 from rockburst.agents.tools import (
     fuse_assessment,
     run_data_quality,
@@ -23,12 +22,15 @@ from rockburst.config import resolve_path
 from rockburst.eval.bootstrap import fold_list_ci, grouped_bootstrap_ci
 from rockburst.eval.metrics import (
     classification_report_dict,
+    matched_coverage_metrics,
     ordinal_mae,
     quadratic_weighted_kappa,
+    reliability_diagram_bins,
     severe_misclassification_rate,
 )
-from rockburst.fusion.features import compute_r_model, compute_reliability_features
-from rockburst.fusion.stacker import ReliabilityFusion, select_decision_thresholds
+from rockburst.eval.run_meta import build_run_metadata
+from rockburst.fusion.features import compute_reliability_features  # noqa: F401 — shared path
+from rockburst.fusion.fold_oof import fit_fold_fusion_oof
 from rockburst.graph.runner import run_graph
 from rockburst.ml.pipelines import build_preprocess, get_model_zoo, prepare_xy
 from rockburst.ml.train import (
@@ -111,6 +113,46 @@ def _risk_coverage_curve(
     return {"points": points, "area": area}
 
 
+def _risk_coverage_with_grouped_band(
+    confidence: np.ndarray,
+    correct: np.ndarray,
+    groups: np.ndarray,
+    *,
+    n_boot: int,
+    seed: int,
+) -> dict[str, Any]:
+    """Add paired duplicate-grouped bootstrap bands without changing the RC point curve."""
+    result = _risk_coverage_curve(confidence, correct)
+    if not result["points"]:
+        return result
+    confidence = np.asarray(confidence, dtype=float)
+    correct = np.asarray(correct, dtype=float)
+    groups = np.asarray(groups)
+    unique = np.unique(groups)
+    members = {group: np.flatnonzero(groups == group) for group in unique}
+    rng = np.random.default_rng(seed)
+    boot = []
+    for _ in range(n_boot):
+        sampled = rng.choice(unique, size=len(unique), replace=True)
+        indices = np.concatenate([members[group] for group in sampled])
+        curve = _risk_coverage_curve(confidence[indices], correct[indices])
+        boot.append([point["accuracy"] for point in curve["points"]])
+    values = np.asarray(boot, dtype=float)
+    for index, point in enumerate(result["points"]):
+        point["ci95_low"] = float(np.percentile(values[:, index], 2.5))
+        point["ci95_high"] = float(np.percentile(values[:, index], 97.5))
+    result["band_method"] = "duplicate-grouped bootstrap"
+    result["n_boot"] = int(n_boot)
+    return result
+
+
+def _confusion_4x4(y_true: np.ndarray, y_pred: np.ndarray) -> list[list[int]]:
+    matrix = np.zeros((4, 4), dtype=int)
+    for truth, prediction in zip(y_true, y_pred):
+        matrix[int(truth), int(prediction)] += 1
+    return matrix.tolist()
+
+
 def run_monolithic_fixed_sequence(
     case: dict[str, Any],
     reference: pd.DataFrame,
@@ -158,6 +200,26 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
     alpha = float(cfg.get("uncertainty", {}).get("conformal_alpha", 0.1))
     conf_method = (m1_meta.get("conformal") or {}).get("method", "marginal_split")
 
+    # RM5: measured criterion↔label agreement → ml_vs_criteria severity cut.
+    from rockburst.physics.criteria import criterion_label_agreement_table
+
+    _rows = [df.iloc[i].to_dict() for i in range(len(df))]
+    _labels = [int(v) for v in df["rockburst_grade"].tolist()]
+    criterion_agreement = criterion_label_agreement_table(_rows, _labels)
+    cons_prec = float((criterion_agreement.get("agreement") or {}).get("consensus") or 0.0)
+    rt0 = dict(cfg.get("routing") or {})
+    hand_cut = float(rt0.get("ml_vs_criteria_severe_agreement_ge", 0.75))
+    # Documented threshold: if consensus rarely matches labels, disable agr-severe
+    # (cut > 1); else keep config hand cut. Report notes any M7 abstention delta.
+    ml_vs_cut = hand_cut if cons_prec >= 0.40 else 1.01
+    criterion_agreement["ml_vs_criteria_severe_agreement_ge_used"] = ml_vs_cut
+    criterion_agreement["ml_vs_criteria_severe_agreement_ge_hand"] = hand_cut
+    criterion_agreement["consensus_label_precision"] = cons_prec
+    criterion_agreement["severity_rule"] = (
+        "severe when voter agreement ≥ cut; cut = hand "
+        f"{hand_cut} if consensus-label precision ≥ 0.40 else 1.01 (never)"
+    )
+
     best_name = (
         m1_meta.get("nested_unbiased", {}).get("production_model")
         or m1_meta.get("best_model")
@@ -204,6 +266,10 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         "recheck_changed_confidence": 0,
         "recheck_changed_set": 0,
         "recheck_changed_decision": 0,
+        # RM1: M6-vs-M7 contrast kept separate from before/after recheck effects.
+        "m6_vs_m7_confidence_delta": 0,
+        "m6_vs_m7_set_delta": 0,
+        "m6_vs_m7_decision_delta": 0,
         "tool_invocations": {
             "geomechanics": 0,
             "geomechanics_skipped": 0,
@@ -216,6 +282,16 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         "rule_fires": {},
         "m7_route_diverged_from_m5": 0,
         "m6_route_diverged_from_m5": 0,
+        # RC5: abstention rates by missing-D (filled on M7 cases; Phase 5 artefacts)
+        "abstain_by_missing_d": {
+            "missing_d": {"n": 0, "abstain": 0, "forced_abstain": 0},
+            "present_d": {"n": 0, "abstain": 0, "forced_abstain": 0},
+        },
+        "critic_recheck_cycles_sum": 0,
+        "termination_reasons": {},
+        # RM2: per-case rule flags aligned with errors (for AUROC post-pass).
+        "_rule_case_fired": [],
+        "_rule_case_error": [],
     }
     _SUBSTANTIVE = frozenset(
         {
@@ -282,101 +358,29 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                 X, y, fit_idx, ranked, seed=seed + rep, fold=fold, top_k=3
             )
 
-            R_tr, ycorr_tr = [], []
-            R_cal, ycorr_cal = [], []
-            fusion_idx = fit_idx
-            if quick and len(fusion_idx) > 24:
-                fusion_idx = fusion_idx[:24]
-            elif len(fusion_idx) > 60:
-                rng = np.random.default_rng(seed)
-                fusion_idx = rng.choice(fusion_idx, size=60, replace=False)
-
+            # RC2: fold stacker+calibrator on cross-fitted OOF vectors from tr only
+            # (never in-sample fit_idx reliability / never full-data calibrators).
             fold_cfg_base = {
                 **cfg,
                 "uncertainty": {**cfg.get("uncertainty", {}), "n_perturb": 4},
                 "_fold_ensemble": fold_ensemble,
             }
-            for j in fusion_idx:
-                case = df.iloc[int(j)].to_dict()
-                ref = build_fold_reference(df, fit_idx, case)
-                proba = _predict_proba_safe(pipe, X.iloc[[j]])[0]
-                obs = {
-                    c: bool(np.isfinite(float(case[c]))) if case.get(c) is not None else False
-                    for c in FEATURE_COLS
-                }
-                pred = PredictiveOutput(
-                    predicted_grade=int(proba.argmax()),
-                    probabilities=proba.tolist(),
-                    r_model=compute_r_model(proba),
-                    observed_mask=obs,
-                    model_name="fold",
-                )
-                dq = run_data_quality(case, ref, fold_cfg_base)
-                phys = run_physics(case, fold_cfg_base)
-                unc = run_uncertainty(
-                    case,
-                    pred,
-                    fold_cfg_base,
-                    pipeline=pipe,
-                    ensemble=fold_ensemble,
-                    conformal=conf,
-                )
-                R_tr.append(compute_reliability_features(dq, phys, pred, unc, case=case))
-                ycorr_tr.append(int(pred.predicted_grade == int(y[j])))
-
-            # Inner calib for nested threshold selection (not outer test)
-            cal_use = calib_idx
-            if len(cal_use) > 40:
-                rng = np.random.default_rng(seed + fold)
-                cal_use = rng.choice(cal_use, size=40, replace=False)
-            for j in cal_use:
-                case = df.iloc[int(j)].to_dict()
-                ref = build_fold_reference(df, fit_idx, case)
-                proba = _predict_proba_safe(pipe, X.iloc[[j]])[0]
-                obs = {
-                    c: bool(np.isfinite(float(case[c]))) if case.get(c) is not None else False
-                    for c in FEATURE_COLS
-                }
-                pred = PredictiveOutput(
-                    predicted_grade=int(proba.argmax()),
-                    probabilities=proba.tolist(),
-                    r_model=compute_r_model(proba),
-                    observed_mask=obs,
-                    model_name="fold",
-                )
-                dq = run_data_quality(case, ref, fold_cfg_base)
-                phys = run_physics(case, fold_cfg_base)
-                unc = run_uncertainty(
-                    case,
-                    pred,
-                    fold_cfg_base,
-                    pipeline=pipe,
-                    ensemble=fold_ensemble,
-                    conformal=conf,
-                )
-                R_cal.append(compute_reliability_features(dq, phys, pred, unc, case=case))
-                ycorr_cal.append(int(pred.predicted_grade == int(y[j])))
-
-            fusion = ReliabilityFusion()
-            fusion.conf_eps = float(cfg.get("fusion", {}).get("conf_eps", 1e-3))
-            if R_tr:
-                fusion.fit(np.asarray(R_tr), np.asarray(ycorr_tr))
-                if fusion.is_fit:
-                    if R_cal:
-                        r_raw = np.array([fusion._raw_score(r) for r in R_cal])
-                        fusion.fit_calibrator(r_raw, np.asarray(ycorr_cal))
-                        r_vals = [fusion.r_final(r) for r in R_cal]
-                        thr = select_decision_thresholds(
-                            np.asarray(r_vals), np.asarray(ycorr_cal)
-                        )
-                    else:
-                        r_raw = np.array([fusion._raw_score(r) for r in R_tr])
-                        fusion.fit_calibrator(r_raw, np.asarray(ycorr_tr))
-                        r_vals = [fusion.r_final(r) for r in R_tr]
-                        thr = select_decision_thresholds(
-                            np.asarray(r_vals), np.asarray(ycorr_tr)
-                        )
-                    fusion.set_decision_thresholds(thr)
+            fusion = fit_fold_fusion_oof(
+                df,
+                X,
+                y,
+                groups,
+                tr,
+                base_est=base_est,
+                imputer=imp,
+                ranked=ranked,
+                cfg=fold_cfg_base,
+                seed=seed + rep,
+                fold=fold,
+                conf_method=conf_method,
+                alpha=alpha,
+                quick=quick,
+            )
             # Keep fold fusion in memory — do not overwrite production fusion.joblib.
             fold_cfg = {
                 **fold_cfg_base,
@@ -389,6 +393,14 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                 "_fold_alt_pipes": {},
                 "_fold_cross_pipes": {},
                 "_conformal_state": conf,
+                "_skip_local_explanation": bool(quick),  # RM9: gate quick mode
+                "routing": {
+                    **rt0,
+                    "ml_vs_criteria_severe_agreement_ge": ml_vs_cut,
+                },
+                "decode_rule": m1_meta.get("decode_rule")
+                or (cfg.get("ml") or {}).get("decode_rule")
+                or "argmax",
             }
 
             preds: dict[str, list[int]] = {s: [] for s in systems}
@@ -486,10 +498,39 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
 
                 # Critic / routing stats
                 critic_stats["n_cases"] += 1
-                for rule in m7.get("critic_rules_fired") or []:
+                # RC5: abstention by missing-D (same critic-recheck budget for both)
+                try:
+                    d_missing = case.get("d") is None or not np.isfinite(
+                        float(case["d"])
+                    )
+                except (TypeError, ValueError):
+                    d_missing = True
+                bucket = critic_stats["abstain_by_missing_d"][
+                    "missing_d" if d_missing else "present_d"
+                ]
+                bucket["n"] += 1
+                if m7.get("abstained"):
+                    bucket["abstain"] += 1
+                term = str(m7.get("termination_reason") or "")
+                if "forced_abstain" in term or "forced_finalize" in " ".join(
+                    m7.get("route_trace") or []
+                ):
+                    bucket["forced_abstain"] += 1
+                critic_stats["critic_recheck_cycles_sum"] += int(
+                    m7.get("critic_recheck_cycles") or 0
+                )
+                if term:
+                    critic_stats["termination_reasons"][term] = (
+                        int(critic_stats["termination_reasons"].get(term, 0)) + 1
+                    )
+                rules_fired = list(m7.get("critic_rules_fired") or [])
+                for rule in rules_fired:
                     critic_stats["rule_fires"][rule] = (
                         int(critic_stats["rule_fires"].get(rule, 0)) + 1
                     )
+                # RM2: accumulate per-case flags for AUROC / flagged-vs-unflagged.
+                critic_stats["_rule_case_fired"].append(set(rules_fired))
+                critic_stats["_rule_case_error"].append(int(g7i != y_true))
                 trace = m7.get("route_trace") or []
                 joined = " ".join(trace)
                 for key in critic_stats["tool_invocations"]:
@@ -527,19 +568,38 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
                             critic_stats["recheck_requested"] += 1
                     except StopIteration:
                         pass
-                # Recheck effects vs M6 (confidence / set / decision)
+                # RM1: before/after recheck from routing meta (not M6-vs-M7).
+                effects = m7.get("recheck_effects") or []
+                if any(
+                    e.get("changed_physics_score")
+                    or e.get("changed_data_reliability")
+                    or e.get("changed_disagreement")
+                    for e in effects
+                ):
+                    critic_stats["recheck_changed_confidence"] += 1
+                if any(e.get("changed_set") for e in effects):
+                    critic_stats["recheck_changed_set"] += 1
+                if any(
+                    e.get("changed_set")
+                    or e.get("changed_physics_score")
+                    or e.get("changed_data_reliability")
+                    or e.get("changed_disagreement")
+                    for e in effects
+                ):
+                    critic_stats["recheck_changed_decision"] += 1
+                # Separate M6-vs-M7 contrast (critic path delta).
                 if abs(
                     float(m7.get("final_system_confidence") or 0)
                     - float(m6.get("final_system_confidence") or 0)
                 ) > 1e-9:
-                    critic_stats["recheck_changed_confidence"] += 1
+                    critic_stats["m6_vs_m7_confidence_delta"] += 1
                 if list(m7.get("prediction_set") or []) != list(
                     m6.get("prediction_set") or []
                 ):
-                    critic_stats["recheck_changed_set"] += 1
+                    critic_stats["m6_vs_m7_set_delta"] += 1
                 if m7.get("recommended_action") != m6.get("recommended_action"):
-                    critic_stats["recheck_changed_decision"] += 1
-                # Decision change vs M6
+                    critic_stats["m6_vs_m7_decision_delta"] += 1
+                # Decision change vs M6 (legacy key for agent-value tables)
                 if (m7.get("recommended_action") != m6.get("recommended_action")) or (
                     g7i != preds["M6"][-1]
                 ):
@@ -688,10 +748,28 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         "m1_best": best_name,
         "n_outer": n_outer,
         "n_repeats": n_repeats,
+        "quick": bool(quick),
+        "mode": "quick" if quick else "full",
+        "run_metadata": build_run_metadata(
+            mode="quick" if quick else "full",
+            command="rockburst evaluate" + (" --quick" if quick else ""),
+            extra={
+                "n_outer": n_outer,
+                "n_repeats": n_repeats,
+                "n_cases": int(len(df)),
+                "m1_best": best_name,
+            },
+            config=cfg,
+            input_paths=[resolve_path(cfg, "processed_csv")],
+        ),
         "ci_method": "grouped_bootstrap over dup_group_id (case-level pooled across repeats)",
         "definitions": {
-            "M1": "Baseline ML predict only",
-            "M2": "M1 + held-out permutation importance (interpretability sidecar; metrics = M1)",
+            "M1": "Baseline ML predict only (max-prob / production decode)",
+            "M2": (
+                "Importance overlay on M1 (RM9): all-fold permutation + local "
+                "explanations; classification metrics identical to M1 by design — "
+                "not a separate predictor"
+            ),
             "M3": "M1 + physics-criteria agreement adjusts confidence/abstention",
             "M4": "M1 + uncertainty / conformal abstention tracking",
             "M5": "Monolithic fixed sequence DQ→physics→predict→uncertainty→fuse (no coordinator, no Critic)",
@@ -703,6 +781,7 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         "risk_coverage": {},
         "critic_statistics": critic_stats,
         "coordinator_m6_vs_m5": coord_stats,
+        "criterion_label_agreement": criterion_agreement,
         "trace_samples": traces_sample,
         "n_cases": int(len(df)),
         "protocol": (
@@ -763,6 +842,13 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
             "class_recall_mean": md.get("class_recall"),
             "accepted": _subset_metrics(y_s, p_s, pr_s, accepted),
             "abstained": _subset_metrics(y_s, p_s, pr_s, ab_s == 1),
+            "confusion_matrix_all": _confusion_4x4(y_s, p_s),
+            "confusion_matrix_accepted": _confusion_4x4(
+                y_s[accepted], p_s[accepted]
+            ),
+            "reliability_diagram": reliability_diagram_bins(
+                correct, np.asarray(case_store[s]["conf"], dtype=float)
+            ),
             "fold_mean_ci_legacy": {
                 k: fold_list_ci([f[k] for f in fold_records[s] if f.get(k) is not None])
                 for k in ("accuracy", "qwk", "abstention_rate")
@@ -778,6 +864,38 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
             "area_std": float(np.std(areas, ddof=1)) if len(areas) > 1 else 0.0,
             "example_points": curves[0]["points"] if curves else [],
         }
+
+    # Pooled case-level M1-M7 risk-coverage curves on all repeated OOF
+    # predictions. M2 is the declared importance-only alias of M1.
+    results["risk_coverage_pooled"] = {}
+    for s in systems:
+        y_s = np.asarray(case_store[s]["y"], dtype=int)
+        p_s = np.asarray(case_store[s]["pred"], dtype=int)
+        conf_s = np.asarray(case_store[s]["conf"], dtype=float)
+        results["risk_coverage_pooled"][s] = _risk_coverage_with_grouped_band(
+            conf_s,
+            (y_s == p_s).astype(int),
+            np.asarray(case_store[s]["groups"]),
+            n_boot=50 if quick else 200,
+            seed=seed + systems.index(s),
+        )
+    results["risk_coverage_pooled"]["M2"] = dict(
+        results["risk_coverage_pooled"]["M1"]
+    )
+    m1_proba = np.asarray(case_store["M1"]["proba"], dtype=float)
+    m1_entropy_conf = -np.asarray(
+        [predictive_entropy(probability) for probability in m1_proba], dtype=float
+    )
+    results["risk_coverage_entropy"] = _risk_coverage_with_grouped_band(
+        m1_entropy_conf,
+        (
+            np.asarray(case_store["M1"]["y"], dtype=int)
+            == np.asarray(case_store["M1"]["pred"], dtype=int)
+        ).astype(int),
+        np.asarray(case_store["M1"]["groups"]),
+        n_boot=50 if quick else 200,
+        seed=seed + 101,
+    )
 
     # C4: max-prob vs R_final on M7 correctness (same cases)
     mp_areas = [
@@ -802,8 +920,8 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
             None if mp_mean is None or rf_mean is None else bool(rf_mean > mp_mean + 1e-9)
         ),
         "note": (
-            "Locked fusion set A = r_model only; near-zero Δ means R_final ranking "
-            "collapses to max-prob (expected until multi-feature fusion helps)."
+            "Report served R_final versus M1 max-prob RC areas plainly (RC4); "
+            "the production feature set is selected by the declared A-D rule."
         ),
     }
 
@@ -843,20 +961,96 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
     results["ablations"]["M2"] = {
         **results["ablations"]["M1"],
         "note": (
-            "Held-out permutation importance sidecar; classification metrics "
-            "identical to M1 on same folds. See m2_importance.json."
+            "RM9 importance overlay (not a separate classifier): metrics ≡ M1. "
+            "See m2_importance.json (all-fold importances_mean / ranked + local)."
         ),
+        "role": "importance_overlay",
     }
-    # Per-rule detection rates (M5)
+
+    # RC4: each M3-M7 system versus M1 thresholded to that system's coverage.
+    mc_systems = {
+        "M1_maxprob": {
+            "y": case_store["M1"]["y"],
+            "pred": case_store["M1"]["pred"],
+            "abstain": case_store["M1"]["abstain"],
+            "confidence": case_store["M1"]["conf"],
+        },
+        **{
+            s: {
+                "y": case_store[s]["y"],
+                "pred": case_store[s]["pred"],
+                "abstain": case_store[s]["abstain"],
+                "confidence": case_store[s]["conf"],
+            }
+            for s in ("M3", "M4", "M5", "M6", "M7")
+        },
+    }
+    results["matched_coverage"] = matched_coverage_metrics(
+        mc_systems,
+        groups=np.asarray(case_store["M1"]["groups"]),
+        n_boot=80 if quick else 400,
+        seed=seed,
+    )
+    # Per-rule detection rates + AUROC / flagged-vs-unflagged error (RM2 / F16)
     n_c = max(int(critic_stats["n_cases"]), 1)
-    critic_stats["rule_detection_rates"] = {
-        rule: {
-            "count": int(cnt),
+    case_fired: list[set] = list(critic_stats.pop("_rule_case_fired", []) or [])
+    case_err: list[int] = list(critic_stats.pop("_rule_case_error", []) or [])
+    all_rules = sorted(
+        set(critic_stats["rule_fires"])
+        | ({r for s in case_fired for r in s} if case_fired else set())
+    )
+    err_arr = np.asarray(case_err, dtype=float) if case_err else np.asarray([])
+    rule_detection: dict[str, Any] = {}
+    for rule in all_rules:
+        cnt = int(critic_stats["rule_fires"].get(rule, 0))
+        block: dict[str, Any] = {
+            "count": cnt,
             "rate": float(cnt) / n_c,
-            "wilson_ci_approx": _wilson_ci(int(cnt), n_c),
+            "wilson_ci_approx": _wilson_ci(cnt, n_c),
+            "auroc": None,
+            "error_flagged": None,
+            "error_unflagged": None,
+            "n_flagged": 0,
+            "n_unflagged": 0,
         }
-        for rule, cnt in sorted(critic_stats["rule_fires"].items())
+        if case_fired and len(err_arr) == len(case_fired) and len(err_arr) > 0:
+            flags = np.asarray(
+                [1 if rule in s else 0 for s in case_fired], dtype=float
+            )
+            n_f = int(flags.sum())
+            n_u = int(len(flags) - n_f)
+            block["n_flagged"] = n_f
+            block["n_unflagged"] = n_u
+            if n_f > 0:
+                block["error_flagged"] = float(err_arr[flags == 1].mean())
+            if n_u > 0:
+                block["error_unflagged"] = float(err_arr[flags == 0].mean())
+            if n_f > 0 and n_u > 0 and len(np.unique(err_arr)) > 1:
+                try:
+                    from sklearn.metrics import roc_auc_score
+
+                    block["auroc"] = float(roc_auc_score(err_arr, flags))
+                except ValueError:
+                    block["auroc"] = None
+        rule_detection[rule] = block
+    critic_stats["rule_detection_rates"] = rule_detection
+    # Severity hint from stats (config override still wins in live Critic).
+    critic_stats["rule_severity_from_stats"] = {
+        rule: bool(
+            (block.get("auroc") or 0) >= 0.60
+            and (block.get("error_flagged") or 0)
+            > (block.get("error_unflagged") or 0) + 0.05
+        )
+        for rule, block in rule_detection.items()
     }
+    # RC5: rates for abstention by missing-D (artefact fields for Phase 5/6)
+    for _dk, _b in critic_stats["abstain_by_missing_d"].items():
+        n_b = max(int(_b["n"]), 1)
+        _b["abstain_rate"] = float(_b["abstain"]) / n_b
+        _b["forced_abstain_rate"] = float(_b["forced_abstain"]) / n_b
+    critic_stats["mean_critic_recheck_cycles"] = float(
+        critic_stats["critic_recheck_cycles_sum"]
+    ) / n_c
     _write_m2_importance(cfg, df, m1_meta=m1_meta)
 
     results["robustness"] = _robustness_all_folds(
@@ -882,6 +1076,19 @@ def run_ablations(cfg: dict[str, Any], quick: bool = False) -> dict[str, Any]:
         quick=quick,
     )
 
+    # Refresh Rm8 metadata at write time (evaluate can take hours).
+    results["run_metadata"] = build_run_metadata(
+        mode="quick" if quick else "full",
+        command="rockburst evaluate" + (" --quick" if quick else ""),
+        extra={
+            "n_outer": n_outer,
+            "n_repeats": n_repeats,
+            "n_cases": int(len(df)),
+            "m1_best": best_name,
+        },
+        config=cfg,
+        input_paths=[resolve_path(cfg, "processed_csv")],
+    )
     out = resolve_path(cfg, "baselines") / "ablation_results.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(results, indent=2, default=str))
@@ -902,12 +1109,20 @@ def _wilson_ci(k: int, n: int, z: float = 1.96) -> list[float]:
 def _write_m2_importance(
     cfg: dict[str, Any], df: pd.DataFrame, *, m1_meta: dict[str, Any] | None = None
 ) -> None:
-    """M7/M2: held-out permutation importance on fold-trained production family."""
+    """RM9 / M2: all-fold permutation importance + local attributions + dependence."""
     from sklearn.inspection import permutation_importance
+
+    from rockburst.ml.explain import (
+        aggregate_fold_importances,
+        dependence_frame,
+        local_permutation_attributions,
+    )
+    from rockburst.ml.ordinal import argmax_grade
 
     m1_meta = m1_meta or {}
     X_all, y_all, groups = prepare_xy(df)
     seed = int(cfg.get("seed", 42))
+    n_outer = int(cfg.get("cv", {}).get("n_outer", 5))
     best_name = (
         m1_meta.get("nested_unbiased", {}).get("production_model")
         or m1_meta.get("best_model")
@@ -920,42 +1135,72 @@ def _write_m2_importance(
     except Exception:  # noqa: BLE001
         zoo = get_model_zoo(quick=True)
         est = zoo.get(name) or next(iter(zoo.values()))
-    sgkf = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=seed)
-    tr, te = next(sgkf.split(X_all, y_all, groups))
-    fit_idx, _ = _split_fit_calib(y_all, groups, tr, seed=seed)
-    pipe = Pipeline([("prep", build_preprocess(imp)), ("model", clone(est))])
-    pipe.fit(X_all.iloc[fit_idx], y_all[fit_idx])
-    r = permutation_importance(
-        pipe,
-        X_all.iloc[te],
-        y_all[te],
-        n_repeats=5,
-        random_state=seed,
-        scoring="accuracy",
-    )
     feat_names = list(X_all.columns)
-    order = np.argsort(-r.importances_mean)
-    ranked = [
-        {
-            "feature": feat_names[i],
-            "importance_mean": float(r.importances_mean[i]),
-            "importance_std": float(r.importances_std[i]),
-        }
-        for i in order
-    ]
+    fold_rows: list[dict[str, Any]] = []
+    local_cases: list[dict[str, Any]] = []
+    sgkf = StratifiedGroupKFold(n_splits=n_outer, shuffle=True, random_state=seed)
+    for fold, (tr, te) in enumerate(sgkf.split(X_all, y_all, groups)):
+        fit_idx, _ = _split_fit_calib(y_all, groups, tr, seed=seed + fold)
+        pipe = Pipeline([("prep", build_preprocess(imp)), ("model", clone(est))])
+        pipe.fit(X_all.iloc[fit_idx], y_all[fit_idx])
+        r = permutation_importance(
+            pipe,
+            X_all.iloc[te],
+            y_all[te],
+            n_repeats=5,
+            random_state=seed + fold,
+            scoring="accuracy",
+        )
+        fold_rows.append(
+            {
+                "fold": fold,
+                "features": feat_names,
+                "importances_mean": r.importances_mean.tolist(),
+                "importances_std": r.importances_std.tolist(),
+                "n_test": int(len(te)),
+            }
+        )
+        # Local perm on up to 3 held-out cases per fold (Phase 6 / Critic hook)
+        te_list = list(te[:3])
+        proba_te = pipe.predict_proba(X_all.iloc[te_list]) if hasattr(pipe, "predict_proba") else None
+        for li, j in enumerate(te_list):
+            grade = (
+                int(argmax_grade(proba_te[li : li + 1])[0])
+                if proba_te is not None
+                else int(pipe.predict(X_all.iloc[[j]])[0])
+            )
+            attrib = local_permutation_attributions(
+                pipe,
+                X_all.iloc[[j]],
+                feature_names=feat_names,
+                predicted_grade=grade,
+                n_repeats=4,
+                seed=seed + fold * 10 + li,
+            )
+            local_cases.append(
+                {
+                    "fold": fold,
+                    "row_index": int(j),
+                    "predicted_grade": grade,
+                    "true_grade": int(y_all[j]),
+                    "attributions": attrib,
+                }
+            )
+
+    agg = aggregate_fold_importances(fold_rows)
     payload = {
-        "features": feat_names,
-        "importances_mean": r.importances_mean.tolist(),
-        "importances_std": r.importances_std.tolist(),
-        "ranked": ranked,
-        "top_features": [x["feature"] for x in ranked[:5]],
+        **agg,
         "model": best_name,
-        "protocol": (
-            "permutation_importance on held-out StratifiedGroupKFold test fold; "
-            "pipeline fit only on fold train/fit indices"
-        ),
+        "role": "importance_overlay",
+        "local_explanations": local_cases,
+        "dependence": dependence_frame(df),
+        # F15 keys (must match generate_figures expectations)
+        "importances_mean": agg["importances_mean"],
+        "importances_std": agg["importances_std"],
+        "ranked": agg["ranked"],
     }
     path = resolve_path(cfg, "baselines") / "m2_importance.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2))
 
 
@@ -1026,6 +1271,10 @@ def _robustness_all_folds(
             "delta_p": [],
             "entropy_delta": [],
             "set_size_delta": [],
+            "set_size_base": [],
+            "set_size_pert": [],
+            "entropy_base": [],
+            "entropy_pert": [],
             "r_final_delta": [],
             "r_final_base": [],
             "r_final_pert": [],
@@ -1033,7 +1282,8 @@ def _robustness_all_folds(
         for lab in ("mild", "strong")
     }
     n_cases = 0
-    max_per_fold = 12 if quick else 40
+    # RC6: full mode uses all fold test cases; quick keeps a cap for cheap pytest.
+    max_per_fold = 12 if quick else None
 
     for rep in range(n_repeats):
         sgkf = StratifiedGroupKFold(
@@ -1067,7 +1317,7 @@ def _robustness_all_folds(
                 "_fold_model_name": best_name,
                 "_conformal_state": conf,
             }
-            te_use = list(te[: max_per_fold])
+            te_use = list(te) if max_per_fold is None else list(te[:max_per_fold])
             rng = np.random.default_rng(seed + 1000 * rep + fold)
             for j in te_use:
                 case = df.iloc[int(j)].to_dict()
@@ -1115,17 +1365,19 @@ def _robustness_all_folds(
                         dq, phys, pp, u, fold_cfg, ["robust:pert"]
                     )
                     r_pert = float(fuse.get("final_system_confidence") or 0.0)
+                    ent_p = predictive_entropy(p)
+                    set_p = float(len(u.prediction_set))
                     bucket = per_case[label]
                     bucket["flip"].append(
                         float(pp.predicted_grade != base_pred.predicted_grade)
                     )
                     bucket["delta_p"].append(float(np.mean(np.abs(base_p - p))))
-                    bucket["entropy_delta"].append(
-                        float(predictive_entropy(p) - base_ent)
-                    )
-                    bucket["set_size_delta"].append(
-                        float(len(u.prediction_set) - base_set_n)
-                    )
+                    bucket["entropy_delta"].append(float(ent_p - base_ent))
+                    bucket["entropy_base"].append(base_ent)
+                    bucket["entropy_pert"].append(ent_p)
+                    bucket["set_size_delta"].append(float(set_p - base_set_n))
+                    bucket["set_size_base"].append(base_set_n)
+                    bucket["set_size_pert"].append(set_p)
                     bucket["r_final_delta"].append(float(r_pert - base_r))
                     bucket["r_final_base"].append(base_r)
                     bucket["r_final_pert"].append(r_pert)
@@ -1133,8 +1385,9 @@ def _robustness_all_folds(
 
     summary: dict[str, Any] = {
         "protocol": (
-            "all outer folds×repeats; fold-trained pipeline+ensemble+conformal; "
-            "perturb primaries only (M3); metrics vs unperturbed baseline"
+            "RC6: all outer folds×repeats; fold-trained pipeline+ensemble+conformal; "
+            "perturb primaries only; metrics vs unperturbed baseline; "
+            "full mode scores every fold test case (quick caps per fold)"
         ),
         "n_cases": n_cases,
         "n_outer": n_outer,
@@ -1143,6 +1396,7 @@ def _robustness_all_folds(
         "eps": {"mild": mild, "strong": strong},
         "metrics": {},
         "degrades_vs_unperturbed": {},
+        "r_final_sensitivity_flag": None,
     }
     for lab in ("mild", "strong"):
         b = per_case[lab]
@@ -1150,19 +1404,36 @@ def _robustness_all_folds(
             "flip_rate": _mean_boot_ci(b["flip"], seed=seed + 1),
             "mean_abs_delta_p": _mean_boot_ci(b["delta_p"], seed=seed + 2),
             "mean_entropy_delta": _mean_boot_ci(b["entropy_delta"], seed=seed + 3),
+            "mean_entropy": _mean_boot_ci(b["entropy_pert"], seed=seed + 13),
             "mean_set_size_delta": _mean_boot_ci(b["set_size_delta"], seed=seed + 4),
+            "mean_set_size": _mean_boot_ci(b["set_size_pert"], seed=seed + 14),
             "mean_r_final_delta": _mean_boot_ci(b["r_final_delta"], seed=seed + 5),
+            "mean_r_final": _mean_boot_ci(b["r_final_pert"], seed=seed + 15),
         }
-        r_d = summary["metrics"][lab]["mean_r_final_delta"]["mean"]
-        e_d = summary["metrics"][lab]["mean_entropy_delta"]["mean"]
-        s_d = summary["metrics"][lab]["mean_set_size_delta"]["mean"]
+        r_block = summary["metrics"][lab]["mean_r_final_delta"]
+        e_block = summary["metrics"][lab]["mean_entropy_delta"]
+        s_block = summary["metrics"][lab]["mean_set_size_delta"]
+        f_block = summary["metrics"][lab]["flip_rate"]
+        r_d = r_block["mean"]
+        e_d = e_block["mean"]
+        s_d = s_block["mean"]
         summary["degrades_vs_unperturbed"][lab] = {
-            "r_final_decreases": bool(r_d is not None and r_d < 0),
-            "entropy_increases": bool(e_d is not None and e_d > 0),
-            "set_size_increases": bool(s_d is not None and s_d > 0),
-            "flip_rate_positive": bool(
-                (summary["metrics"][lab]["flip_rate"]["mean"] or 0) > 0
+            "r_final_decreases": bool(
+                r_d is not None and r_block["ci_high"] is not None
+                and r_block["ci_high"] < 0
             ),
+            "entropy_increases": bool(
+                e_d is not None and e_block["ci_low"] is not None
+                and e_block["ci_low"] > 0
+            ),
+            "set_size_increases": bool(
+                s_d is not None and s_block["ci_low"] is not None
+                and s_block["ci_low"] > 0
+            ),
+            "flip_rate_positive": bool(
+                f_block["ci_low"] is not None and f_block["ci_low"] > 0
+            ),
+            "criterion": "true only when the bootstrap CI excludes zero",
         }
     # Secondary note: strong vs mild (not the acceptance criterion)
     r_m = summary["metrics"]["mild"]["mean_r_final_delta"]["mean"]
@@ -1175,7 +1446,50 @@ def _robustness_all_folds(
         ),
         "criterion": "primary = degrade vs unperturbed; mild-vs-strong is secondary",
     }
+    # RC6 honest-negative hook: flag flat R_final under strong perturbation
+    flat = (
+        r_s is not None
+        and abs(float(r_s)) < 1e-3
+        and (summary["metrics"]["strong"]["flip_rate"]["mean"] or 0) > 0
+    )
+    summary["r_final_sensitivity_flag"] = {
+        "r_final_flat_under_strong_perturbation": bool(flat),
+        "note": (
+            "If true after Phase 5 full eval: optional fusion inputs for "
+            "missingness/perturbation sensitivity, or report honest negative (Phase 6)."
+        ),
+    }
     return summary
+
+
+def _r_final_via_fusion(
+    case: dict[str, Any],
+    ref: pd.DataFrame,
+    fold_cfg: dict[str, Any],
+    pipe: Any,
+) -> tuple[int, float, float]:
+    """Cheap R_final via fold pipe + fusion (no full run_graph) — RC6 imputer path."""
+    pred = run_predict(
+        case, fold_cfg, pipeline=pipe, model_name=fold_cfg.get("_fold_model_name")
+    )
+    dq = run_data_quality(case, ref, fold_cfg)
+    phys = run_physics(case, fold_cfg)
+    unc = run_uncertainty(
+        case,
+        pred,
+        fold_cfg,
+        pipeline=pipe,
+        ensemble=fold_cfg.get("_fold_ensemble"),
+        conformal=fold_cfg.get("_conformal_state"),
+    )
+    fused = fuse_assessment(
+        dq, phys, pred, unc, fold_cfg, ["missing:imputer"], case=case
+    )
+    return (
+        int(pred.predicted_grade),
+        float(fused.get("final_system_confidence") or 0.0),
+        float(len(unc.prediction_set)),
+    )
 
 
 def _score_missing_batch(
@@ -1190,7 +1504,7 @@ def _score_missing_batch(
     use_physics_recon: bool,
 ) -> dict[str, Any]:
     """Score one missingness scenario; optionally physics-reconstruct then M7."""
-    ys, preds, r_deltas, set_sizes = [], [], [], []
+    ys, preds, base_preds, r_deltas, set_sizes, abstained = [], [], [], [], [], []
     for ix in indices:
         case = df.loc[ix].to_dict()
         y_true = int(case["rockburst_grade"])
@@ -1204,33 +1518,28 @@ def _score_missing_batch(
             out = run_graph(masked, ref, fold_cfg, use_llm=False, allow_critic=True)
             g = out.get("predicted_grade")
             g_i = int(g) if g is not None else -1
+            base_g = base.get("predicted_grade")
+            base_preds.append(int(base_g) if base_g is not None else -1)
+            abstained.append(int(bool(out.get("abstained"))))
             r_b = float(base.get("final_system_confidence") or 0.0)
             r_m = float(out.get("final_system_confidence") or 0.0)
             r_deltas.append(r_m - r_b)
             set_sizes.append(float(len(out.get("prediction_set") or [])))
         else:
-            pred = run_predict(
-                masked,
-                fold_cfg,
-                pipeline=pipe,
-                model_name=fold_cfg.get("_fold_model_name"),
-            )
-            g_i = int(pred.predicted_grade)
-            unc = run_uncertainty(
-                masked,
-                pred,
-                fold_cfg,
-                pipeline=pipe,
-                ensemble=fold_cfg.get("_fold_ensemble"),
-                conformal=fold_cfg.get("_conformal_state"),
-            )
-            set_sizes.append(float(len(unc.prediction_set)))
-            r_deltas.append(float("nan"))
+            # RC6: ΔR_final via fold pipe + fusion reliability (not full run_graph).
+            _, r_b, _ = _r_final_via_fusion(case, ref, fold_cfg, pipe)
+            g_i, r_m, set_n = _r_final_via_fusion(masked, ref, fold_cfg, pipe)
+            r_deltas.append(r_m - r_b)
+            set_sizes.append(set_n)
+            base_preds.append(-1)
+            abstained.append(0)
         ys.append(y_true)
         preds.append(g_i)
     yt = np.asarray(ys, dtype=int)
     yp = np.asarray(preds, dtype=int)
     valid = yp >= 0
+    ab = np.asarray(abstained, dtype=int)
+    accepted = valid & (ab == 0)
     out: dict[str, Any] = {
         "n": int(valid.sum()),
         "accuracy": float((yp[valid] == yt[valid]).mean()) if valid.any() else None,
@@ -1242,10 +1551,21 @@ def _score_missing_batch(
             severe_misclassification_rate(yt[valid], yp[valid]) if valid.any() else None
         ),
         "mean_set_size": float(np.nanmean(set_sizes)) if set_sizes else None,
+        "abstention_rate": float(ab[valid].mean()) if valid.any() else None,
+        "accepted_accuracy": (
+            float((yp[accepted] == yt[accepted]).mean()) if accepted.any() else None
+        ),
     }
-    if use_m7:
-        rd = [x for x in r_deltas if np.isfinite(x)]
-        out["mean_delta_r_final"] = float(np.mean(rd)) if rd else None
+    rd = [x for x in r_deltas if np.isfinite(x)]
+    out["mean_delta_r_final"] = float(np.mean(rd)) if rd else None
+    bp = np.asarray(base_preds, dtype=int)
+    base_valid = valid & (bp >= 0)
+    out["accuracy_change_vs_complete"] = (
+        float((yp[base_valid] == yt[base_valid]).mean())
+        - float((bp[base_valid] == yt[base_valid]).mean())
+        if base_valid.any()
+        else None
+    )
     return out
 
 
@@ -1287,9 +1607,17 @@ def _missing_data_all_folds(
         ranked = [(best_name, {"best_params": params, "fold_params": []})]
 
     imputers = ["median", "knn"] if quick else ["median", "knn", "iterative"]
-    max_per_fold = 8 if quick else 24
+    # RC1: mirror robustness — full mode uses all complete fold test rows.
+    max_per_fold = 8 if quick else None
     # Collect per-scenario fold metrics then average
-    scenario_keys = ["complete", *PHYSICAL_MISSING_MASKS.keys(), "physics_recon_theta"]
+    # RC6: physics_recon_theta_scf_missing = identity source (SCF) also missing so
+    # reconstruction cannot fill σθ from SCF·σc (realistic failure pair).
+    scenario_keys = [
+        "complete",
+        *PHYSICAL_MISSING_MASKS.keys(),
+        "physics_recon_theta",
+        "physics_recon_theta_scf_missing",
+    ]
     store: dict[str, dict[str, list[dict[str, Any]]]] = {
         imp: {k: [] for k in scenario_keys} for imp in imputers
     }
@@ -1306,7 +1634,12 @@ def _missing_data_all_folds(
             )
             te_df = df.iloc[te]
             complete_mask = te_df[FEATURE_COLS].notna().all(axis=1)
-            complete_idx = te_df.index[complete_mask].tolist()[:max_per_fold]
+            complete_all = te_df.index[complete_mask].tolist()
+            complete_idx = (
+                complete_all
+                if max_per_fold is None
+                else complete_all[:max_per_fold]
+            )
             if not complete_idx:
                 continue
             fold_ensemble = fit_fold_ensemble(
@@ -1326,42 +1659,23 @@ def _missing_data_all_folds(
                     alpha,
                 )
                 conf.n_fit = int(len(fit_idx))
-            # Fold fusion for M7 decisions
-            fusion = ReliabilityFusion()
-            R_tr, ycorr_tr = [], []
-            for j in fit_idx[: min(40, len(fit_idx))]:
-                case = df.iloc[int(j)].to_dict()
-                ref = build_fold_reference(df, fit_idx, case)
-                proba = _predict_proba_safe(pipe_prod, X.iloc[[j]])[0]
-                pred = PredictiveOutput(
-                    predicted_grade=int(proba.argmax()),
-                    probabilities=proba.tolist(),
-                    r_model=compute_r_model(proba),
-                    model_name="fold",
-                )
-                dq = run_data_quality(case, ref, cfg)
-                phys = run_physics(case, cfg)
-                unc = run_uncertainty(
-                    case,
-                    pred,
-                    cfg,
-                    pipeline=pipe_prod,
-                    ensemble=fold_ensemble,
-                    conformal=conf,
-                )
-                R_tr.append(
-                    compute_reliability_features(dq, phys, pred, unc, case=case, cfg=cfg)
-                )
-                ycorr_tr.append(int(pred.predicted_grade == int(y[j])))
-            if R_tr:
-                fusion.fit(np.asarray(R_tr), np.asarray(ycorr_tr))
-                if fusion.is_fit:
-                    r_vals = [fusion.r_final(r) for r in R_tr]
-                    fusion.set_decision_thresholds(
-                        select_decision_thresholds(
-                            np.asarray(r_vals), np.asarray(ycorr_tr)
-                        )
-                    )
+            # RC2: OOF fold fusion (no in-sample fit_idx / no full-data calibrators)
+            fusion = fit_fold_fusion_oof(
+                df,
+                X,
+                y,
+                groups,
+                tr,
+                base_est=base_est,
+                imputer=default_imp,
+                ranked=ranked,
+                cfg=cfg,
+                seed=seed + rep,
+                fold=fold,
+                conf_method=conf_method,
+                alpha=alpha,
+                quick=quick,
+            )
             fold_cfg_m7 = {
                 **cfg,
                 "uncertainty": {**cfg.get("uncertainty", {}), "n_perturb": 4},
@@ -1413,6 +1727,19 @@ def _missing_data_all_folds(
                     use_physics_recon=True,
                 )
             )
+            # Identity source also missing (SCF): recon cannot invent σθ
+            m7_store["physics_recon_theta_scf_missing"].append(
+                _score_missing_batch(
+                    df=df,
+                    indices=complete_idx,
+                    mask_cols=("sigma_theta", "scf"),
+                    pipe=pipe_prod,
+                    fold_cfg=fold_cfg_m7,
+                    fit_idx=fit_idx,
+                    use_m7=True,
+                    use_physics_recon=True,
+                )
+            )
 
             for imp_kind in imputers:
                 pipe = Pipeline(
@@ -1423,8 +1750,11 @@ def _missing_data_all_folds(
                     **cfg,
                     "_fold_pipeline": pipe,
                     "_fold_ensemble": fold_ensemble,
+                    # Reuse OOF fusion so imputer ΔR_final is calibrated (RC6).
+                    "_fold_fusion": fusion,
                     "_fold_model_name": best_name,
                     "_conformal_state": conf,
+                    "_skip_local_explanation": True,
                 }
                 store[imp_kind]["complete"].append(
                     _score_missing_batch(
@@ -1463,7 +1793,19 @@ def _missing_data_all_folds(
                         use_physics_recon=True,
                     )
                 )
-                # Train- vs inference-time missing D
+                store[imp_kind]["physics_recon_theta_scf_missing"].append(
+                    _score_missing_batch(
+                        df=df,
+                        indices=complete_idx,
+                        mask_cols=("sigma_theta", "scf"),
+                        pipe=pipe,
+                        fold_cfg=fold_cfg,
+                        fit_idx=fit_idx,
+                        use_m7=False,
+                        use_physics_recon=True,
+                    )
+                )
+                # Train- vs inference-time missing D (RC6 protocol fields)
                 X_miss = X.copy()
                 X_miss["d"] = np.nan
                 pipe_miss = Pipeline(
@@ -1480,6 +1822,10 @@ def _missing_data_all_folds(
                         "train_and_inference_missing_d_acc": float(
                             (pipe_miss.predict(X_te) == y[te]).mean()
                         ),
+                        "n_test": int(len(te)),
+                        "imputer": imp_kind,
+                        "fold": int(fold),
+                        "repeat": int(rep),
                     }
                 )
 
@@ -1493,12 +1839,28 @@ def _missing_data_all_folds(
             "severe_error_rate",
             "mean_set_size",
             "mean_delta_r_final",
+            "abstention_rate",
+            "accepted_accuracy",
+            "accuracy_change_vs_complete",
         ]
         out: dict[str, Any] = {"n_folds": len(blocks)}
         for k in keys:
             vals = [b[k] for b in blocks if b.get(k) is not None]
             out[k] = float(np.mean(vals)) if vals else None
+            out[f"{k}_ci"] = fold_list_ci(vals) if vals else None
         out["n_cases_mean"] = float(np.mean([b.get("n", 0) for b in blocks]))
+        out["n_evaluations"] = int(sum(int(b.get("n", 0)) for b in blocks))
+        acc_ci = out.get("accuracy_change_vs_complete_ci") or {}
+        conf_ci = out.get("mean_delta_r_final_ci") or {}
+        out["degradation_flags"] = {
+            "accuracy_decreases": bool(
+                acc_ci.get("ci95_high") is not None and acc_ci["ci95_high"] < 0
+            ),
+            "confidence_decreases": bool(
+                conf_ci.get("ci95_high") is not None and conf_ci["ci95_high"] < 0
+            ),
+            "criterion": "true only when the CI excludes zero",
+        }
         return out
 
     imputers_out: dict[str, Any] = {}
@@ -1518,19 +1880,40 @@ def _missing_data_all_folds(
 
     return {
         "protocol": (
-            "all outer folds×repeats; production-family models; physical masks "
+            "RC6: all outer folds×repeats; production-family models; physical masks "
             "(σθ+SCF; σc+SCF/B1/B2; σt+B1/B2); physics reconstruction; "
-            "imputer predict path + full M7 path"
+            "imputer predict path (median/knn/iterative) + full M7 path"
         ),
         "physical_masks": {k: list(v) for k, v in PHYSICAL_MISSING_MASKS.items()},
         "model": best_name,
         "n_outer": n_outer,
         "n_repeats": n_repeats,
+        "imputers_tested": list(imputers),
+        "includes_iterative_imputer": "iterative" in imputers,
         "imputers": imputers_out,
         "m7": {sk: _agg(m7_store[sk]) for sk in scenario_keys},
+        "train_vs_inference_missing_d_protocol": {
+            "inference_time_missing_d": (
+                "Fit on complete training fold; evaluate with D set to NaN at test "
+                "(imputer fills from train marginals)."
+            ),
+            "train_and_inference_missing_d": (
+                "Fit with D column entirely NaN on train fold; evaluate with D NaN "
+                "at test — matches production rows 315–344 missing-D regime."
+            ),
+            "fields": [
+                "inference_time_missing_d_acc",
+                "train_and_inference_missing_d_acc",
+                "n_test",
+                "imputer",
+                "fold",
+                "repeat",
+            ],
+        },
         "note": (
             "ΔR_final reported on M7 path (missing vs complete same case). "
-            "physics_recon_theta masks σθ then sets σθ=SCF·σc when possible."
+            "physics_recon_theta masks σθ then sets σθ=SCF·σc when possible. "
+            "physics_recon_theta_scf_missing also drops SCF so identity cannot fill σθ."
         ),
     }
 

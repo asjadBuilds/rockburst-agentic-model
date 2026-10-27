@@ -231,6 +231,7 @@ class ReliabilityFusion:
         self.calibrator: Any | None = None
         self.calibration_method: str | None = None
         self.calibration_n: int = 0
+        self.interval_members: list[dict[str, Any]] = []
         self.conf_eps: float = 1e-3
         self.decision_thresholds: dict[str, float] = {
             "abstain_r_final": 0.45,
@@ -299,11 +300,22 @@ class ReliabilityFusion:
         )
         return self
 
-    def fit_calibrator(self, r_raw: np.ndarray, y_correct: np.ndarray) -> "ReliabilityFusion":
-        """Calibrate raw stacker scores → P(correct) on inner data only.
+    def fit_calibrator(
+        self,
+        r_raw: np.ndarray,
+        y_correct: np.ndarray,
+        *,
+        method: str | None = None,
+    ) -> "ReliabilityFusion":
+        """Calibrate raw stacker scores → P(correct) on cross-fitted OOF (RC3).
 
-        Small n or few unique raw scores → Platt (logistic); otherwise isotonic
-        with bounds away from exact 0/1 to reduce tie collapse.
+        Method selection (override via ``method``):
+          - ``platt``: logistic on raw score (small n / few unique values)
+          - ``beta``: logistic on [log s, log(1−s)] (Kull et al.; mid n)
+          - ``smoothed_isotonic``: isotonic with y bound away from 0/1
+
+        Prefer calling with the full cross-fitted OOF raw vector (~344), not a
+        tiny inner holdout (~70). Scores are clipped to ``conf_eps``…``1-conf_eps``.
         """
         r = np.asarray(r_raw, dtype=float).ravel()
         y = np.asarray(y_correct, dtype=int).ravel()
@@ -313,22 +325,54 @@ class ReliabilityFusion:
         if len(np.unique(y)) < 2 or len(r) < 5:
             return self
         eps = float(self.conf_eps)
-        n_unique = int(len(np.unique(np.round(r, 6))))
-        # Platt when small n or isotonic would be nearly constant (ties).
-        use_platt = len(r) < 40 or n_unique < 5
-        if use_platt:
-            from sklearn.linear_model import LogisticRegression
+        r_clip = np.clip(r, eps, 1.0 - eps)
+        n_unique = int(len(np.unique(np.round(r_clip, 6))))
+        chosen = method
+        if chosen is None:
+            # n≈344 is too small for unconstrained isotonic steps. Prefer
+            # parametric calibration; isotonic remains an explicit opt-in.
+            chosen = "platt" if len(r) < 100 or n_unique < 8 else "beta"
+        from sklearn.linear_model import LogisticRegression
 
+        if chosen == "platt":
             lr = LogisticRegression(solver="lbfgs", max_iter=1000)
-            lr.fit(r.reshape(-1, 1), y)
+            lr.fit(r_clip.reshape(-1, 1), y)
             self.calibrator = lr
             self.calibration_method = "platt"
             return self
+        if chosen == "beta":
+            # Beta calibration: logit(p) = a log(s) + b log(1-s) + c
+            Xb = np.column_stack(
+                [np.log(r_clip), np.log(1.0 - r_clip)]
+            )
+            lr = LogisticRegression(solver="lbfgs", max_iter=1000)
+            lr.fit(Xb, y)
+            self.calibrator = ("beta", lr)
+            self.calibration_method = "beta"
+            return self
+        # Smoothed isotonic: bound outputs away from exact 0/1 (reduces plateaus).
         iso = IsotonicRegression(out_of_bounds="clip", y_min=eps, y_max=1.0 - eps)
-        iso.fit(r, y)
+        iso.fit(r_clip, y)
         self.calibrator = iso
-        self.calibration_method = "isotonic"
+        self.calibration_method = "smoothed_isotonic"
         return self
+
+    def _apply_calibrator(self, raw: float) -> float:
+        eps = float(self.conf_eps)
+        raw = float(np.clip(raw, eps, 1.0 - eps))
+        if self.calibrator is None:
+            return raw
+        if self.calibration_method == "beta" and isinstance(self.calibrator, tuple):
+            _, lr = self.calibrator
+            Xb = np.array([[np.log(raw), np.log(1.0 - raw)]], dtype=float)
+            return float(lr.predict_proba(Xb)[0, 1])
+        if self.calibration_method == "platt" or (
+            hasattr(self.calibrator, "predict_proba")
+            and not isinstance(self.calibrator, IsotonicRegression)
+            and not isinstance(self.calibrator, tuple)
+        ):
+            return float(self.calibrator.predict_proba([[raw]])[0, 1])
+        return float(self.calibrator.predict([raw])[0])
 
     def _raw_score(self, r_vec: np.ndarray) -> float:
         if not self.is_fit or self.coef_ is None:
@@ -349,19 +393,76 @@ class ReliabilityFusion:
         return float(_sigmoid(self.intercept_ + float(r @ coef)))
 
     def r_final(self, r_vec: np.ndarray) -> float:
+        """Calibrated P(correct); always bounded away from exact 0/1 (RC3)."""
         raw = self._raw_score(r_vec)
         eps = float(self.conf_eps)
-        if self.calibrator is not None:
-            if self.calibration_method == "platt" or (
-                hasattr(self.calibrator, "predict_proba")
-                and not isinstance(self.calibrator, IsotonicRegression)
-            ):
-                val = float(self.calibrator.predict_proba([[raw]])[0, 1])
-            else:
-                val = float(self.calibrator.predict([raw])[0])
-        else:
-            val = raw
+        val = self._apply_calibrator(raw)
         return float(np.clip(val, eps, 1.0 - eps))
+
+    def r_final_interval(self, r_vec: np.ndarray) -> tuple[float, float, float]:
+        """Point estimate plus bootstrap stacker+calibrator interval."""
+        point = self.r_final(r_vec)
+        if not self.interval_members:
+            return point, float("nan"), float("nan")
+        values = [self._member_r_final(m, r_vec) for m in self.interval_members]
+        return (
+            point,
+            float(np.percentile(values, 2.5)),
+            float(np.percentile(values, 97.5)),
+        )
+
+    def _member_r_final(self, member: dict[str, Any], r_vec: np.ndarray) -> float:
+        clone_fusion = ReliabilityFusion()
+        clone_fusion.coef_ = np.asarray(member["coef_"], dtype=float)
+        clone_fusion.intercept_ = float(member["intercept_"])
+        clone_fusion.is_fit = True
+        clone_fusion.calibrator = member.get("calibrator")
+        clone_fusion.calibration_method = member.get("calibration_method")
+        clone_fusion.conf_eps = float(self.conf_eps)
+        return clone_fusion.r_final(r_vec)
+
+    def fit_bootstrap_interval(
+        self,
+        R: np.ndarray,
+        y_correct: np.ndarray,
+        *,
+        groups: np.ndarray | None = None,
+        n_boot: int = 100,
+        seed: int = 42,
+        method: str | None = None,
+    ) -> "ReliabilityFusion":
+        """Bootstrap the complete serving stacker+calibrator pipeline."""
+        R = np.asarray(R, dtype=float)
+        y = np.asarray(y_correct, dtype=int)
+        g = np.asarray(groups) if groups is not None else np.arange(len(y))
+        unique = np.unique(g)
+        rng = np.random.default_rng(seed)
+        members: list[dict[str, Any]] = []
+        for _ in range(int(n_boot)):
+            chosen = rng.choice(unique, size=len(unique), replace=True)
+            idx = np.concatenate([np.flatnonzero(g == group) for group in chosen])
+            if len(idx) < 5 or len(np.unique(y[idx])) < 2:
+                continue
+            member = ReliabilityFusion()
+            member.conf_eps = float(self.conf_eps)
+            member.fit(
+                R[idx],
+                y[idx],
+                feature_mask=self.feature_mask,
+                select_features=False,
+            )
+            raw = np.array([member._raw_score(row) for row in R[idx]])
+            member.fit_calibrator(raw, y[idx], method=method)
+            members.append(
+                {
+                    "coef_": np.asarray(member.coef_, dtype=float),
+                    "intercept_": float(member.intercept_),
+                    "calibrator": member.calibrator,
+                    "calibration_method": member.calibration_method,
+                }
+            )
+        self.interval_members = members
+        return self
 
     def set_decision_thresholds(self, thresholds: dict[str, float]) -> None:
         self.decision_thresholds.update(thresholds)
@@ -396,10 +497,19 @@ class ReliabilityFusion:
         eng_t = float(thr.get("engineering_verification", 0.55))
         caution_t = float(thr.get("accept_with_caution", 0.65))
         accept_t = float(thr.get("accept_r_final", 0.75))
-        # Enforce ordering: abstain < eng < caution ≤ accept
-        eng_t = max(eng_t, abstain_t + 1e-6)
-        caution_t = max(caution_t, eng_t + 1e-6)
-        accept_t = max(accept_t, caution_t)
+        # Enforce non-empty bands: abstain < eng < caution < accept (RC3).
+        thr_ord = ensure_nonempty_bands(
+            {
+                "abstain_r_final": abstain_t,
+                "engineering_verification": eng_t,
+                "accept_with_caution": caution_t,
+                "accept_r_final": accept_t,
+            }
+        )
+        abstain_t = thr_ord["abstain_r_final"]
+        eng_t = thr_ord["engineering_verification"]
+        caution_t = thr_ord["accept_with_caution"]
+        accept_t = thr_ord["accept_r_final"]
         if r_final < abstain_t:
             return "abstain"
         if r_final < eng_t:
@@ -421,6 +531,7 @@ class ReliabilityFusion:
                 "calibrator": self.calibrator,
                 "calibration_method": self.calibration_method,
                 "calibration_n": self.calibration_n,
+                "interval_members": self.interval_members,
                 "conf_eps": self.conf_eps,
                 "decision_thresholds": self.decision_thresholds,
             },
@@ -443,16 +554,21 @@ class ReliabilityFusion:
             obj.calibrator = data.get("calibrator")
             obj.calibration_method = data.get("calibration_method")
             obj.calibration_n = int(data.get("calibration_n", 0) or 0)
+            obj.interval_members = list(data.get("interval_members") or [])
             obj.conf_eps = float(data.get("conf_eps", obj.conf_eps))
             obj.decision_thresholds = data.get(
                 "decision_thresholds", obj.decision_thresholds
             )
             # Infer method for older blobs
             if obj.calibrator is not None and obj.calibration_method is None:
-                if isinstance(obj.calibrator, IsotonicRegression):
-                    obj.calibration_method = "isotonic"
+                if isinstance(obj.calibrator, tuple) and obj.calibrator and obj.calibrator[0] == "beta":
+                    obj.calibration_method = "beta"
+                elif isinstance(obj.calibrator, IsotonicRegression):
+                    obj.calibration_method = "smoothed_isotonic"
                 elif hasattr(obj.calibrator, "predict_proba"):
                     obj.calibration_method = "platt"
+            elif obj.calibration_method == "isotonic":
+                obj.calibration_method = "smoothed_isotonic"
             return obj
         # Legacy sklearn LogisticRegression blob
         model = data.get("model")
@@ -489,62 +605,263 @@ def pack_r_vector(
     )
 
 
+# Engineering-cost utilities for decision-band selection (RC3).
+# Wrong accept (missed severe rockburst / false routine clear) costs more than
+# an unnecessary engineering check; abstaining on an error is mildly rewarded;
+# abstaining on a correct prediction has small opportunity cost.
+DECISION_BAND_UTILITIES: dict[str, float] = {
+    "abstain_on_error": 0.3,
+    "abstain_on_correct": -0.05,
+    "eng_on_correct": 0.4,
+    "eng_on_error": -0.2,
+    "caution_on_correct": 0.5,
+    "caution_on_error": -0.3,
+    "pre_accept_on_correct": 0.7,
+    "pre_accept_on_error": -0.5,
+    "accept_on_correct": 1.0,
+    "accept_on_error": -1.0,
+}
+DECISION_BAND_UTILITIES_JUSTIFICATION = (
+    "Asymmetric engineering cost: false accept (routine clear when wrong) is "
+    "penalized at −1; correct accept rewarded +1; intermediate bands scale down "
+    "both reward and penalty; abstain on error +0.3 (caught miss) vs abstain on "
+    "correct −0.05 (extra review). Alternative: target_accept_rate mode below."
+)
+MIN_BAND_GAP = 0.05
+
+
+def ensure_nonempty_bands(
+    thresholds: dict[str, float],
+    *,
+    min_gap: float = MIN_BAND_GAP,
+) -> dict[str, float]:
+    """Force abstain < eng < caution < accept so every label is reachable (RC3).
+
+    If learned cuts collapsed (e.g. caution==accept→empty caution→accept gap),
+    push later cuts up by ``min_gap``. Never merges bands silently.
+    """
+    a = float(thresholds.get("abstain_r_final", 0.45))
+    e = float(thresholds.get("engineering_verification", 0.55))
+    c = float(thresholds.get("accept_with_caution", 0.65))
+    t = float(thresholds.get("accept_r_final", 0.75))
+    e = max(e, a + min_gap)
+    c = max(c, e + min_gap)
+    t = max(t, c + min_gap)
+    # Keep inside (0, 1); if overflow, compress from the top.
+    if t > 1.0 - 1e-6:
+        t = 1.0 - 1e-6
+        c = min(c, t - min_gap)
+        e = min(e, c - min_gap)
+        a = min(a, e - min_gap)
+        a = max(a, 1e-6)
+        e = max(e, a + min_gap)
+        c = max(c, e + min_gap)
+        t = max(t, c + min_gap)
+    return {
+        "abstain_r_final": float(a),
+        "engineering_verification": float(e),
+        "accept_with_caution": float(c),
+        "accept_r_final": float(t),
+        "bands_nonempty": True,
+        "min_gap": float(min_gap),
+    }
+
+
+def bands_are_nonempty(thresholds: dict[str, float], *, min_gap: float = 1e-6) -> bool:
+    a = float(thresholds["abstain_r_final"])
+    e = float(thresholds["engineering_verification"])
+    c = float(thresholds["accept_with_caution"])
+    t = float(thresholds["accept_r_final"])
+    return e >= a + min_gap and c >= e + min_gap and t >= c + min_gap
+
+
 def select_decision_thresholds(
     r_final: np.ndarray,
     y_correct: np.ndarray,
     *,
     grid: np.ndarray | None = None,
+    utilities: dict[str, float] | None = None,
+    target_accept_rate: float | None = None,
+    min_gap: float = MIN_BAND_GAP,
 ) -> dict[str, float]:
-    """Choose four ordered cutoffs on validation scores only (maximize utility).
+    """Choose four ordered cutoffs on validation scores (RC3).
 
-    Mapping (pre-registered):
-      R < abstain → abstain
-      abstain ≤ R < eng → engineering_verification
-      eng ≤ R < caution → accept_with_caution
-      R ≥ accept → accept
-    with abstain < eng < caution ≤ accept.
+    Default: maximize ``DECISION_BAND_UTILITIES`` (engineering-cost).
+    Optional ``target_accept_rate``: set accept cutoff to the empirical quantile
+    so accept mass ≈ target, then place lower bands with ``min_gap`` (coverage
+    targeting + sensitivity alternative to hand utilities).
+
+    Always returns non-empty bands (``ensure_nonempty_bands``).
     """
     r = np.asarray(r_final, dtype=float)
     y = np.asarray(y_correct, dtype=int)
+    u = {**DECISION_BAND_UTILITIES, **(utilities or {})}
+
+    if target_accept_rate is not None and len(r):
+        q = float(np.clip(1.0 - float(target_accept_rate), 0.05, 0.95))
+        accept_t = float(np.quantile(r, q))
+        caution_t = accept_t - min_gap
+        eng_t = caution_t - min_gap
+        abstain_t = eng_t - min_gap
+        best = ensure_nonempty_bands(
+            {
+                "abstain_r_final": abstain_t,
+                "engineering_verification": eng_t,
+                "accept_with_caution": caution_t,
+                "accept_r_final": accept_t,
+            },
+            min_gap=min_gap,
+        )
+        best["selection_mode"] = "target_accept_rate"
+        best["target_accept_rate"] = float(target_accept_rate)
+        best["utilities_justification"] = DECISION_BAND_UTILITIES_JUSTIFICATION
+        return best
+
     grid = grid if grid is not None else np.linspace(0.3, 0.9, 13)
-    best = {
-        "abstain_r_final": 0.45,
-        "engineering_verification": 0.55,
-        "accept_with_caution": 0.65,
-        "accept_r_final": 0.75,
-    }
+    best = ensure_nonempty_bands(
+        {
+            "abstain_r_final": 0.45,
+            "engineering_verification": 0.55,
+            "accept_with_caution": 0.65,
+            "accept_r_final": 0.75,
+        },
+        min_gap=min_gap,
+    )
     best_score = -1e18
     for abstain_t in grid:
         for eng_t in grid:
-            if eng_t <= abstain_t + 0.05:
+            if eng_t < abstain_t + min_gap:
                 continue
             for caution_t in grid:
-                if caution_t <= eng_t + 0.05:
+                if caution_t < eng_t + min_gap:
                     continue
                 for accept_t in grid:
-                    if accept_t < caution_t:
+                    # Strict inequality → non-empty caution→accept band (RC3).
+                    if accept_t < caution_t + min_gap:
                         continue
                     score = 0.0
                     for ri, yi in zip(r, y):
                         if ri < abstain_t:
-                            score += 0.3 if yi == 0 else -0.05
+                            score += u["abstain_on_error"] if yi == 0 else u["abstain_on_correct"]
                         elif ri < eng_t:
-                            score += 0.4 if yi == 1 else -0.2
+                            score += u["eng_on_correct"] if yi == 1 else u["eng_on_error"]
                         elif ri < caution_t:
-                            score += 0.5 if yi == 1 else -0.3
+                            score += (
+                                u["caution_on_correct"] if yi == 1 else u["caution_on_error"]
+                            )
                         elif ri < accept_t:
-                            score += 0.7 if yi == 1 else -0.5
+                            score += (
+                                u["pre_accept_on_correct"]
+                                if yi == 1
+                                else u["pre_accept_on_error"]
+                            )
                         else:
-                            score += 1.0 if yi == 1 else -1.0
+                            score += (
+                                u["accept_on_correct"] if yi == 1 else u["accept_on_error"]
+                            )
                     if score > best_score:
                         best_score = score
-                        best = {
-                            "abstain_r_final": float(abstain_t),
-                            "engineering_verification": float(eng_t),
-                            "accept_with_caution": float(caution_t),
-                            "accept_r_final": float(accept_t),
-                        }
+                        best = ensure_nonempty_bands(
+                            {
+                                "abstain_r_final": float(abstain_t),
+                                "engineering_verification": float(eng_t),
+                                "accept_with_caution": float(caution_t),
+                                "accept_r_final": float(accept_t),
+                            },
+                            min_gap=min_gap,
+                        )
+    best["selection_mode"] = "engineering_cost_utility"
+    best["utility_score"] = float(best_score)
+    best["utilities"] = dict(u)
+    best["utilities_justification"] = DECISION_BAND_UTILITIES_JUSTIFICATION
     return best
+
+
+def decision_band_occupancy(
+    r_final: np.ndarray, thresholds: dict[str, float]
+) -> dict[str, int]:
+    """Count served scores in every operational decision band."""
+    fusion = ReliabilityFusion()
+    fusion.set_decision_thresholds(thresholds)
+    labels = ("abstain", "engineering_verification", "accept_with_caution", "accept")
+    counts = {label: 0 for label in labels}
+    for score in np.asarray(r_final, dtype=float).ravel():
+        counts[fusion.decide(float(score))] += 1
+    return counts
+
+
+def decision_utility_sensitivity(
+    r_final: np.ndarray, y_correct: np.ndarray
+) -> dict[str, dict[str, Any]]:
+    """Re-select bands under plausible error-cost changes and report occupancy."""
+    scenarios = {
+        "lower_false_accept_cost": {"accept_on_error": -0.5},
+        "registered": {},
+        "higher_false_accept_cost": {"accept_on_error": -2.0},
+    }
+    out: dict[str, dict[str, Any]] = {}
+    for name, overrides in scenarios.items():
+        thresholds = select_decision_thresholds(
+            r_final, y_correct, utilities=overrides
+        )
+        out[name] = {
+            "thresholds": thresholds,
+            "occupancy": decision_band_occupancy(r_final, thresholds),
+        }
+    return out
+
+
+def fit_calibrator_on_crossfit_raw(
+    fusion: "ReliabilityFusion",
+    R: np.ndarray,
+    y_correct: np.ndarray,
+    fold_of_row: np.ndarray,
+    *,
+    feature_mask: np.ndarray | None = None,
+    conf_eps: float = 1e-3,
+    method: str | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Fit stackers per fold, collect OOF raw scores, calibrate on all (~344).
+
+    Returns ``(r_raw_oof, r_final_oof)`` aligned to rows (0 where unscored).
+    Mutates ``fusion``: attaches calibrator trained on full cross-fitted raw.
+    Production stacker coefficients should be fit separately on all OOF.
+    """
+    R = np.asarray(R, dtype=float)
+    y_correct = np.asarray(y_correct, dtype=int)
+    fold_of_row = np.asarray(fold_of_row, dtype=int)
+    n = len(y_correct)
+    r_raw_oof = np.zeros(n, dtype=float)
+    scored = np.zeros(n, dtype=bool)
+    folds = sorted(int(f) for f in np.unique(fold_of_row) if f >= 0)
+    mask = feature_mask if feature_mask is not None else locked_feature_mask()
+    for fold in folds:
+        train_mask = (fold_of_row >= 0) & (fold_of_row != fold)
+        te_mask = fold_of_row == fold
+        if not train_mask.any() or not te_mask.any():
+            continue
+        idx_fit = np.where(train_mask)[0]
+        idx_te = np.where(te_mask)[0]
+        fold_fus = ReliabilityFusion()
+        fold_fus.conf_eps = float(conf_eps)
+        fold_fus.fit(
+            R[idx_fit], y_correct[idx_fit], feature_mask=mask, select_features=False
+        )
+        if not fold_fus.is_fit:
+            continue
+        for j in idx_te:
+            r_raw_oof[j] = fold_fus._raw_score(R[j])
+            scored[j] = True
+    if not scored.any():
+        return r_raw_oof, r_raw_oof.copy()
+    fusion.conf_eps = float(conf_eps)
+    fusion.fit_calibrator(r_raw_oof[scored], y_correct[scored], method=method)
+    r_final_oof = np.zeros(n, dtype=float)
+    for j in np.where(scored)[0]:
+        r_final_oof[j] = float(
+            np.clip(fusion._apply_calibrator(r_raw_oof[j]), fusion.conf_eps, 1.0 - fusion.conf_eps)
+        )
+    return r_raw_oof, r_final_oof
 
 
 def bootstrap_coef_cis(

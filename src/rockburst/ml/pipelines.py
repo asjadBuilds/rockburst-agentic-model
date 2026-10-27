@@ -157,13 +157,21 @@ def get_model_zoo(quick: bool = False) -> dict[str, Any]:
     return models
 
 
-def prepare_xy(df, feature_cols=None):
+def prepare_xy(df, feature_cols=None, *, include_observed_indicators: bool = True):
     import pandas as pd
 
     feature_cols = feature_cols or FEATURE_COLS
     X = df[feature_cols].copy()
-    for c in feature_cols:
-        X[f"observed_{c}"] = (~X[c].isna()).astype(float)
+    if include_observed_indicators:
+        for c in feature_cols:
+            X[f"observed_{c}"] = (~X[c].isna()).astype(float)
     y = df["rockburst_grade"].astype(int).to_numpy()
     groups = df["dup_group_id"].to_numpy() if "dup_group_id" in df.columns else np.arange(len(df))
     return X, y, groups
+
+
+def prepare_xy_sensitivity_variants(df, feature_cols=None):
+    """Primary and no-indicator inputs for missingness sensitivity analysis."""
+    primary = prepare_xy(df, feature_cols, include_observed_indicators=True)
+    no_indicators = prepare_xy(df, feature_cols, include_observed_indicators=False)
+    return {"observed_indicators": primary, "no_observed_indicators": no_indicators}

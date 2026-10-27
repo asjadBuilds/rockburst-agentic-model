@@ -93,9 +93,17 @@ def test_rows_244_246_row_shift_and_288_implausible():
     diag = diagnose_row_shift_block(block)
     assert diag["suspect"] is True
     for case in block:
+        # RM2: single-row check uses large_b1_identity_gap, not row-shift label
         res = check_case(case)
         assert res.has_identity_violation
-        assert any("suspected_row_shift" in i or "inconsistency" in i for i in res.issues)
+        assert any(
+            "large_b1_identity_gap" in i or "inconsistency" in i for i in res.issues
+        )
+        assert not any("suspected_row_shift" in i for i in res.issues)
+    # Block-level diagnose (with neighbours) may flag suspected_row_shift
+    res_block = check_case(block[1], neighbor_rows=[block[0]])
+    # neighbour context recorded; suspect may require ≥2 shift notes in block
+    assert "row_shift_block" in (res_block.empirical_checks or {})
 
     row288 = df.loc[df["no"] == 288].iloc[0].to_dict()
     res288 = check_case(row288)

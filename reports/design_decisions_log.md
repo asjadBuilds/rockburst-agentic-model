@@ -143,3 +143,39 @@ Written **before** running the A/B/C/D cross-fit comparison on saved OOF vectors
 **Chosen: A** (`r_model` / max-prob only) — simplest set whose paired Δ CI vs best contains 0. B excluded (CI entirely below 0).
 
 **Honesty:** `n_missing` and `d_observed` were added after seeing earlier results; the feature set was chosen on held-out evidence under the pre-registered rule above. Locked in `CHOSEN_FUSION_SET` / `locked_feature_mask()` for production, ablation, and item4.
+
+## Round-2 Phase 3 — RC3 / RM7 (written with code; artefacts after Phase 5 train)
+
+1. **Calibrator n:** Platt / beta / smoothed isotonic on **all cross-fitted OOF raw scores** (~344), not the ~70 inner holdout. Production stacker still fits on all OOF; metrics remain held-out fold scores.
+2. **R_final bound and interval:** `conf_eps` clips away from exact 0/1; `r_final_interval` reports grouped-bootstrap stacker-plus-calibrator quantiles, or NaN bounds when no interval ensemble is fitted—never a fabricated constant range.
+3. **Decision utilities:** `DECISION_BAND_UTILITIES` = engineering-cost asymmetry (false accept −1, correct accept +1; abstain-on-error mildly rewarded). Alternative: `target_accept_rate` coverage mode for sensitivity. Bands forced non-empty (`min_gap=0.05`); no silent merge of caution≡accept.
+4. **No 0.49 clamp:** abstain + high R_final keeps true R_final; `decision_override_reason` records the gate/Critic override.
+5. **RM7:** `compare_fusion_sets` + `component_aurocs` on final leakage-safe R; keep set A only if it still wins/ties on RC area — do not force multi-channel fusion.
+
+## Round-2 Phase 4 — RM8–RM11 + RC4/RC6 hooks (code only; no full train)
+
+1. **RM8:** Set-size distribution per class/fold in `m1_results`; compare Mondrian / marginal / CV+ / ordinal nonconformity / class-conditional grade-3 α; emit coverage–size–abstention trade-off.
+2. **RM10 decode:** Compare argmax vs median by **mean fold QWK** on the production model; adopt median only if it wins; else justify argmax. Nested selection remains **best mean inner QWK** (no silent M1 regression). Capacity-matched multiclass vs ordinal table for F8.
+3. **RM11:** Broaden RF (`min_samples_leaf`, `max_features`); booster subsample/L2; SVM = StandardScaler + balanced weights + CalibratedClassifierCV. Candidate table carries fold QWK CIs for all families.
+4. **RM9:** M2 = importance overlay (metrics ≡ M1); all-fold permutation + local attributions; Critic rule `implausible_explanation_direction`; F15 keys `importances_mean` / `ranked`.
+5. **RC4/RC6 hooks:** `matched_coverage.comparisons` covers M3–M7 versus M1 independently at each system's own coverage, with paired grouped CIs; robustness emits flip/|Δp|/entropy/set size/R_final (+ CIs); missing-data includes abstention, accepted accuracy, confidence/accuracy change, sample size, and CI-gated degradation flags.
+
+## Round-2 Phase 5 — USER long runs (RC1, RC6, RM12, RM13, Rm8 metadata)
+
+**Agent ships code only; user runs long jobs** (constraint 5 / out-of-scope agent train·evaluate).
+
+1. **Rm8:** `build_run_metadata` → every `m1_results.json`, `ablation_results.json`, `triplet_label_sensitivity.json`, fusion set-compare JSON (mode, date_utc, git_hash, package_versions, command).
+2. **RM12:** `scripts/triplet_label_sensitivity.py` — production M1+M7 under `(σc, σt, Wet)` groups **and** side-by-side `dup_group_id` headlines → `artifacts/baselines/triplet_label_sensitivity.json`.
+3. **RM13:** same script — three policies (`as_given`, `drop_rows_315_344`, `earliest_of_conflict`) with production M1+full M7; `missing_d_comparison` with/without 315–344 (report narrative in Phase 6).
+4. **RC1/RC6:** full `train` + `evaluate` (no `--quick`); iterative imputer in missing-data; all fold test cases in robustness.
+5. **RM7 artefact:** after train, `scripts/compare_fusion_sets_slice4.py` on refreshed `fusion_R_oof.npy`.
+
+## Round-2 Phase 6 — Examples, figures, notebook, reports (RC7–RC10, RC4/RC6 report, RM14, §8)
+
+**Agent: code/docs/tests only. User runs** `generate_examples.py`, `generate_figures.py`, `jupyter nbconvert --execute`.
+
+1. **RC7:** `failure_case` = held-out **accepted-wrong** preferring `|ŷ−y|≥2` (case-42 class when available); `abstain_case` separate; `failure_analysis.md` lists inputs, agent flags, skips, which check would catch.
+2. **RC8:** `scripts/archive_stale_artefacts.py` moves item4 / old fusion slices / `*_llm.json` traces → `artifacts/archive/`; `case_corrupt_ood` records real `perturbation`; examples carry `case_no`/`true_grade`/`fold_index`/`fold_model`.
+3. **RC9 + §8:** `generate_figures.py` raises on missing keys; no CM fabrication; captions include n/folds/repeats/model; F2 post-RC5 cycle semantics; F9b matched-coverage; F10 honest R_final loss; F11 real reliability bins.
+4. **RC10:** notebook raw CSV → preprocess → load models by sha256 → eval tables → ≥3 held-outs → embed F01/F08/F12; `README_DELIVERY.txt` aligned with `DELIVERABLES.md`.
+5. **RM14 / reports:** `feedback_response.md` Round-2 evidence map; technical report + COVER_NOTE + README synced to full-mode numbers (quick 0.632 retired).

@@ -1,65 +1,196 @@
 {
   "predicted_grade": 0,
   "predicted_intensity": "none",
-  "prediction_probability": 0.9261780104712041,
+  "prediction_probability": 0.9962504756878465,
   "prediction_set": [
     0
   ],
   "prediction_set_intensities": [
     "none"
   ],
-  "physics_consistency": 0.6565656565656566,
-  "input_reliability": 0.6238805970149254,
-  "ood_status": "No",
+  "physics_consistency": 0.9,
+  "input_reliability": 0.7520750482649361,
+  "ood_status": "Yes",
   "prediction_stability": "high",
-  "agent_disagreement": "low",
+  "agent_disagreement": "Moderate",
   "inter_agent_disagreement": {
     "ml_grade": 0,
     "ml_intensity": "none",
-    "criteria_consensus_grade": null,
-    "criteria_intensity": "unknown",
-    "criteria_grades": {},
+    "criteria_consensus_grade": 0,
+    "criteria_intensity": "none",
+    "criteria_grades": {
+      "russenes": 0,
+      "kidybinski": 0
+    },
     "ml_vs_criteria": false,
-    "critic_endorse": null,
-    "critic_rules_fired": [],
-    "parties": [],
-    "has_disagreement": false
+    "critic_endorse": false,
+    "critic_rules_fired": [
+      "ood_overconfident",
+      "depth_stress_implausible"
+    ],
+    "parties": [
+      "critic_vs_fusion_path",
+      "data_quality_agent",
+      "predictive_agent"
+    ],
+    "has_disagreement": true,
+    "level": "Moderate"
   },
-  "final_system_confidence": 0.999,
-  "decision": "Predicted intensity: none (grade 0). Conformal set: {none} (grades [0]). System confidence R_final=0.999. Recommended action: accept. Prediction accepted; routine monitoring recommended.",
-  "recommended_action": "accept",
+  "final_system_confidence": 0.8775155399612821,
+  "r_final": 0.8775155399612821,
+  "decision": "Predicted intensity: none (grade 0). Conformal set: {none} (grades [0]). System confidence R_final=0.878. Recommended action: accept_with_caution. Hazard statement: No high-intensity indication in the available evidence; continue monitoring. Inter-agent disagreement (Moderate): Critic objections (ood_overconfident, depth_stress_implausible). Accept with caution; verify key measurements. (Critic unresolved (endorse=False, recheck=data); downgraded accept \u2192 accept_with_caution)",
+  "recommended_action": "accept_with_caution",
   "probabilities": [
-    0.9261780104712041,
-    0.045454545454545456,
-    0.028367444074250358,
-    0.0
+    0.9962504756878465,
+    0.002919224716464783,
+    0.0007185339312949392,
+    0.00011176566439368778
   ],
   "route_trace": [
     "rules:data_quality",
-    "rules:geomechanics_skipped",
+    "rules:geomechanics",
     "rules:predict",
     "rules:uncertainty",
+    "rules:extra_validation",
+    "rules:critic",
+    "rules:recheck_data",
+    "rules:critic",
     "rules:finalize"
   ],
   "abstained": false,
-  "critic_endorse": null,
-  "downgrade_reason": null,
+  "critic_endorse": false,
+  "downgrade_reason": "Critic unresolved (endorse=False, recheck=data); downgraded accept \u2192 accept_with_caution",
   "consistency_note": null,
-  "physics_skipped": true,
-  "recheck_payloads": {},
+  "decision_override_reason": null,
+  "physics_skipped": false,
+  "recheck_payloads": {
+    "alt_imputer": {
+      "tool": "alt_imputer_reprediction",
+      "skipped": true,
+      "missing_features": [],
+      "large_spread": false,
+      "grade_flip": false,
+      "prob_spread": 0.0,
+      "probas": {},
+      "grades": {},
+      "primary_imputer": "knn",
+      "primary_grade": 0,
+      "skip_reason": "complete_case_no_imputed_features"
+    },
+    "targeted_perturbation": {
+      "tool": "targeted_perturbation_recheck",
+      "features": [
+        "sigma_theta",
+        "sigma_c",
+        "sigma_t",
+        "scf",
+        "b1",
+        "b2",
+        "wet",
+        "d"
+      ],
+      "stability_score": 0.999604319051234,
+      "prediction_stability": "high",
+      "flip_rate": 0.0,
+      "low_stability": false
+    },
+    "monotonic_tendency": {
+      "tool": "monotonic_tendency_recheck",
+      "rel_increase": 0.1,
+      "base_grade": 0,
+      "violations": [],
+      "details": [
+        {
+          "channel": "sigma_theta",
+          "base": 0,
+          "perturbed": 0
+        },
+        {
+          "channel": "wet",
+          "base": 0,
+          "perturbed": 0
+        }
+      ],
+      "monotonic_violation": false
+    }
+  },
   "r_vector": {
-    "r_data": 0.6238805970149254,
-    "r_physics": 0.6565656565656566,
-    "r_model": 0.999,
-    "r_uncertainty": 0.999,
-    "r_stability": 0.8125,
+    "r_data": 0.7520750482649361,
+    "r_physics": 0.9,
+    "r_model": 0.9962504756878465,
+    "r_uncertainty": 0.9699730260016733,
+    "r_stability": 0.9996918234831985,
     "n_missing": 0.0,
     "d_observed": 1.0,
-    "r_final": 0.999
+    "r_final": 0.8775155399612821
   },
-  "explanation": "Top held-out permutation features: wet, sigma_theta, scf, sigma_c, b1",
-  "critic_rules_fired": [],
+  "explanation": "Top held-out permutation features: wet, sigma_theta, scf, b1, observed_d",
+  "critic_rules_fired": [
+    "ood_overconfident",
+    "depth_stress_implausible"
+  ],
   "delivered_planner": "rules_fsm",
-  "trace_path": "/home/leviathan/Workspace/agentic-rockburst-model/artifacts/traces/case_67.json",
-  "example_protocol": "production model, case seen in training (full-data refit of best_baseline.joblib); rules FSM"
+  "termination_reason": "finalize_unresolved_no_new_evidence",
+  "critic_recheck_cycles": 1,
+  "max_critic_recheck_cycles": 3,
+  "steps_taken": 9,
+  "max_loops": 24,
+  "missing_d": false,
+  "recheck_effects": [
+    {
+      "kind": "data",
+      "before": {
+        "physics_score": 0.9,
+        "data_reliability": 0.7520750482649361,
+        "model_disagreement": 0.045854712959669065,
+        "prediction_set": [
+          0
+        ],
+        "has_criteria": true
+      },
+      "after": {
+        "physics_score": 0.9,
+        "data_reliability": 0.7520750482649361,
+        "model_disagreement": 0.045854712959669065,
+        "prediction_set": [
+          0
+        ],
+        "has_criteria": true
+      },
+      "changed_data_reliability": false,
+      "changed_set": false
+    }
+  ],
+  "critic_objections": [
+    {
+      "rule": "ood_overconfident",
+      "status": "open",
+      "requested_recheck": "data",
+      "resolution_reason": null,
+      "recheck": "data"
+    },
+    {
+      "rule": "depth_stress_implausible",
+      "status": "open",
+      "requested_recheck": "physics",
+      "resolution_reason": null,
+      "recheck": "data"
+    }
+  ],
+  "resolved_critic_rules": [],
+  "recheck_changed_evidence_count": 0,
+  "termination_conditions": [
+    "finalize: evidence complete and Critic endorses or is not required",
+    "forced_abstain_critic_cycles: Critic\u2192recheck budget exhausted with unresolved objections",
+    "forced_abstain_max_steps: absolute step ceiling with unresolved objections/evidence",
+    "forced_abstain_safety: loop exited without finalize"
+  ],
+  "trace_path": "artifacts/traces/case_67.json",
+  "case_no": 67,
+  "true_grade": 0,
+  "true_intensity": "none",
+  "fold_index": null,
+  "fold_model": "production_full_refit",
+  "example_protocol": "production_showcase; rules FSM; relative paths only; note=case_seen_in_full_data_refit",
+  "showcase_label": "standard_b"
 }

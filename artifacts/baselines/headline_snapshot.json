@@ -1,73 +1,260 @@
 {
-  "best_model": "rf__iterative",
+  "best_model": "lightgbm__median",
   "n_trials": 50,
-  "production_qwk_pooled": 0.6823578790281211,
-  "nested_unbiased_qwk": 0.6972773091316367,
-  "nested_unbiased_accuracy": 0.6308139534883721,
-  "selection_biased_qwk": 0.7186941166955725,
-  "conformal_method": "mondrian_split",
-  "conformal_coverage": 0.9333333333333332,
+  "production_qwk_pooled": 0.6970885241350593,
+  "nested_unbiased_qwk": 0.7034585528139727,
+  "nested_unbiased_accuracy": 0.625,
+  "selection_biased_qwk": 0.7048978169372783,
+  "conformal_method": "marginal_split",
+  "conformal_coverage": 0.9188405797101449,
   "fold_winner_instability": {
     "fold_winners": [
+      "xgboost__knn",
       "lightgbm__median",
+      "xgboost__knn",
       "lightgbm__median",
-      "catboost__knn",
-      "rf__iterative",
-      "lightgbm__iterative"
+      "rf__knn"
     ],
-    "unique_winners": 4,
-    "mode_of_winners": "lightgbm__median",
+    "unique_winners": 3,
+    "mode_of_winners": "xgboost__knn",
     "mode_count": 2,
     "mode_fraction": 0.4,
     "winner_counts": {
+      "xgboost__knn": 2,
       "lightgbm__median": 2,
-      "catboost__knn": 1,
-      "rf__iterative": 1,
-      "lightgbm__iterative": 1
+      "rf__knn": 1
     },
     "production_rule": "best_mean_inner_qwk",
-    "production_model": "rf__iterative",
-    "production_inner_qwk_mean": 0.6976148088999073,
+    "production_model": "lightgbm__median",
+    "production_inner_qwk_mean": 0.6933098164492676,
     "mode_differs_from_production": true
   },
   "ablation_M1_qwk": {
-    "mean": 0.6323707481745129,
-    "std": 0.030551656884589558,
-    "ci95_low": 0.5791605052859302,
-    "ci95_high": 0.6836747602042822,
+    "mean": 0.669951155562134,
+    "std": 0.024280026431932413,
+    "ci95_low": 0.6218271792683865,
+    "ci95_high": 0.7170540879949087,
     "method": "grouped_bootstrap"
   },
   "ablation_M7_qwk": {
-    "mean": 0.6323707481745129,
-    "std": 0.030551656884589558,
-    "ci95_low": 0.5791605052859302,
-    "ci95_high": 0.6836747602042822,
+    "mean": 0.669951155562134,
+    "std": 0.024280026431932413,
+    "ci95_low": 0.6218271792683865,
+    "ci95_high": 0.7170540879949087,
     "method": "grouped_bootstrap"
   },
   "ablation_M7_abstention": {
-    "mean": 0.5174418604651163,
-    "std": 0.018571698186311842,
-    "ci95_low": 0.48295329670329673,
-    "ci95_high": 0.5578535273647579,
+    "mean": 0.32558139534883723,
+    "std": 0.013717364656664885,
+    "ci95_low": 0.2989764563106796,
+    "ci95_high": 0.3525606111672846,
     "method": "grouped_bootstrap"
+  },
+  "matched_coverage": {
+    "n_total": 1720,
+    "baseline": "M1_maxprob",
+    "comparisons": {
+      "M3": {
+        "n_total": 1720,
+        "n_accepted": 1547,
+        "coverage": 0.8994186046511627,
+        "system": {
+          "accuracy": 0.5972850678733032,
+          "severe_error_rate": 0.05106658047834518
+        },
+        "m1_same_coverage": {
+          "accuracy": 0.6031027795733678,
+          "severe_error_rate": 0.057530704589528116
+        },
+        "delta_system_minus_m1": {
+          "accuracy": -0.005817711700064621,
+          "accuracy_ci95": [
+            -0.023582636970381026,
+            0.009389557164948922
+          ],
+          "severe_error_rate": -0.0064641241111829326,
+          "severe_error_rate_ci95": [
+            -0.015885475391814185,
+            0.006513219163907287
+          ]
+        }
+      },
+      "M4": {
+        "n_total": 1720,
+        "n_accepted": 810,
+        "coverage": 0.47093023255813954,
+        "system": {
+          "accuracy": 0.7037037037037037,
+          "severe_error_rate": 0.03209876543209877
+        },
+        "m1_same_coverage": {
+          "accuracy": 0.7419753086419754,
+          "severe_error_rate": 0.028395061728395062
+        },
+        "delta_system_minus_m1": {
+          "accuracy": -0.03827160493827164,
+          "accuracy_ci95": [
+            -0.07012508181966946,
+            -0.01264517021015113
+          ],
+          "severe_error_rate": 0.0037037037037037056,
+          "severe_error_rate_ci95": [
+            -0.007390768901263658,
+            0.02086683507758931
+          ]
+        }
+      },
+      "M5": {
+        "n_total": 1720,
+        "n_accepted": 1427,
+        "coverage": 0.8296511627906977,
+        "system": {
+          "accuracy": 0.6096706377014717,
+          "severe_error_rate": 0.0539593552908199
+        },
+        "m1_same_coverage": {
+          "accuracy": 0.6208829712683952,
+          "severe_error_rate": 0.053258584442887176
+        },
+        "delta_system_minus_m1": {
+          "accuracy": -0.011212333566923527,
+          "accuracy_ci95": [
+            -0.024375913020571367,
+            0.0013643090976809473
+          ],
+          "severe_error_rate": 0.0007007708479327274,
+          "severe_error_rate_ci95": [
+            -0.006775182582334293,
+            0.00914021313948773
+          ]
+        }
+      },
+      "M6": {
+        "n_total": 1720,
+        "n_accepted": 1427,
+        "coverage": 0.8296511627906977,
+        "system": {
+          "accuracy": 0.6096706377014717,
+          "severe_error_rate": 0.0539593552908199
+        },
+        "m1_same_coverage": {
+          "accuracy": 0.6208829712683952,
+          "severe_error_rate": 0.053258584442887176
+        },
+        "delta_system_minus_m1": {
+          "accuracy": -0.011212333566923527,
+          "accuracy_ci95": [
+            -0.023251412724041444,
+            0.002132386265128347
+          ],
+          "severe_error_rate": 0.0007007708479327274,
+          "severe_error_rate_ci95": [
+            -0.006454507577075818,
+            0.0091438352067989
+          ]
+        }
+      },
+      "M7": {
+        "n_total": 1720,
+        "n_accepted": 1160,
+        "coverage": 0.6744186046511628,
+        "system": {
+          "accuracy": 0.6379310344827587,
+          "severe_error_rate": 0.05086206896551724
+        },
+        "m1_same_coverage": {
+          "accuracy": 0.6698275862068965,
+          "severe_error_rate": 0.03879310344827586
+        },
+        "delta_system_minus_m1": {
+          "accuracy": -0.031896551724137856,
+          "accuracy_ci95": [
+            -0.0542507754712479,
+            -0.009862421614018645
+          ],
+          "severe_error_rate": 0.012068965517241376,
+          "severe_error_rate_ci95": [
+            -0.0008499661767058044,
+            0.022489495131004535
+          ]
+        }
+      }
+    },
+    "note": "Per-system same-coverage comparison: each M3\u2013M7 native accepted subset versus the highest-confidence M1 subset of equal size on the same pooled predictions; paired duplicate-grouped bootstrap CIs."
+  },
+  "risk_coverage_max_prob_vs_r_final": {
+    "max_prob_area_mean": 0.6534599766597929,
+    "r_final_area_mean": 0.6416881614954135,
+    "r_final_minus_max_prob": -0.011771815164379418,
+    "r_final_beats_max_prob": false,
+    "note": "Report served R_final versus M1 max-prob RC areas plainly (RC4); the production feature set is selected by the declared A-D rule."
   },
   "agent_value_finding": {
     "m5_m6_m7_qwk_identical": true,
     "m5_m6_m7_abstention_identical": false,
-    "critic_fire_rate": 0.6133720930232558,
-    "coord_route_divergence_rate": 0.4186046511627907,
-    "m6_vs_m7_substantive_divergence_rate": 0.6133720930232558,
+    "critic_fire_rate": 0.922093023255814,
+    "coord_route_divergence_rate": 1.0,
+    "m6_vs_m7_substantive_divergence_rate": 0.922093023255814,
     "m6_vs_m7_divergence_causes": {
-      "critic_only": 15,
+      "critic_only": 0,
       "extra_validation_only": 0,
       "recheck_only": 0,
-      "other_or_mixed": 196
+      "other_or_mixed": 1586
     },
     "note": "Route divergence uses substantive actions only (extra_validation / recheck* / critic). If M5/M6/M7 remain indistinguishable on grades, agents may not change argmax; not tuned on test folds."
+  },
+  "run_metadata_ablation": {
+    "mode": "full",
+    "date_utc": "2026-10-27T15:49:06Z",
+    "git_hash": "3db99c9d5e6145a9590ccf7403ede1f74b608855",
+    "git_dirty": true,
+    "rockburst_version": "0.1.0",
+    "package_versions": {
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "scikit-learn": "1.9.1",
+      "scipy": "1.18.1",
+      "joblib": "1.6.0",
+      "optuna": "5.0.0",
+      "catboost": "1.2.10",
+      "xgboost": "3.4.1",
+      "lightgbm": "4.7.0"
+    },
+    "command": "rockburst evaluate",
+    "configuration_sha256": "1cbce9eee44a70cbd90a5f088e48a663ca6b06538d8864ebe7d35085c1bc4ef1",
+    "input_sha256": {
+      "/home/leviathan/Workspace/agentic-rockburst-model/data/processed/rockburst_processed.csv": "5be436a3711623b2c40ceb0c7cb7be5e19ccc15bfb323d6fcb7f7197d797f54d"
+    },
+    "n_outer": 5,
+    "n_repeats": 5,
+    "n_cases": 344,
+    "m1_best": "lightgbm__median"
+  },
+  "run_metadata_m1": {
+    "mode": "full",
+    "date_utc": "2026-10-27T10:30:08Z",
+    "git_hash": "3db99c9d5e6145a9590ccf7403ede1f74b608855",
+    "rockburst_version": "0.1.0",
+    "package_versions": {
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "scikit-learn": "1.9.1",
+      "scipy": "1.18.1",
+      "joblib": "1.6.0",
+      "optuna": "5.0.0",
+      "catboost": "1.2.10",
+      "xgboost": "3.4.1",
+      "lightgbm": "4.7.0"
+    },
+    "command": "rockburst train",
+    "n_outer": 5,
+    "n_inner": 3,
+    "n_trials": 50,
+    "best_model": "lightgbm__median"
   },
   "source_files": [
     "artifacts/baselines/m1_results.json",
     "artifacts/baselines/ablation_results.json"
   ],
-  "note": "Regenerate via scripts/generate_figures.py; reports must cite this snapshot or the JSONs."
+  "note": "Full-mode only. Regenerate via scripts/generate_figures.py; reports must cite this snapshot or the JSONs."
 }

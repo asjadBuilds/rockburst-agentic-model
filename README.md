@@ -4,7 +4,7 @@ Physics-guided multi-agent system for rockburst grade (0–3) assessment with re
 
 **Design rule:** the planner (rules or Gemini) only chooses the next action. All numbers come from deterministic Python tools. Fusion decides trust and abstention.
 
-**Headline (nested-unbiased M1, final-hardening @ 5% near-dup):** QWK **0.689**, accuracy **0.613** (`rf__median`). Fusion reduces to calibrated max-probability (set A); mean \(R_{\mathrm{final}}\) 0.650 is still overconfident vs base accuracy (~0.57–0.59). Rules planner is the default (no API key). See [`reports/technical_report.md`](reports/technical_report.md) and [`reports/design_decisions_log.md`](reports/design_decisions_log.md).
+**Headline (full-mode nested-unbiased M1):** QWK **0.703**, accuracy **0.625** (`lightgbm__median`, best mean inner QWK). Repeated-OOF M1/M7 QWK is **0.670**; M7 abstains on **0.326**. The declared fusion rule selects set **C** and excludes inverted `r_data`; served R_final still trails max-prob on risk–coverage (0.642 vs 0.653). Rules planner is the default. See [`COVER_NOTE.md`](COVER_NOTE.md), [`reports/technical_report.md`](reports/technical_report.md), and [`reports/feedback_response.md`](reports/feedback_response.md).
 
 ## Quick start for the client
 
@@ -46,15 +46,14 @@ python scripts/rockburst_cli.py train          # nested CV + conformal + live fu
 python scripts/rockburst_cli.py evaluate       # repeated grouped OOF ablations M1–M7
 python scripts/rockburst_cli.py assess --no 1  # rules planner (default)
 python scripts/rockburst_cli.py assess --no 146 --llm
-python scripts/dup_sensitivity.py
-python scripts/refit_fusion_item2.py           # constrained fusion refit + missing-D drop
-python scripts/item4_metrics.py                # Critic AUROC / risk-coverage / per-class
-python scripts/item5_dup_label_noise.py        # near-dup + label-noise policies
-python scripts/generate_examples.py
+python scripts/triplet_label_sensitivity.py   # RM12/RM13 (long)
+python scripts/generate_examples.py           # RC7–RC8 (+ archive stale)
+python scripts/generate_figures.py            # F1–F17 + headline_snapshot
+jupyter nbconvert --to notebook --execute notebooks/end_to_end_demo.ipynb --inplace
 pytest -q
 ```
 
-`--quick` exists for smoke tests only. **Do not use `--quick` for any number that appears in reports.**
+`--quick` exists for smoke tests only. **Do not use `--quick` for any number that appears in reports.** Run metadata (mode, date, git hash, package versions) is written into baseline JSONs.
 
 ## Planner modes
 | Mode | Flag | Trace tags |
@@ -62,7 +61,7 @@ pytest -q
 | Rules (default) | _(none)_ | `rules:…` |
 | Gemini Flash | `--llm` | `llm:…` / `fallback:…` / `rejected:…` |
 
-Conditional routing: physics may be skipped after a cheap pre-check; Critic rechecks call distinct tools; unresolved objections downgrade the decision one level.
+Conditional routing: physics may be skipped after a cheap pre-check (criteria retained); Critic→recheck cycles limited by `max_critic_recheck_cycles` (forced abstain on non-convergence); `max_loops` is a safeguard only.
 
 ## Repo layout
 

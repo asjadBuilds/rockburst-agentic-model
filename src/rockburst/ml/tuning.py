@@ -57,11 +57,17 @@ SEARCH_SPACES_DOC = {
         "C": "loguniform(1e-3, 100)",
         "gamma": "loguniform(1e-4, 10) if rbf",
         "note": (
-            "Wrapped in CalibratedClassifierCV (sigmoid); broader C/gamma vs Slice 5 "
-            "(M9 retune). Equal n_trials across families."
+            "RM11: StandardScaler in preprocess; CalibratedClassifierCV(sigmoid); "
+            "class_weight=balanced on LinearSVC/SVC; equal n_trials."
         ),
     },
-    "rf": {"n_estimators": "int(50, 300)", "max_depth": "int(3, 12)"},
+    "rf": {
+        "n_estimators": "int(50, 400)",
+        "max_depth": "int(3, 16)",
+        "min_samples_leaf": "int(1, 12)",
+        "max_features": "categorical(sqrt, log2, 0.5, 0.8)",
+        "note": "RM11: broadened leaf/feature regularisation vs Slice 6.",
+    },
     "mlp": {
         "hidden_layer_sizes": "categorical((32,), (64,), (32, 16), (64, 32))",
         "alpha": "loguniform(1e-5, 1e-1)",
@@ -72,32 +78,43 @@ SEARCH_SPACES_DOC = {
         ),
     },
     "xgboost": {
-        "n_estimators": "int(50, 250)",
-        "max_depth": "int(2, 6)",
-        "learning_rate": "loguniform(0.02, 0.2)",
+        "n_estimators": "int(50, 300)",
+        "max_depth": "int(2, 8)",
+        "learning_rate": "loguniform(0.01, 0.2)",
+        "subsample": "uniform(0.6, 1.0)",
+        "colsample_bytree": "uniform(0.5, 1.0)",
+        "reg_lambda": "loguniform(1e-3, 10)",
+        "note": "RM11: subsample / colsample / L2 regularisation.",
     },
     "lightgbm": {
-        "n_estimators": "int(50, 250)",
-        "max_depth": "int(2, 8)",
-        "learning_rate": "loguniform(0.02, 0.2)",
+        "n_estimators": "int(50, 300)",
+        "max_depth": "int(2, 10)",
+        "learning_rate": "loguniform(0.01, 0.2)",
+        "subsample": "uniform(0.6, 1.0)",
+        "colsample_bytree": "uniform(0.5, 1.0)",
+        "reg_lambda": "loguniform(1e-3, 10)",
+        "note": "RM11: subsample / colsample / L2 regularisation.",
     },
     "catboost": {
-        "iterations": "int(50, 250)",
-        "depth": "int(2, 6)",
-        "learning_rate": "loguniform(0.02, 0.2)",
+        "iterations": "int(50, 300)",
+        "depth": "int(2, 8)",
+        "learning_rate": "loguniform(0.01, 0.2)",
+        "subsample": "uniform(0.6, 1.0)",
+        "l2_leaf_reg": "loguniform(1e-2, 20)",
+        "note": "RM11: subsample + L2 leaf regularisation.",
     },
     "ordinal_logistic": {"alpha": "loguniform(1e-2, 10)"},
     "frank_hall_rf": {
-        "n_estimators": "int(50, 200)",
-        "max_depth": "int(3, 10)",
-        "note": "Frank–Hall ordinal reduction with RF binary thresholds (M8).",
+        "n_estimators": "int(50, 250)",
+        "max_depth": "int(3, 12)",
+        "min_samples_leaf": "int(1, 10)",
+        "note": "Frank–Hall ordinal reduction with RF binary thresholds (M8/RM11).",
     },
     "frank_hall_logistic": {
         "C": "loguniform(1e-2, 10)",
         "note": "Frank–Hall ordinal reduction with logistic binary thresholds (M8).",
     },
 }
-
 
 class _FixedTrial:
     def suggest_float(self, n, low, high, log=False):
@@ -111,8 +128,8 @@ class _FixedTrial:
 
 
 def _wrap_calibrated_svm(base: Any, seed: int) -> CalibratedClassifierCV:
-    # cv=2 keeps nested-Optuna cost tractable; outer/inner loops remain group-aware
-    return CalibratedClassifierCV(base, method="sigmoid", cv=2)
+    # cv=3 + sigmoid: better calibrated probs for ordinal metrics; cost OK at equal budget
+    return CalibratedClassifierCV(base, method="sigmoid", cv=3)
 
 
 def _suggest_estimator(trial: Any, name: str, seed: int) -> Any:
@@ -123,6 +140,7 @@ def _suggest_estimator(trial: Any, name: str, seed: int) -> Any:
             class_weight="balanced",
         )
     if name == "svm":
+        # RM11: scaled inputs via Pipeline StandardScaler; balanced weights; sigmoid calib
         kernel = trial.suggest_categorical("kernel", ["linear", "rbf"])
         C = trial.suggest_float("C", 1e-3, 100.0, log=True)
         if kernel == "linear":
@@ -130,7 +148,7 @@ def _suggest_estimator(trial: Any, name: str, seed: int) -> Any:
                 C=C,
                 class_weight="balanced",
                 dual="auto",
-                max_iter=8000,
+                max_iter=12000,
                 random_state=seed,
             )
         else:
@@ -140,12 +158,18 @@ def _suggest_estimator(trial: Any, name: str, seed: int) -> Any:
                 kernel="rbf",
                 gamma=gamma,
                 class_weight="balanced",
+                random_state=seed,
             )
         return _wrap_calibrated_svm(base, seed)
     if name == "rf":
+        max_features = trial.suggest_categorical(
+            "max_features", ["sqrt", "log2", 0.5, 0.8]
+        )
         return RandomForestClassifier(
-            n_estimators=trial.suggest_int("n_estimators", 50, 300),
-            max_depth=trial.suggest_int("max_depth", 3, 12),
+            n_estimators=trial.suggest_int("n_estimators", 50, 400),
+            max_depth=trial.suggest_int("max_depth", 3, 16),
+            min_samples_leaf=trial.suggest_int("min_samples_leaf", 1, 12),
+            max_features=max_features,
             random_state=seed,
             class_weight="balanced_subsample",
             n_jobs=1,
@@ -169,9 +193,12 @@ def _suggest_estimator(trial: Any, name: str, seed: int) -> Any:
         )
     if name == "xgboost" and XGBClassifier is not None:
         return XGBClassifier(
-            n_estimators=trial.suggest_int("n_estimators", 50, 250),
-            max_depth=trial.suggest_int("max_depth", 2, 6),
-            learning_rate=trial.suggest_float("learning_rate", 0.02, 0.2, log=True),
+            n_estimators=trial.suggest_int("n_estimators", 50, 300),
+            max_depth=trial.suggest_int("max_depth", 2, 8),
+            learning_rate=trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
+            subsample=trial.suggest_float("subsample", 0.6, 1.0),
+            colsample_bytree=trial.suggest_float("colsample_bytree", 0.5, 1.0),
+            reg_lambda=trial.suggest_float("reg_lambda", 1e-3, 10.0, log=True),
             objective="multi:softprob",
             num_class=4,
             random_state=seed,
@@ -180,20 +207,27 @@ def _suggest_estimator(trial: Any, name: str, seed: int) -> Any:
         )
     if name == "lightgbm" and LGBMClassifier is not None:
         return LGBMClassifier(
-            n_estimators=trial.suggest_int("n_estimators", 50, 250),
-            max_depth=trial.suggest_int("max_depth", 2, 8),
-            learning_rate=trial.suggest_float("learning_rate", 0.02, 0.2, log=True),
+            n_estimators=trial.suggest_int("n_estimators", 50, 300),
+            max_depth=trial.suggest_int("max_depth", 2, 10),
+            learning_rate=trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
+            subsample=trial.suggest_float("subsample", 0.6, 1.0),
+            colsample_bytree=trial.suggest_float("colsample_bytree", 0.5, 1.0),
+            reg_lambda=trial.suggest_float("reg_lambda", 1e-3, 10.0, log=True),
             random_state=seed,
             class_weight="balanced",
             verbose=-1,
         )
     if name == "catboost" and CatBoostClassifier is not None:
         return CatBoostClassifier(
-            iterations=trial.suggest_int("iterations", 50, 250),
-            depth=trial.suggest_int("depth", 2, 6),
-            learning_rate=trial.suggest_float("learning_rate", 0.02, 0.2, log=True),
+            iterations=trial.suggest_int("iterations", 50, 300),
+            depth=trial.suggest_int("depth", 2, 8),
+            learning_rate=trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
+            subsample=trial.suggest_float("subsample", 0.6, 1.0),
+            bootstrap_type="Bernoulli",
+            l2_leaf_reg=trial.suggest_float("l2_leaf_reg", 1e-2, 20.0, log=True),
             loss_function="MultiClass",
             verbose=False,
+            allow_writing_files=False,
             random_seed=seed,
             auto_class_weights="Balanced",
         )
@@ -201,8 +235,9 @@ def _suggest_estimator(trial: Any, name: str, seed: int) -> Any:
         return LogisticAT(alpha=trial.suggest_float("alpha", 1e-2, 10.0, log=True))
     if name == "frank_hall_rf":
         base = RandomForestClassifier(
-            n_estimators=trial.suggest_int("n_estimators", 50, 200),
-            max_depth=trial.suggest_int("max_depth", 3, 10),
+            n_estimators=trial.suggest_int("n_estimators", 50, 250),
+            max_depth=trial.suggest_int("max_depth", 3, 12),
+            min_samples_leaf=trial.suggest_int("min_samples_leaf", 1, 10),
             random_state=seed,
             class_weight="balanced_subsample",
             n_jobs=1,
@@ -273,7 +308,7 @@ def _tuning_cache_key(
         "n": int(len(y)),
         "y_sum": int(np.asarray(y).sum()),
         "n_groups": int(len(np.unique(groups))),
-        "slice6": True,
+        "phase4_rm11": True,
     }
     raw = json.dumps(payload, sort_keys=True)
     return hashlib.sha256(raw.encode()).hexdigest()[:24]
@@ -332,8 +367,10 @@ def nested_optuna_select(
                 pipe.fit(X.iloc[tr], y[tr])
                 proba = _predict_proba_safe(pipe, X.iloc[te])
                 qwks.append(quadratic_weighted_kappa(y[te], proba.argmax(axis=1)))
-            except Exception:  # noqa: BLE001
-                return -1.0
+            except Exception as exc:  # noqa: BLE001
+                raise RuntimeError(
+                    f"candidate {model_name!r} failed during inner-CV fit"
+                ) from exc
         return float(np.mean(qwks)) if qwks else -1.0
 
     sampler = TPESampler(seed=seed)

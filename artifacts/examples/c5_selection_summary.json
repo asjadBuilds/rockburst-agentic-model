@@ -1,17 +1,43 @@
 {
-  "fold_model": "rf__iterative",
+  "fold_model": "lightgbm__median",
   "n_test_fold0": 69,
   "abstain_found": true,
-  "abstain_no": 77,
+  "abstain_no": 129,
   "failure_found": true,
-  "failure_no": 77,
+  "failure_no": 88,
+  "failure_kind": "accepted_wrong",
+  "failure_abs_error": 2,
+  "cases_distinct": true,
+  "preferred_failure_case_no": 42,
   "scanned": [
     {
       "fold": 0,
+      "no": 88,
+      "action": "accept_with_caution",
+      "abstained": false,
+      "fold_err": 2
+    },
+    {
+      "fold": 0,
+      "no": 40,
+      "action": "accept_with_caution",
+      "abstained": false,
+      "fold_err": 2
+    },
+    {
+      "fold": 0,
       "no": 77,
-      "action": "abstain",
+      "action": "engineering_verification",
+      "abstained": false,
       "fold_err": 3
+    },
+    {
+      "fold": 0,
+      "no": 129,
+      "action": "abstain",
+      "abstained": true,
+      "fold_err": 2
     }
   ],
-  "note": "C5: abstain/failure selected from held-out folds via rules FSM"
+  "note": "RC7: abstain_case = held-out abstain; failure_case = held-out accepted-wrong preferring |\u0177\u2212y|\u22652 (fallback \u22651); failure_no \u2260 abstain_no; case 42 class when available"
 }

@@ -196,46 +196,55 @@ def test_non_endorsing_critic_executes_recheck_with_payload(cfg_df):
 
 
 def test_loop_limit_forces_abstain_on_missing_evidence(cfg_df):
-    """C2: max_loops with missing predict/uncertainty → forced abstain, not quiet finalize."""
+    """C2/RC5: absolute max_loops safety ceiling with missing evidence → forced abstain."""
     cfg, df = cfg_df
+    # Safety ceiling only — not the production non-convergence path (critic cycles).
     cfg = {**cfg, "routing": {**cfg.get("routing", {}), "max_loops": 2}}
     case = df.iloc[0].to_dict()
     result = run_graph(case, df.head(50), cfg, use_llm=False, allow_critic=False)
     assert result.get("abstained") is True
     assert result.get("recommended_action") == "abstain"
     assert "forced_finalize" in (result.get("route_trace") or [])
-    assert "Forced stop at loop limit" in (result.get("decision") or "")
+    assert "Forced stop" in (result.get("decision") or "")
 
 
 def test_loop_limit_forces_abstain_on_unresolved_critic():
-    """C2: at max_loops with non-endorsing Critic → forced_abstain, not finalize."""
+    """RC5: Critic→recheck cycle budget exhausted with unresolved Critic → forced_abstain."""
     cfg = load_config()
+    from rockburst.agents.schemas import (
+        PhysicsOutput,
+        PredictiveOutput,
+        UncertaintyOutput,
+    )
+
     state = CaseState(
         case={},
-        loop=8,
-        max_loops=8,
+        loop=6,
+        max_loops=24,
+        max_critic_recheck_cycles=3,
+        critic_recheck_cycles=3,
         data_q=DataQualityOutput(data_reliability=0.9, ood_flag=False),
+        phys=PhysicsOutput(physics_score=0.5),
         critic=CriticOutput(
             challenges=["unresolved"],
-            request_recheck="none",
+            request_recheck="physics",
             endorse=False,
         ),
-    )
-    from rockburst.agents.schemas import PredictiveOutput, UncertaintyOutput
-
-    state.pred = PredictiveOutput(
-        predicted_grade=1,
-        probabilities=[0.05, 0.85, 0.05, 0.05],
-        r_model=0.9,
-    )
-    state.unc = UncertaintyOutput(
-        uncertainty_score=0.2,
-        r_uncertainty=0.8,
-        prediction_set=[1],
-        model_disagreement=0.0,
-        prediction_stability="high",
-        stability_score=0.9,
-        entropy=0.5,
+        pred=PredictiveOutput(
+            predicted_grade=1,
+            probabilities=[0.05, 0.85, 0.05, 0.05],
+            r_model=0.9,
+        ),
+        unc=UncertaintyOutput(
+            uncertainty_score=0.2,
+            r_uncertainty=0.8,
+            prediction_set=[1],
+            model_disagreement=0.0,
+            prediction_stability="high",
+            stability_score=0.9,
+            entropy=0.5,
+        ),
+        extra_validation_done=True,
     )
     assert rule_based_next_action(state, cfg) == "forced_abstain"
 
@@ -294,12 +303,12 @@ def test_unresolved_objection_downgrades_decision(cfg_df):
 def test_cheap_precheck_pure():
     cfg = load_config()
     case = {
-        "sigma_theta": 100.0,
-        "sigma_c": 50.0,
-        "sigma_t": 5.0,
-        "scf": 2.0,
+        "sigma_theta": 50.0,
+        "sigma_c": 100.0,
+        "sigma_t": 10.0,
+        "scf": 0.5,
         "b1": 10.0,
-        "b2": (50 - 5) / (50 + 5),
+        "b2": (100 - 10) / (100 + 10),
         "wet": 10.0,
         "d": 500.0,
     }

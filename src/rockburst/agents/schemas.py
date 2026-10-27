@@ -13,7 +13,9 @@ class DataQualityOutput(BaseModel):
     missing_features: list[str] = []
     near_duplicates: list[int] = []
     conflicting_near_dup_labels: bool = False
+    train_near_dup_grades: list[int] = []
     ood_scores: dict[str, float] = Field(default_factory=dict)
+    ood_combination: dict[str, Any] = Field(default_factory=dict)
     issues: list[str] = []
 
 
@@ -49,6 +51,9 @@ class CriticOutput(BaseModel):
     endorse: bool = True
     rules_fired: list[str] = []
     escalate_abstain: bool = False
+    objection_records: list[dict[str, Any]] = Field(default_factory=list)
+    disagreement_level: Literal["Low", "Moderate", "High"] = "Low"
+    disagreeing_parties: list[str] = Field(default_factory=list)
 
 
 class AssessmentOutput(BaseModel):

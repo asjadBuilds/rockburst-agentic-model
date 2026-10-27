@@ -30,6 +30,13 @@ DEFAULT_ABS_TOL = 0.006
 # Flag implausible σc/σt (e.g. row 288 listed B1≈23 but σc/σt≈602).
 DEFAULT_B1_IMPLAUSIBLE_MAX = 200.0
 
+# Depth / overburden plausibility (RM6): σv ≈ γ·D with γ≈0.027 MPa/m
+# (≈2700 kg/m³ rock). Horizontal-to-vertical stress ratio k-range for deep
+# mining screening (stated + justified span; not a hard physics identity).
+DEFAULT_OVERBURDEN_MPA_PER_M = 0.027
+# Upper bound 4.0 covers concentrated catalogue rows after σθ/SCF proxy.
+DEFAULT_K_RATIO_RANGE = (0.3, 4.0)
+
 
 def compute_scf(sigma_theta: float, sigma_c: float) -> float:
     if sigma_c == 0 or not np.isfinite(sigma_c):
@@ -143,6 +150,26 @@ def _rel_ok(observed: float, expected: float, rel_tol: float, abs_tol: float) ->
     return abs(observed - expected) <= max(abs_tol, rel_tol * abs(expected))
 
 
+def kirsch_tangential_stress_range(
+    depth_m: float,
+    *,
+    overburden_mpa_per_m: float = DEFAULT_OVERBURDEN_MPA_PER_M,
+    k_ratio_range: tuple[float, float] = DEFAULT_K_RATIO_RANGE,
+) -> tuple[float, float]:
+    """Kirsch circular-opening boundary range for k within the stated bounds.
+
+    The controlling factor is max(3k-1, 3-k) times vertical stress. Its
+    minimum is 2 at k=1 and its maximum occurs at a configured endpoint.
+    """
+    sigma_v = float(overburden_mpa_per_m) * float(depth_m)
+    k_lo, k_hi = sorted(float(k) for k in k_ratio_range)
+    candidates = [k_lo, k_hi]
+    if k_lo <= 1.0 <= k_hi:
+        candidates.append(1.0)
+    factors = [max(3.0 * k - 1.0, 3.0 - k) for k in candidates]
+    return float(min(factors) * sigma_v), float(max(factors) * sigma_v)
+
+
 @dataclass
 class PhysicsCheckResult:
     r_physics: float
@@ -175,6 +202,9 @@ def check_case(
     wet_range: tuple[float, float] = (0.5, 40.0),
     d_range: tuple[float, float] = (50.0, 2500.0),
     b1_implausible_max: float = DEFAULT_B1_IMPLAUSIBLE_MAX,
+    overburden_mpa_per_m: float = DEFAULT_OVERBURDEN_MPA_PER_M,
+    k_ratio_range: tuple[float, float] = DEFAULT_K_RATIO_RANGE,
+    neighbor_rows: list[dict[str, Any]] | None = None,
 ) -> PhysicsCheckResult:
     """Verify exact derived relations, empirical ranges, and criteria grades."""
     issues: list[str] = []
@@ -240,7 +270,7 @@ def check_case(
             f"(>{b1_implausible_max:g})"
         )
 
-    # Suspected table row-shift: listed B1≈neighbor expected while own identity fails.
+    # Large B1 identity gap (RM2): not labelled row-shift — that needs neighbours.
     if (
         not exact["b1"]["ok"]
         and np.isfinite(b1_obs)
@@ -248,9 +278,23 @@ def check_case(
         and abs(b1_obs - b1_exp) > max(abs_tol, rel_tol * abs(b1_exp)) * 5
     ):
         issues.append(
-            "suspected_row_shift: listed B1 far from sigma_c/sigma_t "
-            "(see rows 244–246 pattern)"
+            "large_b1_identity_gap: listed B1 far from sigma_c/sigma_t"
         )
+
+    # σt ≥ σc is physically implausible for intact rock (RM6).
+    if np.isfinite(stens) and np.isfinite(sc) and stens >= sc and sc > 0:
+        issues.append(
+            f"sigma_t_ge_sigma_c: sigma_t={stens:.4g} >= sigma_c={sc:.4g}"
+        )
+    if np.isfinite(st) and np.isfinite(sc) and st >= sc and sc > 0:
+        issues.append(
+            "tangential_stress_exceeds_strength: "
+            f"sigma_theta={st:.4g} >= sigma_c={sc:.4g} (SCF>=1)"
+        )
+
+    # B2 must lie in (0, 1) for valid compressive rocks with σc > σt (RM6).
+    if np.isfinite(b2_obs) and not (0.0 < b2_obs < 1.0):
+        issues.append(f"b2_out_of_bounds: B2={b2_obs:.4g} not in (0,1)")
 
     empirical: dict[str, Any] = {}
     if wet is None or (isinstance(wet, float) and not np.isfinite(wet)):
@@ -282,9 +326,51 @@ def check_case(
         if not in_range:
             issues.append(f"D out of plausible range: {d_f}")
 
+        # TM3: compare catalogue tangential stress directly with the Kirsch
+        # circular-opening boundary range; dataset SCF is stress/strength and
+        # must not be used as an elastic concentration divisor.
+        if np.isfinite(st) and d_f > 0:
+            sig_v = float(overburden_mpa_per_m) * d_f
+            k_lo, k_hi = float(k_ratio_range[0]), float(k_ratio_range[1])
+            lo, hi = kirsch_tangential_stress_range(
+                d_f,
+                overburden_mpa_per_m=overburden_mpa_per_m,
+                k_ratio_range=k_ratio_range,
+            )
+            ok_depth = lo <= float(st) <= hi
+            empirical["depth_stress"] = {
+                "sigma_theta": st,
+                "sigma_v_overburden": sig_v,
+                "k_ratio_range": [k_lo, k_hi],
+                "plausible_tangential_stress_range": [lo, hi],
+                "ok": ok_depth,
+                "overburden_mpa_per_m": float(overburden_mpa_per_m),
+                "citation": (
+                    "Kirsch circular-opening boundary stress: "
+                    "max(3k-1,3-k)·σv; k∈[0.3,4.0], σv≈0.027 MPa/m·D; "
+                    "Brown and Hoek (1978) stress-ratio range"
+                ),
+            }
+            if not ok_depth:
+                issues.append(
+                    f"depth_stress_implausible: sigma_theta={st:.4g} "
+                    f"not in [{lo:.4g},{hi:.4g}] for D={d_f:.4g} m"
+                )
+
     if np.isfinite(scf_obs) and scf_obs > scf_ood_threshold:
         issues.append(f"SCF OOD (> {scf_ood_threshold}): {scf_obs:.3g}")
         empirical["scf_ood"] = True
+
+    # Row-shift only via block diagnosis when neighbours are supplied (RM2).
+    if neighbor_rows:
+        block = list(neighbor_rows) + [row]
+        diag = diagnose_row_shift_block(block, rel_tol=rel_tol, abs_tol=abs_tol)
+        empirical["row_shift_block"] = diag
+        if diag.get("suspect"):
+            issues.append(
+                "suspected_row_shift: diagnose_row_shift_block suspect "
+                f"(notes={diag.get('notes')})"
+            )
 
     # Criteria (as-given listed values) — main empirical rockburst signal for R_physics.
     from rockburst.physics.criteria import criteria_grades_for_case
@@ -300,7 +386,7 @@ def check_case(
 
     n_exact = sum(1 for c in exact.values() if c["ok"])
     exact_score = n_exact / 3.0
-    # Criteria agreement among Russenes / Kidybinski / brittleness (as-given).
+    # Criteria agreement among Russenes / Kidybinski / B1 / Hoek (as-given).
     criteria_score = float(crit_as.get("agreement") or 0.0)
     if int(crit_as.get("n_valid") or 0) < 2:
         criteria_score = 0.5
@@ -318,6 +404,12 @@ def check_case(
         emp_penalties += 0.2
     if any("suspected_row_shift" in i for i in issues):
         emp_penalties += 0.15
+    if any("sigma_t_ge_sigma_c" in i for i in issues):
+        emp_penalties += 0.2
+    if any("depth_stress_implausible" in i for i in issues):
+        emp_penalties += 0.1
+    if any("b2_out_of_bounds" in i for i in issues):
+        emp_penalties += 0.1
 
     # Main R_physics: criteria consensus + identity consistency (Slice 3 / M1).
     r_physics = float(

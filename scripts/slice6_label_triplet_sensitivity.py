@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-"""Slice 6 / M13–M14: triplet grouping + label-policy headline metrics.
+"""LEGACY probe (untuned logistic) — superseded for Round-2 RM12/RM13.
 
-M13: Sensitivity grouped by identical (σc, σt, Wet) triplets (source/rock series).
-M14: Headline M1-style QWK under (a) as-given (b) drop rows 315–344
-     (c) earliest-of-conflict; missing-D vs grade with/without that block.
+Use ``scripts/triplet_label_sensitivity.py`` after full ``rockburst train`` for
+production M1+M7 under triplet groups (RM12) and three label policies (RM13).
 
-Writes artifacts/baselines/slice6_m13_m14.json. Uses a fixed logistic baseline
-(no Optuna) so the script finishes in minutes; full production numbers come
-from `rockburst train` after Slice 6 modelling changes.
+This file remains only as a fast descriptive / logistic probe (slice6 M13–M14).
 """
 
 from __future__ import annotations

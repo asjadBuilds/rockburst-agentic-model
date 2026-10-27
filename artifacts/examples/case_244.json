@@ -1,22 +1,22 @@
 {
   "predicted_grade": 1,
   "predicted_intensity": "light",
-  "prediction_probability": 0.7710820061388827,
+  "prediction_probability": 0.9706597590042321,
   "prediction_set": [
+    0,
     1,
-    2,
-    3
+    2
   ],
   "prediction_set_intensities": [
+    "none",
     "light",
-    "moderate",
-    "strong"
+    "moderate"
   ],
-  "physics_consistency": 0.3333333333333333,
-  "input_reliability": 0.8888888888888888,
+  "physics_consistency": 0.15,
+  "input_reliability": 0.8564445225238053,
   "ood_status": "No",
   "prediction_stability": "high",
-  "agent_disagreement": "inter_agent",
+  "agent_disagreement": "High",
   "inter_agent_disagreement": {
     "ml_grade": 1,
     "ml_intensity": "light",
@@ -24,36 +24,39 @@
     "criteria_intensity": "moderate",
     "criteria_grades": {
       "russenes": 3,
-      "kidybinski": 1,
-      "brittleness_b1": 3,
-      "brittleness_b2": 1
+      "kidybinski": 1
     },
     "ml_vs_criteria": true,
     "critic_endorse": false,
     "critic_rules_fired": [
       "low_physics",
+      "physics_vs_model_confidence",
       "large_prediction_set",
-      "wide_conformal_edge",
-      "b1_inconsistency",
       "identity_violation",
-      "suspected_row_shift",
-      "ml_vs_criteria"
+      "large_b1_identity_gap",
+      "ml_vs_criteria",
+      "validation_objection"
     ],
     "parties": [
       "ml_vs_criteria",
       "critic_vs_fusion_path",
-      "critic_flags_ml_vs_criteria"
+      "critic_flags_ml_vs_criteria",
+      "geomechanics_agent",
+      "predictive_agent",
+      "uncertainty_agent"
     ],
-    "has_disagreement": true
+    "has_disagreement": true,
+    "level": "High"
   },
-  "final_system_confidence": 0.49,
-  "decision": "Forced stop at loop limit; abstain pending review.",
-  "recommended_action": "abstain",
+  "final_system_confidence": 0.7904676811411722,
+  "r_final": 0.7904676811411722,
+  "decision": "Predicted intensity: light (grade 1). Conformal set: {none, light, moderate} (grades [0, 1, 2]). System confidence R_final=0.790. Recommended action: accept_with_caution. Hazard statement: Moderate rockburst potential; engineering verification recommended. Inter-agent disagreement (High): ML light vs criteria moderate; Critic objections (low_physics, physics_vs_model_confidence, large_prediction_set, identity_violation, large_b1_identity_gap, ml_vs_criteria, validation_objection). Accept with caution; verify key measurements. (Critic unresolved (endorse=False, recheck=physics); downgraded accept \u2192 accept_with_caution)",
+  "recommended_action": "accept_with_caution",
   "probabilities": [
-    0.0006598261257751909,
-    0.7710820061388827,
-    0.17634036014411886,
-    0.05191780759122289
+    2.4659707306748004e-05,
+    0.9706597590042321,
+    0.028984469080334755,
+    0.00033111220812638814
   ],
   "route_trace": [
     "rules:data_quality",
@@ -62,92 +65,204 @@
     "rules:uncertainty",
     "rules:extra_validation",
     "rules:critic",
-    "rules:recheck_model",
+    "rules:recheck_physics",
     "rules:critic",
-    "rules:forced_abstain",
-    "forced_finalize"
+    "rules:finalize"
   ],
-  "abstained": true,
+  "abstained": false,
   "critic_endorse": false,
-  "downgrade_reason": "Critic severe rules ['identity_violation', 'ml_vs_criteria', 'suspected_row_shift', 'wide_conformal_edge']; escalated accept \u2192 abstain; consistency: abstain with R_final=0.999\u22650.95; clamped reported confidence to 0.490",
-  "consistency_note": "consistency: abstain with R_final=0.999\u22650.95; clamped reported confidence to 0.490",
+  "downgrade_reason": "Critic unresolved (endorse=False, recheck=physics); downgraded accept \u2192 accept_with_caution",
+  "consistency_note": null,
+  "decision_override_reason": null,
   "physics_skipped": false,
   "recheck_payloads": {
     "alt_imputer": {
       "tool": "alt_imputer_reprediction",
-      "imputers": [
-        "median",
-        "knn",
-        "iterative"
-      ],
-      "probas": {
-        "median": [
-          0.0,
-          0.82,
-          0.14,
-          0.04
-        ],
-        "knn": [
-          0.01,
-          0.87,
-          0.08,
-          0.04
-        ],
-        "iterative": [
-          0.0,
-          0.85,
-          0.09,
-          0.06
-        ]
-      },
-      "grades": {
-        "median": 1,
-        "knn": 1,
-        "iterative": 1
-      },
-      "prob_spread": 0.060000000000000026,
-      "grade_flip": false,
+      "skipped": true,
+      "missing_features": [],
       "large_spread": false,
+      "grade_flip": false,
+      "prob_spread": 0.0,
+      "probas": {},
+      "grades": {},
       "primary_imputer": "knn",
-      "primary_grade": 1
-    },
-    "cross_check": {
-      "tool": "cross_check_model_reprediction",
-      "cross_model": "ordinal_logistic",
-      "cross_grade": 1,
-      "cross_proba": [
-        0.12889636358737885,
-        0.427930426055102,
-        0.3848505105908261,
-        0.05832269976669302
-      ],
       "primary_grade": 1,
-      "grade_disagree": false,
-      "soft_disagreement": 0.3431515800837808,
-      "large_disagreement": false
+      "skip_reason": "complete_case_no_imputed_features"
+    },
+    "targeted_perturbation": {
+      "tool": "targeted_perturbation_recheck",
+      "features": [
+        "sigma_theta",
+        "sigma_c",
+        "sigma_t",
+        "scf",
+        "b1",
+        "b2",
+        "wet",
+        "d"
+      ],
+      "stability_score": 0.9400528326365046,
+      "prediction_stability": "high",
+      "flip_rate": 0.05,
+      "low_stability": false
+    },
+    "monotonic_tendency": {
+      "tool": "monotonic_tendency_recheck",
+      "rel_increase": 0.1,
+      "base_grade": 1,
+      "violations": [],
+      "details": [
+        {
+          "channel": "sigma_theta",
+          "base": 1,
+          "perturbed": 1
+        },
+        {
+          "channel": "wet",
+          "base": 1,
+          "perturbed": 1
+        }
+      ],
+      "monotonic_violation": false
+    },
+    "physics_tol": {
+      "tool": "physics_recheck_perturbed_tolerance",
+      "physics_score_stated": 0.15,
+      "physics_score_tight": 0.15,
+      "borderline_relations": [],
+      "issues_stated": [
+        "scf inconsistency: observed=0.67, expected=0.4624",
+        "b1 inconsistency: observed=21.2, expected=16.2",
+        "large_b1_identity_gap: listed B1 far from sigma_c/sigma_t"
+      ],
+      "issues_tight": [
+        "scf inconsistency: observed=0.67, expected=0.4624",
+        "b1 inconsistency: observed=21.2, expected=16.2",
+        "large_b1_identity_gap: listed B1 far from sigma_c/sigma_t"
+      ],
+      "low_physics": true,
+      "criteria_consensus_grade": 2
     }
   },
   "r_vector": {
-    "r_data": 0.8888888888888888,
-    "r_physics": 0.3333333333333333,
-    "r_model": 0.8064516129032258,
-    "r_uncertainty": 0.8095238095238095,
-    "r_stability": 0.7777777777777778,
+    "r_data": 0.8564445225238053,
+    "r_physics": 0.15,
+    "r_model": 0.9706597590042321,
+    "r_uncertainty": 0.9011588575273631,
+    "r_stability": 0.992808791789603,
     "n_missing": 0.0,
     "d_observed": 1.0,
-    "r_final": 0.49
+    "r_final": 0.7904676811411722
   },
-  "explanation": "Top held-out permutation features: wet, sigma_theta, scf, sigma_c, b1",
+  "explanation": "Top held-out permutation features: wet, sigma_theta, scf, b1, observed_d",
   "critic_rules_fired": [
     "low_physics",
-    "large_prediction_set",
-    "wide_conformal_edge",
-    "b1_inconsistency",
+    "physics_vs_model_confidence",
     "identity_violation",
-    "suspected_row_shift",
-    "ml_vs_criteria"
+    "large_b1_identity_gap",
+    "ml_vs_criteria",
+    "large_prediction_set",
+    "validation_objection"
   ],
   "delivered_planner": "rules_fsm",
-  "trace_path": "/home/leviathan/Workspace/agentic-rockburst-model/artifacts/traces/case_244.json",
-  "example_protocol": "production model, case seen in training (full-data refit of best_baseline.joblib); rules FSM"
+  "termination_reason": "finalize_unresolved_no_new_evidence",
+  "critic_recheck_cycles": 1,
+  "max_critic_recheck_cycles": 3,
+  "steps_taken": 9,
+  "max_loops": 24,
+  "missing_d": false,
+  "recheck_effects": [
+    {
+      "kind": "physics",
+      "before": {
+        "physics_score": 0.15,
+        "data_reliability": 0.8564445225238053,
+        "model_disagreement": 0.10162046882382796,
+        "prediction_set": [
+          1,
+          2
+        ],
+        "has_criteria": true
+      },
+      "after": {
+        "physics_score": 0.15,
+        "data_reliability": 0.8564445225238053,
+        "model_disagreement": 0.10162046882382796,
+        "prediction_set": [
+          0,
+          1,
+          2
+        ],
+        "has_criteria": true
+      },
+      "changed_physics_score": false,
+      "changed_set": true,
+      "preserved_criteria": true
+    }
+  ],
+  "critic_objections": [
+    {
+      "rule": "low_physics",
+      "status": "open",
+      "requested_recheck": "none",
+      "resolution_reason": null,
+      "recheck": "physics"
+    },
+    {
+      "rule": "physics_vs_model_confidence",
+      "status": "open",
+      "requested_recheck": "physics",
+      "resolution_reason": null,
+      "recheck": "physics"
+    },
+    {
+      "rule": "identity_violation",
+      "status": "open",
+      "requested_recheck": "physics",
+      "resolution_reason": null,
+      "recheck": "physics"
+    },
+    {
+      "rule": "large_b1_identity_gap",
+      "status": "open",
+      "requested_recheck": "physics",
+      "resolution_reason": null,
+      "recheck": "physics"
+    },
+    {
+      "rule": "ml_vs_criteria",
+      "status": "open",
+      "requested_recheck": "physics",
+      "resolution_reason": null,
+      "recheck": "physics"
+    },
+    {
+      "rule": "large_prediction_set",
+      "status": "open",
+      "requested_recheck": "model",
+      "resolution_reason": null
+    },
+    {
+      "rule": "validation_objection",
+      "status": "open",
+      "requested_recheck": "none",
+      "resolution_reason": null
+    }
+  ],
+  "resolved_critic_rules": [],
+  "recheck_changed_evidence_count": 1,
+  "termination_conditions": [
+    "finalize: evidence complete and Critic endorses or is not required",
+    "forced_abstain_critic_cycles: Critic\u2192recheck budget exhausted with unresolved objections",
+    "forced_abstain_max_steps: absolute step ceiling with unresolved objections/evidence",
+    "forced_abstain_safety: loop exited without finalize"
+  ],
+  "trace_path": "artifacts/traces/case_244.json",
+  "case_no": 244,
+  "true_grade": 1,
+  "true_intensity": "light",
+  "fold_index": null,
+  "fold_model": "production_full_refit",
+  "example_protocol": "production_showcase; rules FSM; relative paths only; note=case_seen_in_full_data_refit",
+  "showcase_label": "physics_b1_244"
 }

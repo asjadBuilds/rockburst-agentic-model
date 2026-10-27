@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "purpose": "Freeze the approved Phase 1-5 implementation and empirical results before closure-only work.",
+  "float_tolerance": 1e-12,
+  "protected_files_sha256": {
+    "src/rockburst/agents/rechecks.py": "4c1737711b00600704df14eca047485c954555692c50461677bc1d238d2603dd",
+    "src/rockburst/agents/schemas.py": "25c8222416ea07a81f33a3befff722113a52d7916775d1803e15ab847dbba4b0",
+    "src/rockburst/agents/tools.py": "262496166847c426e7ad20eea4f64d22b479719706a6f0c61f8b1b0ed1d206b6",
+    "src/rockburst/eval/ablation.py": "6004c228282588985f53e926ccf93ab2dfb0102f680697236e03e4ccab4f911e",
+    "src/rockburst/eval/metrics.py": "9092e48e053799be791db357b37f59d8873712f1a5f6c911c27116b64ff5b562",
+    "src/rockburst/fusion/features.py": "6cbc09b54824a4f7c730454bf5b7116fe40bb2c7b9b4691310d723caf07f395e",
+    "src/rockburst/fusion/stacker.py": "041623f5e362ac4e80eae97cc39212ac4c179e271eabbcf183a9ddb0db3564ad",
+    "src/rockburst/graph/runner.py": "043e7c37fcf4579312ba15be068de705750c7902770b1f0b655fe8a6baad5b75",
+    "src/rockburst/ml/pipelines.py": "a7969c1488449bb8feea8ded902ebcc339b4213fafcdcc69dcc79494ae8f88ff",
+    "src/rockburst/ml/train.py": "45021707f7aa1976b460df672d667d2092cae2232632540419b4e0bec4a6c358",
+    "src/rockburst/ml/tuning.py": "9fce654dfce8ec219e87e9308b88de735a30f81febdbe095835bc96d99822176",
+    "src/rockburst/physics/criteria.py": "3e322e59e19991cb22dd664a4f99c656936d0ec9b1756f280ded59ba13f19aa1",
+    "src/rockburst/physics/precheck.py": "6fadca22bea196ca0b99d631b9b11bd9ed206c8acc270d6d74d2962665ad57ad",
+    "src/rockburst/physics/relations.py": "e763e1a790adabadfa9d5100726858b33667e84b6549a644242a7d6c40aa1410",
+    "src/rockburst/quality/checks.py": "5c0628602335c0f8a0300001df8139e4dd58cf2dee3cc18cc104bc42eddfb631",
+    "src/rockburst/quality/fold_ref.py": "fb4e957882397797f02002383ad874f40fc0f367e8a488b341aa2c6702dd6e9b",
+    "src/rockburst/uncertainty/conformal.py": "cddbe53447b051a069c5e6dfd87136a5b5e2729cec574b30417320a5bc893a8d",
+    "configs/default.yaml": "e76c22175de1a028a083b8ac9e5d855612115cad0490b3bb634fb4534bf6da8c"
+  },
+  "authorized_nonbehavioral_transitions": {
+    "phase2": {
+      "src/rockburst/graph/runner.py": {
+        "before": "eab9d94ba814d9212c25966acdf879fdae8d64ffffd9780bdeb0daf8d06e4a0a",
+        "after": "043e7c37fcf4579312ba15be068de705750c7902770b1f0b655fe8a6baad5b75",
+        "scope": "module description and optional Gemini fallback name only; deterministic rules FSM unchanged"
+      },
+      "configs/default.yaml": {
+        "before": "5510593f72b501bf71dee3a6f5e8ad3d8c9b07498a05f002433060468e1bea16",
+        "after": "e76c22175de1a028a083b8ac9e5d855612115cad0490b3bb634fb4534bf6da8c",
+        "scope": "near-duplicate tolerance comment only; configured value remains 0.05"
+      }
+    },
+    "phase3": {
+      "src/rockburst/ml/train.py": {
+        "before": "b3771a62f92933aa0ecb85a432ad6b3ecdd48c040767d16cb15e3076c010f54b",
+        "after": "45021707f7aa1976b460df672d667d2092cae2232632540419b4e0bec4a6c358",
+        "scope": "serialize the three generated model paths repository-relative; fitting, selection, predictions, and metrics unchanged"
+      }
+    },
+    "phase4": {
+      "src/rockburst/eval/ablation.py": {
+        "before": "d49a900f959a94ac02064b6cd3dc041a7065d1d3c613dba24a717be87bc97441",
+        "after": "6004c228282588985f53e926ccf93ab2dfb0102f680697236e03e4ccab4f911e",
+        "scope": "report-only confusion matrices, reliability bins, entropy risk-coverage, and grouped-bootstrap curve bands; existing predictions and headline metric formulas unchanged"
+      }
+    }
+  },
+  "approved_artefacts_sha256": {
+    "artifacts/models/best_baseline.joblib": "cd021e614b34b9d400f6266cebc68e63b1d8f5c099c087337e6c65aec57443b4",
+    "artifacts/models/fusion.joblib": "b6dfdfd146caa346251311926b5c8115b2d8dbeb083338296dd781e205fbb487",
+    "artifacts/baselines/m1_results.json": "68cd11a4c5af0f82c8856c29c309c75849850b66c74f0b493ad56324367116a8",
+    "artifacts/baselines/ablation_results.json": "f04228901e2bd6b9d9da6149b1b58b61322514ec1ae96cb6dd91252b363abf18",
+    "artifacts/baselines/triplet_label_sensitivity.json": "867e0a9aa1f1389844563403bf2226366eedbeb02400b6cc2c0743c98ef48c9b",
+    "artifacts/baselines/fusion_set_comparison_slice4.json": "8c382bc613238331b169a7b04279c8afae5d46e6476f4c06d54c62f7afe9e919"
+  },
+  "protected_values": {
+    "best_model": {"file": "artifacts/baselines/m1_results.json", "path": "best_model"},
+    "decode_rule": {"file": "artifacts/baselines/m1_results.json", "path": "decode_rule"},
+    "nested_accuracy": {"file": "artifacts/baselines/m1_results.json", "path": "nested_unbiased.pooled_oof.accuracy"},
+    "nested_qwk": {"file": "artifacts/baselines/m1_results.json", "path": "nested_unbiased.pooled_oof.qwk"},
+    "nested_severe_error": {"file": "artifacts/baselines/m1_results.json", "path": "nested_unbiased.pooled_oof.severe_misclassification_rate"},
+    "fusion_set": {"file": "artifacts/baselines/m1_results.json", "path": "fusion_set_comparison.production_set_from_rule"},
+    "calibration_method": {"file": "artifacts/baselines/m1_results.json", "path": "fusion_calibration_method"},
+    "conformal_method": {"file": "artifacts/baselines/m1_results.json", "path": "conformal.method"},
+    "decision_thresholds": {"file": "artifacts/baselines/m1_results.json", "path": "decision_thresholds"},
+    "m1_accuracy": {"file": "artifacts/baselines/ablation_results.json", "path": "ablations.M1.accuracy.mean"},
+    "m1_qwk": {"file": "artifacts/baselines/ablation_results.json", "path": "ablations.M1.qwk.mean"},
+    "m1_severe_error": {"file": "artifacts/baselines/ablation_results.json", "path": "ablations.M1.severe_misclassification_rate.mean"},
+    "m7_abstention": {"file": "artifacts/baselines/ablation_results.json", "path": "ablations.M7.abstention_rate.mean"},
+    "m7_accepted_accuracy": {"file": "artifacts/baselines/ablation_results.json", "path": "matched_coverage.comparisons.M7.system.accuracy"},
+    "m7_matched_accuracy_delta": {"file": "artifacts/baselines/ablation_results.json", "path": "matched_coverage.comparisons.M7.delta_system_minus_m1.accuracy"},
+    "m7_matched_accuracy_ci": {"file": "artifacts/baselines/ablation_results.json", "path": "matched_coverage.comparisons.M7.delta_system_minus_m1.accuracy_ci95"},
+    "m1_risk_coverage_area": {"file": "artifacts/baselines/ablation_results.json", "path": "risk_coverage_pooled.M1.area"},
+    "m7_risk_coverage_area": {"file": "artifacts/baselines/ablation_results.json", "path": "risk_coverage_pooled.M7.area"},
+    "critic_termination": {"file": "artifacts/baselines/ablation_results.json", "path": "critic_statistics.termination_reasons"},
+    "critic_recheck_changed_set": {"file": "artifacts/baselines/ablation_results.json", "path": "critic_statistics.recheck_changed_set"},
+    "robustness_n": {"file": "artifacts/baselines/ablation_results.json", "path": "robustness.n_cases"},
+    "missing_imputers": {"file": "artifacts/baselines/ablation_results.json", "path": "missing_data.imputers_tested"},
+    "triplet_m1_qwk": {"file": "artifacts/baselines/triplet_label_sensitivity.json", "path": "rm12_triplet_grouping.headline_triplet_groups.systems.M1.qwk"},
+    "triplet_m7_abstention": {"file": "artifacts/baselines/triplet_label_sensitivity.json", "path": "rm12_triplet_grouping.headline_triplet_groups.systems.M7.abstention_rate"},
+    "no_indicator_m1_qwk": {"file": "artifacts/baselines/triplet_label_sensitivity.json", "path": "observed_indicator_sensitivity.without_indicators.systems.M1.qwk"}
+  },
+  "expected_values": {
+    "best_model": "lightgbm__median",
+    "decode_rule": "argmax",
+    "nested_accuracy": 0.625,
+    "nested_qwk": 0.7034585528139727,
+    "nested_severe_error": 0.05813953488372093,
+    "fusion_set": "C",
+    "calibration_method": "beta",
+    "conformal_method": "marginal_split",
+    "decision_thresholds": {
+      "abstain_r_final": 0.5,
+      "engineering_verification": 0.55,
+      "accept_with_caution": 0.6000000000000001,
+      "accept_r_final": 0.7000000000000001,
+      "bands_nonempty": true,
+      "min_gap": 0.05,
+      "selection_mode": "engineering_cost_utility",
+      "utility_score": 100.45000000000005,
+      "utilities": {
+        "abstain_on_error": 0.3,
+        "abstain_on_correct": -0.05,
+        "eng_on_correct": 0.4,
+        "eng_on_error": -0.2,
+        "caution_on_correct": 0.5,
+        "caution_on_error": -0.3,
+        "pre_accept_on_correct": 0.7,
+        "pre_accept_on_error": -0.5,
+        "accept_on_correct": 1.0,
+        "accept_on_error": -1.0
+      },
+      "utilities_justification": "Asymmetric engineering cost: false accept (routine clear when wrong) is penalized at −1; correct accept rewarded +1; intermediate bands scale down both reward and penalty; abstain on error +0.3 (caught miss) vs abstain on correct −0.05 (extra review). Alternative: target_accept_rate mode below."
+    },
+    "m1_accuracy": 0.5825581395348837,
+    "m1_qwk": 0.669951155562134,
+    "m1_severe_error": 0.062209302325581396,
+    "m7_abstention": 0.32558139534883723,
+    "m7_accepted_accuracy": 0.6379310344827587,
+    "m7_matched_accuracy_delta": -0.031896551724137856,
+    "m7_matched_accuracy_ci": [-0.0542507754712479, -0.009862421614018645],
+    "m1_risk_coverage_area": 0.6508806293835363,
+    "m7_risk_coverage_area": 0.5589671004060539,
+    "critic_termination": {
+      "finalize_unresolved_no_new_evidence": 1275,
+      "finalize": 362,
+      "forced_abstain_critic_cycles": 83
+    },
+    "critic_recheck_changed_set": 272,
+    "robustness_n": 1720,
+    "missing_imputers": ["median", "knn", "iterative"],
+    "triplet_m1_qwk": 0.642294461927698,
+    "triplet_m7_abstention": 0.4063953488372093,
+    "no_indicator_m1_qwk": 0.6630470945501137
+  }
+}

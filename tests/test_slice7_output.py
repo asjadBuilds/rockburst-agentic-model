@@ -9,6 +9,9 @@ from rockburst.agents.schemas import (
     PredictiveOutput,
     UncertaintyOutput,
 )
+import numpy as np
+import pytest
+
 from rockburst.agents.tools import (
     enforce_decision_consistency,
     format_engineering_decision,
@@ -16,7 +19,6 @@ from rockburst.agents.tools import (
     intensity_name,
 )
 from rockburst.fusion.stacker import ReliabilityFusion
-import numpy as np
 
 
 def test_intensity_names():
@@ -49,11 +51,12 @@ def test_format_engineering_decision_includes_intensity_set_confidence():
     assert "Inter-agent disagreement" in text
 
 
-def test_consistency_clamps_r_final_on_abstain():
+def test_consistency_keeps_r_final_on_abstain():
+    # RC3: no 0.49 clamp — report true R_final beside override reason.
     action, r, note = enforce_decision_consistency(action="abstain", r_final=0.99)
     assert action == "abstain"
-    assert r <= 0.49
-    assert note is not None and "clamped" in note
+    assert r == pytest.approx(0.99)
+    assert note is not None and "unchanged" in note
 
 
 def test_fuse_assessment_emits_m15_fields(tmp_path, monkeypatch):
@@ -114,6 +117,7 @@ def test_fuse_assessment_emits_m15_fields(tmp_path, monkeypatch):
     ]
     assert out["delivered_planner"] == "rules_fsm"
     assert out["inter_agent_disagreement"]["ml_vs_criteria"] is True
+    assert out["agent_disagreement"] in {"Moderate", "High"}
     assert "Predicted intensity" in out["decision"]
     # Severe critic → abstain; R_final may be high → consistency may rewrite
     assert out["recommended_action"] in {

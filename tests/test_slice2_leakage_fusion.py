@@ -115,7 +115,7 @@ def test_calibrator_bounds_away_from_exact_01():
     f.fit_calibrator(r_raw, y)
     assert f.calibrator is not None
     assert f.calibration_n == 80
-    assert f.calibration_method in {"platt", "isotonic"}
+    assert f.calibration_method in {"platt", "beta", "smoothed_isotonic", "isotonic"}
     # Build a fitted identity-ish stacker to score
     f.coef_ = np.array([0, 0, 1.0, 0, 0, 0, 0], dtype=float)
     f.intercept_ = 0.0

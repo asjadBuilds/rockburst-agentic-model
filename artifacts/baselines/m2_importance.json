@@ -18,14 +18,14 @@
     "observed_d"
   ],
   "importances_mean": [
-    0.0608695652173913,
-    0.02898550724637683,
-    0.0028985507246377163,
-    0.02898550724637685,
-    0.026086956521739157,
-    0.011594202898550754,
-    0.12173913043478261,
-    0.02028985507246377,
+    0.04808184143222508,
+    0.012728047740835486,
+    0.0023017902813299435,
+    0.026641091219096347,
+    0.023776641091219124,
+    -4.262574595053532e-05,
+    0.1419693094629156,
+    0.017382779198636,
     0.0,
     0.0,
     0.0,
@@ -33,17 +33,17 @@
     0.0,
     0.0,
     0.0,
-    4.4408920985006264e-17
+    0.01742540494458655
   ],
   "importances_std": [
-    0.028102491927051186,
-    0.02049584873004485,
-    0.01690130984013134,
-    0.03175203231914005,
-    0.005797101449275343,
-    0.010845383729779553,
-    0.03502332166259297,
-    0.017391304347826084,
+    0.06379489387659167,
+    0.0323371787276057,
+    0.06683918129443088,
+    0.04154842776547564,
+    0.052466738812212706,
+    0.033135506838384024,
+    0.050482486329456996,
+    0.02451829794623742,
     0.0,
     0.0,
     0.0,
@@ -51,97 +51,801 @@
     0.0,
     0.0,
     0.0,
-    0.012962712913042266
+    0.0380629342671461
   ],
   "ranked": [
     {
       "feature": "wet",
-      "importance_mean": 0.12173913043478261,
-      "importance_std": 0.03502332166259297
+      "importance_mean": 0.1419693094629156,
+      "importance_std": 0.050482486329456996,
+      "n_folds": 5
     },
     {
       "feature": "sigma_theta",
-      "importance_mean": 0.0608695652173913,
-      "importance_std": 0.028102491927051186
+      "importance_mean": 0.04808184143222508,
+      "importance_std": 0.06379489387659167,
+      "n_folds": 5
     },
     {
       "feature": "scf",
-      "importance_mean": 0.02898550724637685,
-      "importance_std": 0.03175203231914005
-    },
-    {
-      "feature": "sigma_c",
-      "importance_mean": 0.02898550724637683,
-      "importance_std": 0.02049584873004485
+      "importance_mean": 0.026641091219096347,
+      "importance_std": 0.04154842776547564,
+      "n_folds": 5
     },
     {
       "feature": "b1",
-      "importance_mean": 0.026086956521739157,
-      "importance_std": 0.005797101449275343
-    },
-    {
-      "feature": "d",
-      "importance_mean": 0.02028985507246377,
-      "importance_std": 0.017391304347826084
-    },
-    {
-      "feature": "b2",
-      "importance_mean": 0.011594202898550754,
-      "importance_std": 0.010845383729779553
-    },
-    {
-      "feature": "sigma_t",
-      "importance_mean": 0.0028985507246377163,
-      "importance_std": 0.01690130984013134
+      "importance_mean": 0.023776641091219124,
+      "importance_std": 0.052466738812212706,
+      "n_folds": 5
     },
     {
       "feature": "observed_d",
-      "importance_mean": 4.4408920985006264e-17,
-      "importance_std": 0.012962712913042266
+      "importance_mean": 0.01742540494458655,
+      "importance_std": 0.0380629342671461,
+      "n_folds": 5
     },
     {
-      "feature": "observed_sigma_theta",
-      "importance_mean": 0.0,
-      "importance_std": 0.0
+      "feature": "d",
+      "importance_mean": 0.017382779198636,
+      "importance_std": 0.02451829794623742,
+      "n_folds": 5
     },
     {
-      "feature": "observed_sigma_t",
-      "importance_mean": 0.0,
-      "importance_std": 0.0
+      "feature": "sigma_c",
+      "importance_mean": 0.012728047740835486,
+      "importance_std": 0.0323371787276057,
+      "n_folds": 5
     },
     {
-      "feature": "observed_sigma_c",
-      "importance_mean": 0.0,
-      "importance_std": 0.0
+      "feature": "sigma_t",
+      "importance_mean": 0.0023017902813299435,
+      "importance_std": 0.06683918129443088,
+      "n_folds": 5
     },
     {
       "feature": "observed_scf",
       "importance_mean": 0.0,
-      "importance_std": 0.0
+      "importance_std": 0.0,
+      "n_folds": 5
     },
     {
-      "feature": "observed_b1",
+      "feature": "observed_sigma_theta",
       "importance_mean": 0.0,
-      "importance_std": 0.0
+      "importance_std": 0.0,
+      "n_folds": 5
+    },
+    {
+      "feature": "observed_sigma_t",
+      "importance_mean": 0.0,
+      "importance_std": 0.0,
+      "n_folds": 5
+    },
+    {
+      "feature": "observed_sigma_c",
+      "importance_mean": 0.0,
+      "importance_std": 0.0,
+      "n_folds": 5
     },
     {
       "feature": "observed_b2",
       "importance_mean": 0.0,
-      "importance_std": 0.0
+      "importance_std": 0.0,
+      "n_folds": 5
+    },
+    {
+      "feature": "observed_b1",
+      "importance_mean": 0.0,
+      "importance_std": 0.0,
+      "n_folds": 5
     },
     {
       "feature": "observed_wet",
       "importance_mean": 0.0,
-      "importance_std": 0.0
+      "importance_std": 0.0,
+      "n_folds": 5
+    },
+    {
+      "feature": "b2",
+      "importance_mean": -4.262574595053532e-05,
+      "importance_std": 0.033135506838384024,
+      "n_folds": 5
     }
   ],
   "top_features": [
     "wet",
     "sigma_theta",
     "scf",
-    "sigma_c",
-    "b1"
+    "b1",
+    "observed_d"
   ],
-  "model": "rf__iterative",
-  "protocol": "permutation_importance on held-out StratifiedGroupKFold test fold; pipeline fit only on fold train/fit indices"
+  "n_folds": 5,
+  "fold_rows": [
+    {
+      "fold": 0,
+      "features": [
+        "sigma_theta",
+        "sigma_c",
+        "sigma_t",
+        "scf",
+        "b1",
+        "b2",
+        "wet",
+        "d",
+        "observed_sigma_theta",
+        "observed_sigma_c",
+        "observed_sigma_t",
+        "observed_scf",
+        "observed_b1",
+        "observed_b2",
+        "observed_wet",
+        "observed_d"
+      ],
+      "importances_mean": [
+        0.0753623188405797,
+        0.002898550724637694,
+        0.008695652173913038,
+        0.0318840579710145,
+        2.2204460492503132e-17,
+        0.011594202898550754,
+        0.191304347826087,
+        0.02028985507246377,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0028985507246377163
+      ],
+      "importances_std": [
+        0.0295595334121321,
+        0.005797101449275388,
+        0.029842406205759408,
+        0.03355315044287021,
+        0.009166022203386612,
+        0.010845383729779553,
+        0.053760107220264954,
+        0.017391304347826084,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0169013098401313
+      ],
+      "n_test": 69
+    },
+    {
+      "fold": 1,
+      "features": [
+        "sigma_theta",
+        "sigma_c",
+        "sigma_t",
+        "scf",
+        "b1",
+        "b2",
+        "wet",
+        "d",
+        "observed_sigma_theta",
+        "observed_sigma_c",
+        "observed_sigma_t",
+        "observed_scf",
+        "observed_b1",
+        "observed_b2",
+        "observed_wet",
+        "observed_d"
+      ],
+      "importances_mean": [
+        0.10434782608695654,
+        0.005797101449275366,
+        2.2204460492503132e-17,
+        0.026086956521739157,
+        0.11014492753623188,
+        0.05217391304347827,
+        0.14782608695652177,
+        0.057971014492753645,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.063768115942029
+      ],
+      "importances_std": [
+        0.032276894856985636,
+        0.031218346708026087,
+        0.015876016159570024,
+        0.028102491927051162,
+        0.029842406205759443,
+        0.014779766706066044,
+        0.010845383729779548,
+        0.018332044406773208,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.014779766706066044
+      ],
+      "n_test": 69
+    },
+    {
+      "fold": 2,
+      "features": [
+        "sigma_theta",
+        "sigma_c",
+        "sigma_t",
+        "scf",
+        "b1",
+        "b2",
+        "wet",
+        "d",
+        "observed_sigma_theta",
+        "observed_sigma_c",
+        "observed_sigma_t",
+        "observed_scf",
+        "observed_b1",
+        "observed_b2",
+        "observed_wet",
+        "observed_d"
+      ],
+      "importances_mean": [
+        -0.02898550724637681,
+        -0.005797101449275355,
+        -0.08985507246376807,
+        -0.008695652173913038,
+        -0.02608695652173909,
+        -0.03188405797101448,
+        0.06376811594202902,
+        2.2204460492503132e-17,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -0.034782608695652154
+      ],
+      "importances_std": [
+        0.009166022203386612,
+        0.023547937404741925,
+        0.023188405797101456,
+        0.021690767459559092,
+        0.021299910806810228,
+        0.01084538372977954,
+        0.047273931682029244,
+        0.012962712913042242,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.011594202898550727
+      ],
+      "n_test": 69
+    },
+    {
+      "fold": 3,
+      "features": [
+        "sigma_theta",
+        "sigma_c",
+        "sigma_t",
+        "scf",
+        "b1",
+        "b2",
+        "wet",
+        "d",
+        "observed_sigma_theta",
+        "observed_sigma_c",
+        "observed_sigma_t",
+        "observed_scf",
+        "observed_b1",
+        "observed_b2",
+        "observed_wet",
+        "observed_d"
+      ],
+      "importances_mean": [
+        0.10144927536231889,
+        0.06956521739130439,
+        0.09855072463768118,
+        0.09275362318840581,
+        0.03188405797101455,
+        -0.017391304347826077,
+        0.12753623188405797,
+        0.011594202898550754,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.04347826086956523
+      ],
+      "importances_std": [
+        0.04299245499765603,
+        0.016901309840131298,
+        0.01922681037887189,
+        0.011594202898550727,
+        0.023188405797101422,
+        0.0169013098401313,
+        0.03931785497463924,
+        0.03355315044287022,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.025925425826084522
+      ],
+      "n_test": 69
+    },
+    {
+      "fold": 4,
+      "features": [
+        "sigma_theta",
+        "sigma_c",
+        "sigma_t",
+        "scf",
+        "b1",
+        "b2",
+        "wet",
+        "d",
+        "observed_sigma_theta",
+        "observed_sigma_c",
+        "observed_sigma_t",
+        "observed_scf",
+        "observed_b1",
+        "observed_b2",
+        "observed_wet",
+        "observed_d"
+      ],
+      "importances_mean": [
+        -0.0117647058823529,
+        -0.008823529411764675,
+        -0.00588235294117645,
+        -0.008823529411764697,
+        0.002941176470588247,
+        -0.014705882352941147,
+        0.17941176470588238,
+        -0.0029411764705882027,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.011764705882352965
+      ],
+      "importances_std": [
+        0.054550697032327664,
+        0.03301462400094656,
+        0.014997116216449379,
+        0.03901911518065177,
+        0.014408763192842214,
+        0.016109486985446085,
+        0.0327515550754707,
+        0.017149858514250903,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.01714985851425087
+      ],
+      "n_test": 68
+    }
+  ],
+  "protocol": "permutation_importance on each outer-fold held-out test set; pipeline fit on fold train/fit only; report mean\u00b1std across folds",
+  "model": "lightgbm__median",
+  "role": "importance_overlay",
+  "local_explanations": [
+    {
+      "fold": 0,
+      "row_index": 5,
+      "predicted_grade": 1,
+      "true_grade": 2,
+      "attributions": {
+        "sigma_theta": 0.03929832735963942,
+        "sigma_c": 0.00808187521330081,
+        "sigma_t": 0.012156143026978067,
+        "scf": 0.08286618562761477,
+        "b1": -0.0073927489361284016,
+        "b2": 0.02286647328025168,
+        "wet": -0.07404151918100355,
+        "d": 0.04914907784350664,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 0,
+      "row_index": 7,
+      "predicted_grade": 2,
+      "true_grade": 2,
+      "attributions": {
+        "sigma_theta": 0.070559826828708,
+        "sigma_c": -0.04342689441059727,
+        "sigma_t": -0.09210225262327028,
+        "scf": -0.030499992013838337,
+        "b1": 0.05416860570830789,
+        "b2": 0.1228097942695415,
+        "wet": 0.1795857167843799,
+        "d": 0.1984797713339501,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 0,
+      "row_index": 12,
+      "predicted_grade": 2,
+      "true_grade": 2,
+      "attributions": {
+        "sigma_theta": 0.05987839288251609,
+        "sigma_c": -0.0033211899962719282,
+        "sigma_t": 0.05664295476084025,
+        "scf": 0.006265431868227672,
+        "b1": 0.16024352682554285,
+        "b2": 0.04292370962778361,
+        "wet": 0.059311165696831813,
+        "d": 0.019334670733882953,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 1,
+      "row_index": 1,
+      "predicted_grade": 1,
+      "true_grade": 1,
+      "attributions": {
+        "sigma_theta": -0.008819306063236193,
+        "sigma_c": 0.0026942123038968535,
+        "sigma_t": -0.027535191576061158,
+        "scf": 0.3853362431259337,
+        "b1": 0.0325891625771611,
+        "b2": 0.06812387550623206,
+        "wet": 0.0576936719159242,
+        "d": 0.0,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 1,
+      "row_index": 10,
+      "predicted_grade": 3,
+      "true_grade": 2,
+      "attributions": {
+        "sigma_theta": 0.04759677735703663,
+        "sigma_c": 0.14782709353988174,
+        "sigma_t": 0.4377358614220062,
+        "scf": -0.07809791439902866,
+        "b1": -0.10239008515463016,
+        "b2": -0.07456256041827719,
+        "wet": 0.08825979094211028,
+        "d": -0.12227967191990852,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 1,
+      "row_index": 11,
+      "predicted_grade": 2,
+      "true_grade": 2,
+      "attributions": {
+        "sigma_theta": -0.024574699800674366,
+        "sigma_c": 0.02899669116601819,
+        "sigma_t": 0.16856474867706045,
+        "scf": -0.0011521139548588966,
+        "b1": 0.4195359859136155,
+        "b2": 0.025753862612137746,
+        "wet": 0.21605579839802297,
+        "d": 0.07932619651436101,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 2,
+      "row_index": 4,
+      "predicted_grade": 2,
+      "true_grade": 2,
+      "attributions": {
+        "sigma_theta": 0.08231185380702169,
+        "sigma_c": 0.0006636909021137949,
+        "sigma_t": 0.0004363236641163337,
+        "scf": 0.11422408009128529,
+        "b1": 0.034715438335000764,
+        "b2": 0.050586968655020104,
+        "wet": 0.04474935980534345,
+        "d": -0.01630782923314772,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 2,
+      "row_index": 8,
+      "predicted_grade": 2,
+      "true_grade": 2,
+      "attributions": {
+        "sigma_theta": -0.051823037197341326,
+        "sigma_c": 0.1278586174207091,
+        "sigma_t": 0.022870710036323086,
+        "scf": -0.04860628644263151,
+        "b1": 0.014245106018553208,
+        "b2": 0.1027149194836059,
+        "wet": 0.05838289564824334,
+        "d": 0.0,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 2,
+      "row_index": 15,
+      "predicted_grade": 1,
+      "true_grade": 2,
+      "attributions": {
+        "sigma_theta": 0.06015343989564627,
+        "sigma_c": -0.09679216414158591,
+        "sigma_t": -0.042415897140845996,
+        "scf": -0.04572227473927094,
+        "b1": -0.0008293465150436136,
+        "b2": -0.16220573102110003,
+        "wet": -0.34040865937061443,
+        "d": 0.14282923580206364,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 3,
+      "row_index": 0,
+      "predicted_grade": 1,
+      "true_grade": 2,
+      "attributions": {
+        "sigma_theta": -0.07140763669733308,
+        "sigma_c": 0.0029155587551108475,
+        "sigma_t": -0.0029204214320077693,
+        "scf": 0.10335792295394901,
+        "b1": 0.027698979718188937,
+        "b2": -0.052505925430148453,
+        "wet": 0.02185023509993278,
+        "d": 0.0,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 3,
+      "row_index": 6,
+      "predicted_grade": 1,
+      "true_grade": 1,
+      "attributions": {
+        "sigma_theta": -0.014301710930780615,
+        "sigma_c": 0.07007671138435098,
+        "sigma_t": 0.15013817917238134,
+        "scf": 0.1632949203071863,
+        "b1": 0.27111336374302264,
+        "b2": 0.011388881939165874,
+        "wet": -0.018766809497092557,
+        "d": -0.00024843973432919775,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 3,
+      "row_index": 9,
+      "predicted_grade": 3,
+      "true_grade": 3,
+      "attributions": {
+        "sigma_theta": -0.0038359751625563487,
+        "sigma_c": 0.03272608530113935,
+        "sigma_t": -0.002691155266395351,
+        "scf": -0.007750340096462333,
+        "b1": 0.21789241992190955,
+        "b2": 0.010884280402270796,
+        "wet": 0.027659965945761922,
+        "d": 0.10496167645376953,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 4,
+      "row_index": 2,
+      "predicted_grade": 3,
+      "true_grade": 1,
+      "attributions": {
+        "sigma_theta": 0.16540234039255153,
+        "sigma_c": 0.02059968212475552,
+        "sigma_t": -0.04489794820114648,
+        "scf": -0.052089182553501506,
+        "b1": 0.09558202252558773,
+        "b2": 0.11504942008152477,
+        "wet": 0.014229235015997321,
+        "d": 0.019484628769078416,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 4,
+      "row_index": 3,
+      "predicted_grade": 1,
+      "true_grade": 2,
+      "attributions": {
+        "sigma_theta": -0.031124434353216046,
+        "sigma_c": 0.09160113087710514,
+        "sigma_t": -0.0036697551653969984,
+        "scf": -0.1011786852745925,
+        "b1": 0.0391983921876992,
+        "b2": 0.04289134241761952,
+        "wet": 0.0,
+        "d": 8.506248760870028e-05,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    },
+    {
+      "fold": 4,
+      "row_index": 20,
+      "predicted_grade": 2,
+      "true_grade": 2,
+      "attributions": {
+        "sigma_theta": -0.02142639615346223,
+        "sigma_c": -0.010041186869414936,
+        "sigma_t": 0.02021713893907974,
+        "scf": -0.10643894209948582,
+        "b1": 0.0,
+        "b2": -0.07417712873565926,
+        "wet": 0.17560283111959538,
+        "d": 0.08530844201925597,
+        "observed_sigma_theta": 0.0,
+        "observed_sigma_c": 0.0,
+        "observed_sigma_t": 0.0,
+        "observed_scf": 0.0,
+        "observed_b1": 0.0,
+        "observed_b2": 0.0,
+        "observed_wet": 0.0,
+        "observed_d": 0.0
+      }
+    }
+  ],
+  "dependence": {
+    "scf": {
+      "n": 344,
+      "spearman_approx": 0.4082725791834756,
+      "mean_by_grade": {
+        "0": 0.30519999999999997,
+        "1": 0.4111224489795919,
+        "2": 0.4660162601626016,
+        "3": 1.0045205479452057
+      }
+    },
+    "wet": {
+      "n": 344,
+      "spearman_approx": 0.5922192953297536,
+      "mean_by_grade": {
+        "0": 2.835,
+        "1": 3.8125510204081627,
+        "2": 5.2404065040650405,
+        "3": 8.216575342465752
+      }
+    },
+    "sigma_theta": {
+      "n": 344,
+      "spearman_approx": 0.5511737615691255,
+      "mean_by_grade": {
+        "0": 25.8472,
+        "1": 44.5404081632653,
+        "2": 52.5120325203252,
+        "3": 106.05109589041096
+      }
+    }
+  }
 }

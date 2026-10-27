@@ -29,6 +29,12 @@ def test_mean_pairwise_tv_disagreement():
 
 def test_critic_escalates_severe_rules_to_abstain():
     cfg = load_config()
+    cfg["_critic_rule_statistics"] = {
+        "identity_violation": {
+            "auroc_ci95": [0.61, 0.75],
+            "error_delta_ci95": [0.08, 0.30],
+        }
+    }
     phys = PhysicsOutput(
         physics_score=0.9,
         issues=["scf inconsistency: observed=1, expected=2"],

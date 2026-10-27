@@ -49,10 +49,11 @@ def compute_reliability_features(
     case: dict[str, Any] | None = None,
     cfg: dict[str, Any] | None = None,
 ) -> np.ndarray:
-    """Single train/serve code path for the fusion stacker input vector.
+    """Single train/serve/eval code path for the fusion stacker input vector.
 
-    When ``cfg['_component_calibrators']`` is set (or on-disk calibrators exist
-    under models/), applies per-channel R_* calibration (Slice 4 / M4).
+    Component calibrators apply only when explicitly injected via
+    ``cfg['_component_calibrators']``. Full-data ``component_calibrators.joblib``
+    is never auto-loaded (RC2: prevents n_fit=344 leakage on fold evaluation).
     """
     obs = getattr(pred, "observed_mask", None) if pred is not None else None
     n_miss, d_obs = missingness_counts(case, observed_mask=obs)
@@ -65,18 +66,7 @@ def compute_reliability_features(
         n_miss,
         d_obs,
     )
-    cal = None
-    if cfg is not None:
-        cal = cfg.get("_component_calibrators")
-        if cal is None and cfg.get("paths"):
-            from pathlib import Path
-
-            from rockburst.fusion.components import ComponentCalibrators
-
-            root = Path(cfg.get("_root", "."))
-            cpath = root / cfg["paths"]["models"] / "component_calibrators.joblib"
-            if cpath.exists():
-                cal = ComponentCalibrators.load(cpath)
+    cal = cfg.get("_component_calibrators") if cfg is not None else None
     if cal is not None and getattr(cal, "is_fit", False):
         r = cal.transform_vector(r)
     return r

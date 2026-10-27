@@ -81,6 +81,11 @@ def _pad_proba(proba: np.ndarray, n: int = 4) -> np.ndarray:
 
 def _predict_with_pipe(pipe: Any, case: dict[str, Any]) -> np.ndarray:
     X = _case_frame(case)
+    # Sensitivity pipelines may intentionally omit observed_* indicators.
+    # Align inference to the exact schema recorded by sklearn at fit time.
+    expected = getattr(pipe, "feature_names_in_", None)
+    if expected is not None:
+        X = X.reindex(columns=list(expected))
     if hasattr(pipe, "predict_proba"):
         return _pad_proba(pipe.predict_proba(X)[0])
     pred = int(pipe.predict(X)[0])
@@ -109,6 +114,8 @@ def run_predict(
         # optional conformal attached to blob
         if "conformal" in blob and "_conformal_state" not in cfg:
             cfg["_conformal_state"] = ConformalState.from_dict(blob["conformal"])
+        if blob.get("decode_rule") and "decode_rule" not in cfg:
+            cfg["decode_rule"] = blob["decode_rule"]
     else:
         pipe = pipeline
         name = model_name or "fold_pipeline"
@@ -118,8 +125,20 @@ def run_predict(
         c: bool(np.isfinite(float(case[c]))) if case.get(c) is not None else False
         for c in FEATURE_COLS
     }
+    # RM10: honour production decode_rule from cfg / artefact (default argmax).
+    decode = str(
+        cfg.get("decode_rule")
+        or (cfg.get("ml") or {}).get("decode_rule")
+        or "argmax"
+    )
+    if decode == "median":
+        from rockburst.ml.ordinal import median_of_distribution
+
+        grade = int(median_of_distribution(proba)[0])
+    else:
+        grade = int(proba.argmax())
     return PredictiveOutput(
-        predicted_grade=int(proba.argmax()),
+        predicted_grade=grade,
         probabilities=proba.tolist(),
         r_model=compute_r_model(proba),
         observed_mask=observed_mask,
@@ -194,17 +213,63 @@ def run_uncertainty(
     )
 
 
-# Rules that escalate unresolved Critic objections all the way to abstain (M5).
-_SEVERE_CRITIC_RULES = frozenset(
-    {
-        "identity_violation",
-        "ml_vs_criteria",
-        "implausible_stress_ratio",
-        "suspected_row_shift",
-        "conflicting_near_dup_labels",
-        "wide_conformal_edge",
+_SEVERE_CRITIC_RULES: frozenset[str] = frozenset()
+
+def critic_rule_stat_hooks() -> dict[str, Any]:
+    """Schema for per-rule flagged vs unflagged error / AUROC (F16 / Phase 5)."""
+    return {
+        "per_rule_fields": [
+            "rule",
+            "n_flagged",
+            "n_unflagged",
+            "error_flagged",
+            "error_unflagged",
+            "auroc",
+            "ci_low",
+            "ci_high",
+        ],
+        "severity_source": (
+            "Promote to severe only when flagged error ≫ unflagged and AUROC "
+            "justifies it; do not hand-severe all |set|≥3 (RM2)."
+        ),
+        "default_severe_rules": sorted(_SEVERE_CRITIC_RULES),
     }
-)
+
+
+def severe_rules_from_stats(stats: dict[str, Any] | None) -> set[str]:
+    """Select severe rules only when grouped-bootstrap evidence supports harm."""
+    severe: set[str] = set()
+    for rule, block in (stats or {}).items():
+        if not isinstance(block, dict):
+            continue
+        auc_ci = block.get("auroc_ci95") or block.get("ci95_auroc")
+        delta_ci = block.get("error_delta_ci95") or block.get("ci95_error_delta")
+        if (
+            isinstance(auc_ci, (list, tuple))
+            and len(auc_ci) == 2
+            and isinstance(delta_ci, (list, tuple))
+            and len(delta_ci) == 2
+            and float(auc_ci[0]) > 0.5
+            and float(delta_ci[0]) > 0.0
+        ):
+            severe.add(str(rule))
+    return severe
+
+
+def disabled_rules_from_stats(stats: dict[str, Any] | None) -> set[str]:
+    """Disable rules whose grouped-bootstrap AUROC is confidently below chance."""
+    disabled: set[str] = set()
+    for rule, block in (stats or {}).items():
+        if not isinstance(block, dict):
+            continue
+        auc_ci = block.get("auroc_ci95") or block.get("ci95_auroc")
+        if (
+            isinstance(auc_ci, (list, tuple))
+            and len(auc_ci) == 2
+            and float(auc_ci[1]) < 0.5
+        ):
+            disabled.add(str(rule))
+    return disabled
 
 
 def run_critic(
@@ -215,6 +280,8 @@ def run_critic(
     cfg: dict[str, Any],
     *,
     validation_objections: list[str] | None = None,
+    local_explanation: dict[str, float] | None = None,
+    resolved_rules: set[str] | None = None,
 ) -> CriticOutput:
     challenges, contradictions = [], []
     rules_fired: list[str] = []
@@ -222,10 +289,26 @@ def run_critic(
     endorse = True
     rt = cfg.get("routing", {})
     objections = list(validation_objections or [])
+    rule_stats = cfg.get("_critic_rule_statistics")
+    suppressed = set(resolved_rules or set()) | disabled_rules_from_stats(rule_stats)
+    severe = severe_rules_from_stats(rule_stats)
+    records: list[dict[str, Any]] = []
 
     def _fire(rule: str, *, req: str | None = None) -> None:
         nonlocal request, endorse
+        if rule in suppressed:
+            return
+        if rule in rules_fired:
+            return
         rules_fired.append(rule)
+        records.append(
+            {
+                "rule": rule,
+                "status": "open",
+                "requested_recheck": req or "none",
+                "resolution_reason": None,
+            }
+        )
         endorse = False
         if req and request == "none":
             request = req
@@ -236,6 +319,16 @@ def run_critic(
         if pred and pred.r_model > 0.8:
             contradictions.append("High model confidence despite physics failure")
             _fire("physics_vs_model_confidence", req="physics")
+    # RM6: OOD + failed physics → severe (case 146 class).
+    if (
+        data_q
+        and data_q.ood_flag
+        and phys is not None
+        and float(phys.physics_score) < 0.7
+    ):
+        contradictions.append("OOD input combined with failed physics")
+        challenges.append("OOD + failed physics")
+        _fire("ood_and_failed_physics", req="data")
     if data_q and data_q.ood_flag and pred and pred.r_model > 0.75:
         contradictions.append("OOD input with overconfident prediction")
         _fire("ood_overconfident", req="data")
@@ -244,52 +337,103 @@ def run_critic(
             f"Strong ensemble disagreement (TV={unc.model_disagreement:.3f})"
         )
         _fire("ensemble_disagreement", req="model")
+    # RM2: large set (non-severe by default) + distinct edge-of-wide-set check.
     if unc and len(unc.prediction_set) >= rt.get("large_set_size", 3):
         challenges.append("Large conformal prediction set")
         _fire("large_prediction_set", req="model")
-        # Wide ordinal edge: set spans ≥2 grade steps
         pset = sorted(int(g) for g in unc.prediction_set)
-        if pset and (pset[-1] - pset[0]) >= 2:
-            challenges.append("Wide conformal ordinal edge")
-            _fire("wide_conformal_edge", req="model")
-    if phys and any("b1 inconsistency" in i for i in phys.issues):
-        challenges.append("Derived B1 does not match sigma_c/sigma_t")
-        _fire("b1_inconsistency", req="physics")
-    if phys and any("inconsistency" in i for i in phys.issues):
-        challenges.append("Identity violation on SCF/B1/B2")
+        span_ok = bool(pset) and (pset[-1] - pset[0]) >= 2
+        if (
+            pred is not None
+            and span_ok
+            and int(pred.predicted_grade) in {pset[0], pset[-1]}
+        ):
+            challenges.append(
+                f"Predicted grade {pred.predicted_grade} at edge of wide set {pset}"
+            )
+            _fire("edge_of_wide_set", req="model")
+    if phys and any(
+        ("scf inconsistency" in i) or ("b2 inconsistency" in i)
+        for i in phys.issues
+    ):
+        challenges.append("Identity violation on SCF or B2")
         _fire("identity_violation", req="physics")
     if phys and any("implausible_sigma_c_over_sigma_t" in i for i in phys.issues):
         challenges.append("Implausible sigma_c/sigma_t ratio")
-        _fire("implausible_stress_ratio", req="physics")
+        _fire("implausible_strength_ratio", req="physics")
+    if phys and any("large_b1_identity_gap" in i for i in phys.issues):
+        challenges.append("Large B1 identity gap (not row-shift without neighbours)")
+        _fire("large_b1_identity_gap", req="physics")
     if phys and any("suspected_row_shift" in i for i in phys.issues):
-        challenges.append("Suspected table row-shift in listed derived features")
+        challenges.append("Suspected table row-shift (block diagnose)")
         _fire("suspected_row_shift", req="physics")
+    if phys and any("sigma_t_ge_sigma_c" in i for i in phys.issues):
+        challenges.append("Tensile strength ≥ UCS")
+        _fire("sigma_t_ge_sigma_c", req="physics")
+    if phys and any("tangential_stress_exceeds_strength" in i for i in phys.issues):
+        challenges.append("Tangential boundary stress reaches or exceeds UCS")
+        _fire("tangential_stress_exceeds_strength", req="physics")
+    if phys and any("depth_stress_implausible" in i for i in phys.issues):
+        challenges.append("Tangential stress is outside the Kirsch depth range")
+        _fire("depth_stress_implausible", req="physics")
     if data_q and getattr(data_q, "conflicting_near_dup_labels", False):
         challenges.append("Near-duplicates with conflicting labels")
         contradictions.append("Conflicting near-duplicate labels in reference")
         _fire("conflicting_near_dup_labels", req="data")
-    # ML grade vs empirical criteria consensus
+    # ML grade vs empirical criteria consensus (RM5: severity from agreement).
     if phys is not None and pred is not None:
         crit = (phys.empirical_checks or {}).get("criteria_as_given") or {}
         cons = crit.get("consensus_grade")
+        agr = float(crit.get("agreement") or 0.0)
         if cons is not None and int(cons) >= 0 and int(pred.predicted_grade) != int(cons):
             contradictions.append(
                 f"ML grade {pred.predicted_grade} ≠ criteria consensus {cons} "
-                f"(agreement={crit.get('agreement')})"
+                f"(agreement={agr:.3f}, rule={crit.get('consensus_rule')})"
             )
             challenges.append("ML vs physics-criteria grade mismatch")
             _fire("ml_vs_criteria", req="physics")
     if objections:
         challenges.extend([f"validation:{o}" for o in objections])
         _fire("validation_objection")
+        if any("monotonic_tendency" in o for o in objections):
+            _fire("monotonic_tendency_violation", req="model")
         if request == "none":
             if any("physics" in o for o in objections):
                 request = "physics"
-            elif any("imputer" in o or "perturbation" in o for o in objections):
-                request = "data"
+            elif any(
+                "imputer" in o or "perturbation" in o or "monotonic" in o
+                for o in objections
+            ):
+                request = "data" if "monotonic" not in " ".join(objections) else "model"
             else:
                 request = "model"
-    escalate = bool(set(rules_fired) & _SEVERE_CRITIC_RULES)
+    # RM9: implausible local explanation directions (SCF/Wet/σθ vs severity).
+    attrib = local_explanation
+    if isinstance(attrib, dict) and pred is not None:
+        from rockburst.ml.explain import check_implausible_explanation_directions
+
+        for flag in check_implausible_explanation_directions(
+            {k: float(v) for k, v in attrib.items() if isinstance(v, (int, float))},
+            int(pred.predicted_grade),
+        ):
+            contradictions.append(flag)
+            challenges.append("Implausible explanation direction vs rockburst severity prior")
+            _fire("implausible_explanation_direction", req="model")
+            break
+    escalate = bool(set(rules_fired) & severe)
+    parties: set[str] = set()
+    if any(r in rules_fired for r in {"ml_vs_criteria", "physics_vs_model_confidence"}):
+        parties.update({"predictive_agent", "geomechanics_agent"})
+    if any(
+        r in rules_fired
+        for r in {"ensemble_disagreement", "large_prediction_set", "edge_of_wide_set"}
+    ):
+        parties.update({"predictive_agent", "uncertainty_agent"})
+    if any(r in rules_fired for r in {"ood_overconfident", "ood_and_failed_physics"}):
+        parties.update({"data_quality_agent", "predictive_agent"})
+    disagreement_level = (
+        "High" if escalate or len(parties) >= 3 else "Moderate" if parties else "Low"
+    )
     return CriticOutput(
         challenges=challenges,
         contradictions=contradictions,
@@ -297,6 +441,9 @@ def run_critic(
         endorse=endorse,
         rules_fired=rules_fired,
         escalate_abstain=escalate,
+        objection_records=records,
+        disagreement_level=disagreement_level,
+        disagreeing_parties=sorted(parties),
     )
 
 
@@ -345,6 +492,21 @@ def _inter_agent_disagreement(
         parties.append("critic_vs_fusion_path")
     if "ml_vs_criteria" in critic_rules:
         parties.append("critic_flags_ml_vs_criteria")
+    if critic is not None:
+        parties.extend(p for p in critic.disagreeing_parties if p not in parties)
+    grade_gap = abs(ml - cons_i) if ml is not None and cons_i is not None else 0
+    computed_level = (
+        "High"
+        if grade_gap >= 2 or (critic_objects and len(critic_rules) >= 2)
+        else "Moderate"
+        if parties
+        else "Low"
+    )
+    level = (
+        critic.disagreement_level
+        if critic is not None and critic.disagreement_level != "Low"
+        else computed_level
+    )
     return {
         "ml_grade": ml,
         "ml_intensity": intensity_name(ml),
@@ -356,6 +518,7 @@ def _inter_agent_disagreement(
         "critic_rules_fired": critic_rules,
         "parties": parties,
         "has_disagreement": bool(parties),
+        "level": level,
     }
 
 
@@ -377,6 +540,19 @@ def format_engineering_decision(
         f"System confidence R_final={float(r_final):.3f}.",
         f"Recommended action: {action}.",
     ]
+    criteria_grade = None
+    if disagreement:
+        criteria_grade = disagreement.get("criteria_consensus_grade")
+    hazard_grade = max(
+        [g for g in [predicted_grade, criteria_grade, *prediction_set] if g is not None],
+        default=-1,
+    )
+    if hazard_grade >= 3:
+        lines.append("Hazard statement: High rockburst potential; engineering verification required.")
+    elif hazard_grade == 2:
+        lines.append("Hazard statement: Moderate rockburst potential; engineering verification recommended.")
+    else:
+        lines.append("Hazard statement: No high-intensity indication in the available evidence; continue monitoring.")
     if disagreement and disagreement.get("has_disagreement"):
         parts = []
         if disagreement.get("ml_vs_criteria"):
@@ -388,7 +564,11 @@ def format_engineering_decision(
             rules = disagreement.get("critic_rules_fired") or []
             parts.append(f"Critic objections ({', '.join(rules) or 'unspecified'})")
         if parts:
-            lines.append("Inter-agent disagreement: " + "; ".join(parts) + ".")
+            lines.append(
+                f"Inter-agent disagreement ({disagreement.get('level', 'Moderate')}): "
+                + "; ".join(parts)
+                + "."
+            )
     return " ".join(lines)
 
 
@@ -398,22 +578,22 @@ def enforce_decision_consistency(
     r_final: float,
     high_conf: float = 0.95,
 ) -> tuple[str, float, str | None]:
-    """Enforce consistent (action, R_final) pairs (M15).
+    """Align action with R_final without rewriting confidence (RC3).
 
-    Abstain + near-certain R_final is invalid UX: keep abstain (Critic/gates may
-    require it) but clamp reported confidence. Accept + very low R_final → abstain.
+    Critic/hard gates may force abstain while calibrated R_final stays high —
+    keep the true R_final and record ``decision_override_reason`` instead of the
+    old 0.49 clamp. Accept + very low R_final → abstain (action change only).
 
-    Returns (action, r_final, consistency_note).
+    Returns (action, r_final_unchanged, decision_override_reason | None).
     """
     r = float(r_final)
     if action == "abstain" and r >= high_conf:
-        clamped = min(r, 0.49)
         return (
             "abstain",
-            clamped,
+            r,
             (
-                f"consistency: abstain with R_final={r:.3f}≥{high_conf}; "
-                f"clamped reported confidence to {clamped:.3f}"
+                f"override: abstain with R_final={r:.3f}≥{high_conf} "
+                "(Critic/gates); reported R_final left unchanged"
             ),
         )
     if action == "accept" and r < 0.35:
@@ -421,8 +601,8 @@ def enforce_decision_consistency(
             "abstain",
             r,
             (
-                f"consistency: accept incompatible with R_final={r:.3f}<0.35; "
-                "changed action to abstain"
+                f"override: accept incompatible with R_final={r:.3f}<0.35; "
+                "changed action to abstain (R_final unchanged)"
             ),
         )
     return action, r, None
@@ -439,9 +619,11 @@ def fuse_assessment(
     critic: CriticOutput | None = None,
     recheck_payloads: dict[str, Any] | None = None,
     physics_skipped: bool = False,
+    case: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    # Single train/serve/eval vector path; component calibrators only if explicit.
     r_vec = compute_reliability_features(
-        data_q, phys, pred, unc, case=None, cfg=cfg
+        data_q, phys, pred, unc, case=case, cfg=cfg
     )
     r_parts = r_vector_dict(r_vec)
     r_data = r_parts["r_data"]
@@ -493,6 +675,8 @@ def fuse_assessment(
             "critic_endorse": None if critic is None else bool(critic.endorse),
             "downgrade_reason": "fusion_unfitted",
             "consistency_note": None,
+            "decision_override_reason": None,
+            "r_final": r_final,
             "physics_skipped": physics_skipped,
             "recheck_payloads": recheck_payloads or {},
             "r_vector": {**r_parts, "r_final": r_final},
@@ -509,16 +693,18 @@ def fuse_assessment(
             decision = "abstain"
         elif unc.model_disagreement >= 0.5 and r_final < 0.75:
             decision = "abstain"
+    # RM6: OOD + failed physics → abstain (no high-r_model escape; case 146).
     if data_q is not None and phys is not None:
-        if data_q.ood_flag and phys.physics_score < 0.7 and (pred is None or pred.r_model < 0.6):
+        if data_q.ood_flag and float(phys.physics_score) < 0.7:
             decision = "abstain"
 
     # Unresolved Critic: escalate to abstain on severe rules; else one-step downgrade (M5).
     downgrade_reason = None
     if critic is not None and not critic.endorse and decision != "abstain":
         if getattr(critic, "escalate_abstain", False):
+            fired_severe = sorted(set(critic.rules_fired))
             downgrade_reason = (
-                f"Critic severe rules {sorted(set(critic.rules_fired) & _SEVERE_CRITIC_RULES)}; "
+                f"Critic severe rules {fired_severe}; "
                 f"escalated {decision} → abstain"
             )
             decision = "abstain"
@@ -533,20 +719,22 @@ def fuse_assessment(
 
     grade = pred.predicted_grade if pred else None
     pset = list(unc.prediction_set) if unc else []
-    decision, r_final, consistency_note = enforce_decision_consistency(
-        action=decision, r_final=float(r_final)
+    r_final_reported = float(r_final)
+    decision, r_final_reported, decision_override_reason = enforce_decision_consistency(
+        action=decision, r_final=r_final_reported
     )
-    if consistency_note:
+    consistency_note = decision_override_reason
+    if decision_override_reason:
         downgrade_reason = (
-            f"{downgrade_reason}; {consistency_note}"
+            f"{downgrade_reason}; {decision_override_reason}"
             if downgrade_reason
-            else consistency_note
+            else decision_override_reason
         )
 
     disagreement = _inter_agent_disagreement(phys, pred, critic)
     # Prefer structured inter-agent label when ML≠criteria or Critic objects
     if disagreement.get("has_disagreement"):
-        dis_label = "inter_agent"
+        dis_label = str(disagreement.get("level") or "Moderate")
     elif unc:
         dis_label = (
             "high"
@@ -561,7 +749,7 @@ def fuse_assessment(
     plain = format_engineering_decision(
         predicted_grade=grade,
         prediction_set=pset,
-        r_final=float(r_final),
+        r_final=float(r_final_reported),
         action=decision,
         disagreement=disagreement,
     )
@@ -588,7 +776,9 @@ def fuse_assessment(
         "prediction_stability": unc.prediction_stability if unc else "unknown",
         "agent_disagreement": dis_label,
         "inter_agent_disagreement": disagreement,
-        "final_system_confidence": r_final,
+        # RC3: R_final always the calibrated score; overrides never clamp it.
+        "final_system_confidence": r_final_reported,
+        "r_final": r_final_reported,
         "decision": plain,
         "recommended_action": decision,
         "probabilities": pred.probabilities if pred else [],
@@ -597,9 +787,10 @@ def fuse_assessment(
         "critic_endorse": None if critic is None else bool(critic.endorse),
         "downgrade_reason": downgrade_reason,
         "consistency_note": consistency_note,
+        "decision_override_reason": decision_override_reason,
         "physics_skipped": physics_skipped,
         "recheck_payloads": recheck_payloads or {},
-        "r_vector": {**r_parts, "r_final": r_final},
+        "r_vector": {**r_parts, "r_final": r_final_reported},
         "explanation": explanation,
         "critic_rules_fired": list(getattr(critic, "rules_fired", []) or []),
         "delivered_planner": "rules_fsm",

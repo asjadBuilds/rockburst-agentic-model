@@ -92,13 +92,18 @@ def test_target_never_used_for_imputation(processed_df):
     assert all(not c.startswith("rockburst") for c in X.columns)
 
 
-def test_fold_reference_excludes_self_and_group(processed_df):
+def test_fold_reference_excludes_self_keeps_group(processed_df):
+    """RM3: exclude case by ``no`` only; same-group near-dups stay for conflict checks."""
     case = processed_df.iloc[0].to_dict()
     idx = np.arange(len(processed_df))
     ref = build_fold_reference(processed_df, idx, case)
     assert int(case["no"]) not in set(ref["no"].astype(int))
+    # Optional legacy group hold-out still available
+    ref_g = build_fold_reference(
+        processed_df, idx, case, exclude_dup_group=True
+    )
     if "dup_group_id" in processed_df.columns:
-        assert case["dup_group_id"] not in set(ref["dup_group_id"])
+        assert case["dup_group_id"] not in set(ref_g["dup_group_id"])
 
 
 def test_fusion_monotonicity():
@@ -219,24 +224,11 @@ def test_conformal_coverage_near_nominal():
 
 
 def test_max_loops_forced_abstain(processed_df):
-    from rockburst.graph.runner import CaseState, step
-
-    cfg = load_config()
-    cfg["routing"] = {**cfg.get("routing", {}), "max_loops": 1}
+    """Safety max_loops ceiling still forces abstain when planner never finalizes."""
     case = processed_df.iloc[0].to_dict()
-    # Force a stuck state: never finalize by using max_loops=0 and mocking
-    from rockburst.graph.runner import run_graph
-
-    cfg2 = load_config()
-    cfg2["routing"] = {**cfg2.get("routing", {}), "max_loops": 0}
-    # With max_loops=0, rules immediately finalize on first call... need loop limit path
-    # Simulate by patching rule planner to never finalize until forced
     import rockburst.graph.runner as runner
 
-    calls = {"n": 0}
-
     def never_finalize(state, cfg, allow_critic=True):
-        calls["n"] += 1
         if state.data_q is None:
             return "data_quality"
         if state.phys is None:
@@ -251,10 +243,9 @@ def test_max_loops_forced_abstain(processed_df):
     runner.rule_based_next_action = never_finalize  # type: ignore[assignment]
     try:
         cfg3 = load_config()
+        # Absolute step ceiling only (RC5 primary limit is critic cycles).
         cfg3["routing"] = {**cfg3.get("routing", {}), "max_loops": 2}
-        # Need a model — skip if missing
         from rockburst.config import resolve_path
-        import joblib
 
         mp = resolve_path(cfg3, "models") / "best_baseline.joblib"
         if not mp.exists():

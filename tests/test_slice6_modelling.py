@@ -80,7 +80,7 @@ def test_contiguous_ordinal_prediction_sets():
     assert s_raw == [0, 2]
 
 
-def test_pick_defensible_prefers_mondrian_when_grade3_ok():
+def test_pick_defensible_uses_coverage_size_and_abstention():
     comparison = {
         "class_calib_counts": [20, 20, 15, 10],
         "mondrian_split": {
@@ -90,7 +90,7 @@ def test_pick_defensible_prefers_mondrian_when_grade3_ok():
         },
         "marginal_split": {"coverage": 0.90, "mean_size": 1.8, "per_class": {}},
     }
-    assert pick_defensible_method(comparison, alpha=0.1) == "mondrian_split"
+    assert pick_defensible_method(comparison, alpha=0.1) == "marginal_split"
 
 
 def test_combination_scale_and_ood_detectors():
@@ -121,15 +121,30 @@ def test_combination_scale_and_ood_detectors():
             "dup_group_id": np.arange(40),
         }
     )
-    # Near-duplicate of row 0 with conflicting grade
-    case = ref.iloc[0].to_dict()
-    case["no"] = 999
-    case["rockburst_grade"] = (int(case["rockburst_grade"]) + 1) % 4
-    case["dup_group_id"] = 999
+    # Two fold-train near-dups with conflicting labels (RM3: never use case label).
+    base = {
+        "sigma_theta": 100.0,
+        "sigma_c": 50.0,
+        "sigma_t": 5.0,
+        "wet": 5.0,
+        "d": 500.0,
+        "scf": 2.0,
+        "b1": 10.0,
+        "b2": 0.82,
+    }
+    for col, val in base.items():
+        ref.loc[0, col] = val
+        ref.loc[1, col] = val * 1.001  # within 5% rel tol
+    ref.loc[0, "rockburst_grade"] = 0
+    ref.loc[1, "rockburst_grade"] = 3
+    ref.loc[0, "dup_group_id"] = 0
+    ref.loc[1, "dup_group_id"] = 0
+    case = {**base, "no": 999, "dup_group_id": 0, "rockburst_grade": 1}
     out = score_data_quality(case, ref, near_dup_rel_tol=0.05)
     assert "ood_scores" in out
     assert set(out["ood_scores"]) >= {"isolation_forest", "mahalanobis", "knn"}
     assert out["conflicting_near_dup_labels"] is True
+    assert set(out.get("train_near_dup_grades") or []) >= {0, 3}
 
 
 def test_production_selection_rule_mean_inner():

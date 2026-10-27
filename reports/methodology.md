@@ -34,9 +34,9 @@ Typical happy path: `data_quality → (geomechanics | skip) → predict → unce
 
 **Critic:** OOD, low physics, large conformal set, strong disagreement, or unresolved validation objections. Rechecks call **different** tools than the first pass (`recheck_physics` / `recheck_data` / `recheck_model`). Unresolved objections after recheck **downgrade** the decision one level (grade unchanged).
 
-Hard stop at `max_loops=8` → forced abstain. LLM planner actions that lack preconditions are tagged `rejected:` and fall back to rules.
+**Termination (RC5):** primary non-convergence is `critic_recheck_cycles ≥ max_critic_recheck_cycles` (default **3**) → forced abstain. `max_loops` (default **24**) is a safeguard above the longest legitimate path. LLM planner actions that lack preconditions are tagged `rejected:` and fall back to rules.
 
-Planner: **rules FSM by default** (offline, reproducible). Optional Gemini Flash (`configs/default.yaml` `gemini.planner_model`) when `--llm` and `GOOGLE_API_KEY` are set. Trace tags: `llm:` / `rules:` / `fallback:` / `rejected:`. Engineering decision text names intensity, conformal set, `R_final`, and action; consistency guards block abstain with near-certain `R_final` (M15).
+Planner: **rules FSM by default** (offline, reproducible). Optional Gemini Flash (`configs/default.yaml` `gemini.planner_model`) when `--llm` and `GOOGLE_API_KEY` are set. Trace tags: `llm:` / `rules:` / `fallback:` / `rejected:`. Engineering decision text names intensity, conformal set, `R_final`, and action; abstain keeps true `R_final` with `decision_override_reason` (RC3; no 0.49 clamp).
 
 ## Agents and tools (summary)
 
@@ -47,7 +47,7 @@ Planner: **rules FSM by default** (offline, reproducible). Optional Gemini Flash
 | Predictive | Leakage-safe pipelines (nested Optuna ≥50) | grade, probs, `R_model` |
 | Uncertainty | Entropy, ensemble TV, Mondrian/marginal conformal, primary-only perturbations | `R_uncertainty`, `R_stability`, set |
 | Critic | Contradiction rules; escalate/downgrade | `request_recheck`, `endorse` |
-| Fusion | Non-neg logistic + calibration; set **A** | `R_final`, decision |
+| Fusion | Constrained logistic + beta calibration; rule-selected set **C** | `R_final`, interval, decision |
 
 ### Full agent specifications (m3)
 
@@ -90,11 +90,11 @@ Planner: **rules FSM by default** (offline, reproducible). Optional Gemini Flash
 
 **Coordinator** (`graph/runner.py`).  
 - Custom rules FSM (not LangGraph runtime). Optional Gemini chooses next action only.  
-- Termination: finalize; or `max_loops` → forced abstain (C2).
+- Termination: finalize; or Critic-cycle / `max_loops` safeguard → forced abstain (RC5).
 
 ## Reliability fusion equations (m4)
 
-Reliability vector (locked production mask = set **A** activates `r_model` only; others reported):
+Reliability vector (production mask selected by the declared A–D risk–coverage rule; the full run selected **C** and excluded confidently inverted `r_data`):
 
 \[
 \mathbf{r} = (r_{\mathrm{data}}, r_{\mathrm{physics}}, r_{\mathrm{model}}, r_{\mathrm{uncertainty}}, r_{\mathrm{stability}})
@@ -107,7 +107,7 @@ s = \mathbf{w}^\top (\mathbf{r} \odot \mathbf{m}) + b,\quad w_i \ge 0,\quad
 R_{\mathrm{raw}} = \sigma(s)
 \]
 
-with mask \(\mathbf{m}\) for set A. **Calibration:** isotonic or Platt on inner scores → \(R_{\mathrm{final}}\in(\varepsilon,1-\varepsilon)\).
+with selected mask \(\mathbf{m}\). `n_missing` is a free-sign risk count; reliability channels are constrained non-negative. **Calibration:** Platt or beta calibration on the exact production-stacker OOF raw scores; smoothed isotonic is explicit opt-in. Grouped bootstrap refits the stacker and calibrator to provide nonconstant intervals.
 
 **Decision bands** (learned thresholds \(t_{\cdot}\), default serving from `fusion.joblib`):
 
@@ -142,12 +142,12 @@ Wet and depth \(D\) are empirical tendencies only.
 
 ## Reliability fusion (narrative)
 
-The **final** fusion reduces to calibrated max-probability (feature set **A** = `r_model` only) after held-out set comparison. Other \(R_*\) channels remain reported flags. See equations above (m4). Current risk–coverage: max-prob area exceeds \(R_{\mathrm{final}}\) under set A (`ablation_results.json`) — negative C4 result retained.
+The declared comparison selected set **C**. The serving mask includes physics, model, uncertainty, stability, and missing-count inputs; `r_data` is removed because its grouped-bootstrap AUROC interval lies wholly below 0.5. Current risk–coverage still favors max-prob over served \(R_{\mathrm{final}}\); this negative result is retained.
 
 ## Conformal prediction
 Grouped **split conformal** with nonconformity \(1-p_y\) and finite-sample quantile
 \(\lceil(n+1)(1-\alpha)\rceil/n\). Mondrian, marginal, and grouped CV+ are compared on outer OOF.
-Production prefers **Mondrian** when grade-3 has enough calibration mass (class-conditional coverage); prediction sets are forced **contiguous** on the ordinal grade scale (M11). Calibration holdouts are group-aware and disjoint from model fit and fusion training.
+The production method is **marginal split**, selected from marginal, Mondrian, and the distinct grade-3 variant using overall coverage, grade-3 coverage, mean set size, and downstream abstention. Mondrian remains a reported alternative rather than the production method. Prediction sets are forced **contiguous** on the ordinal grade scale. Calibration holdouts are group-aware and disjoint from model fit and fusion training.
 
 ## Nested tuning and selection (M1)
 Outer `StratifiedGroupKFold` evaluates; inner Optuna selects hyperparameters (`tuning.n_trials` ≥50 equal per family, including retuned RBF SVM and MLP replacing ExtraTrees).

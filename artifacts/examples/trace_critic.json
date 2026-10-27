@@ -1,57 +1,223 @@
 {
   "predicted_grade": 1,
-  "prediction_probability": 0.4510302197918618,
+  "predicted_intensity": "light",
+  "prediction_probability": 0.8687336592641373,
   "prediction_set": [
+    0,
     1,
     2,
     3
   ],
-  "physics_consistency": 1.0,
-  "input_reliability": 0.8425709092052102,
+  "prediction_set_intensities": [
+    "none",
+    "light",
+    "moderate",
+    "strong"
+  ],
+  "physics_consistency": 0.45,
+  "input_reliability": 0.9170679665824253,
   "ood_status": "No",
   "prediction_stability": "high",
-  "agent_disagreement": "low",
-  "final_system_confidence": 0.999999,
-  "decision": "Accept with caution; verify key measurements. (Critic unresolved (endorse=False, recheck=model); downgraded accept \u2192 accept_with_caution)",
+  "agent_disagreement": "High",
+  "inter_agent_disagreement": {
+    "ml_grade": 1,
+    "ml_intensity": "light",
+    "criteria_consensus_grade": 2,
+    "criteria_intensity": "moderate",
+    "criteria_grades": {
+      "russenes": 1,
+      "kidybinski": 3
+    },
+    "ml_vs_criteria": true,
+    "critic_endorse": false,
+    "critic_rules_fired": [
+      "low_physics",
+      "physics_vs_model_confidence",
+      "large_prediction_set",
+      "ml_vs_criteria",
+      "validation_objection"
+    ],
+    "parties": [
+      "ml_vs_criteria",
+      "critic_vs_fusion_path",
+      "critic_flags_ml_vs_criteria",
+      "geomechanics_agent",
+      "predictive_agent",
+      "uncertainty_agent"
+    ],
+    "has_disagreement": true,
+    "level": "High"
+  },
+  "final_system_confidence": 0.7295998146298323,
+  "r_final": 0.7295998146298323,
+  "decision": "Predicted intensity: light (grade 1). Conformal set: {none, light, moderate, strong} (grades [0, 1, 2, 3]). System confidence R_final=0.730. Recommended action: accept_with_caution. Hazard statement: High rockburst potential; engineering verification required. Inter-agent disagreement (High): ML light vs criteria moderate; Critic objections (low_physics, physics_vs_model_confidence, large_prediction_set, ml_vs_criteria, validation_objection). Accept with caution; verify key measurements. (Critic unresolved (endorse=False, recheck=physics); downgraded accept \u2192 accept_with_caution)",
   "recommended_action": "accept_with_caution",
   "probabilities": [
-    0.0078125,
-    0.4510302197918618,
-    0.30690685572494014,
-    0.2342504244831979
+    2.027685936029871e-05,
+    0.8687336592641373,
+    0.023063576059793728,
+    0.10818248781670867
   ],
   "route_trace": [
     "rules:data_quality",
     "rules:geomechanics_skipped",
     "rules:predict",
     "rules:uncertainty",
+    "rules:extra_validation",
     "rules:critic",
-    "rejected:recheck_model",
-    "fallback:critic",
+    "rules:recheck_physics",
+    "rules:critic",
     "rules:finalize"
   ],
   "abstained": false,
   "critic_endorse": false,
-  "downgrade_reason": "Critic unresolved (endorse=False, recheck=model); downgraded accept \u2192 accept_with_caution",
+  "downgrade_reason": "Critic unresolved (endorse=False, recheck=physics); downgraded accept \u2192 accept_with_caution",
+  "consistency_note": null,
+  "decision_override_reason": null,
   "physics_skipped": true,
-  "recheck_payloads": {},
+  "recheck_payloads": {
+    "monotonic_tendency": {
+      "tool": "monotonic_tendency_recheck",
+      "rel_increase": 0.1,
+      "base_grade": 1,
+      "violations": [],
+      "details": [
+        {
+          "channel": "sigma_theta",
+          "base": 1,
+          "perturbed": 1
+        },
+        {
+          "channel": "wet",
+          "base": 1,
+          "perturbed": 1
+        }
+      ],
+      "monotonic_violation": false
+    },
+    "physics_tol": {
+      "tool": "physics_recheck_perturbed_tolerance",
+      "physics_score_stated": 0.45,
+      "physics_score_tight": 0.45,
+      "borderline_relations": [],
+      "issues_stated": [],
+      "issues_tight": [],
+      "low_physics": true,
+      "criteria_consensus_grade": 2
+    }
+  },
   "r_vector": {
-    "r_data": 0.8425709092052102,
-    "r_physics": 1.0,
-    "r_model": 0.4510302197918618,
-    "r_uncertainty": 0.5241137542226464,
-    "r_stability": 0.9693483464679247,
+    "r_data": 0.9170679665824253,
+    "r_physics": 0.45,
+    "r_model": 0.8687336592641373,
+    "r_uncertainty": 0.8052382264268635,
+    "r_stability": 0.9632546351710042,
     "n_missing": 0.0,
     "d_observed": 1.0,
-    "r_final": 0.999999
+    "r_final": 0.7295998146298323
   },
-  "example_protocol": "held-out fold model",
+  "explanation": "Top held-out permutation features: wet, sigma_theta, scf, b1, observed_d",
+  "critic_rules_fired": [
+    "low_physics",
+    "physics_vs_model_confidence",
+    "large_prediction_set",
+    "edge_of_wide_set",
+    "ml_vs_criteria",
+    "validation_objection"
+  ],
+  "delivered_planner": "rules_fsm",
+  "termination_reason": "finalize_unresolved_no_new_evidence",
+  "critic_recheck_cycles": 1,
+  "max_critic_recheck_cycles": 3,
+  "steps_taken": 9,
+  "max_loops": 24,
+  "missing_d": false,
+  "recheck_effects": [
+    {
+      "kind": "physics",
+      "before": {
+        "physics_score": 0.45,
+        "data_reliability": 0.9170679665824253,
+        "model_disagreement": 0.0,
+        "prediction_set": [
+          1,
+          2,
+          3
+        ],
+        "has_criteria": true
+      },
+      "after": {
+        "physics_score": 0.45,
+        "data_reliability": 0.9170679665824253,
+        "model_disagreement": 0.0,
+        "prediction_set": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "has_criteria": true
+      },
+      "changed_physics_score": false,
+      "changed_set": true,
+      "preserved_criteria": true
+    }
+  ],
+  "critic_objections": [
+    {
+      "rule": "low_physics",
+      "status": "open",
+      "requested_recheck": "none",
+      "resolution_reason": null,
+      "recheck": "physics"
+    },
+    {
+      "rule": "physics_vs_model_confidence",
+      "status": "open",
+      "requested_recheck": "physics",
+      "resolution_reason": null,
+      "recheck": "physics"
+    },
+    {
+      "rule": "large_prediction_set",
+      "status": "open",
+      "requested_recheck": "model",
+      "resolution_reason": null,
+      "recheck": "physics"
+    },
+    {
+      "rule": "edge_of_wide_set",
+      "status": "open",
+      "requested_recheck": "model",
+      "resolution_reason": "recheck_did_not_clear_objection",
+      "recheck": "physics"
+    },
+    {
+      "rule": "ml_vs_criteria",
+      "status": "open",
+      "requested_recheck": "physics",
+      "resolution_reason": null,
+      "recheck": "physics"
+    },
+    {
+      "rule": "validation_objection",
+      "status": "open",
+      "requested_recheck": "none",
+      "resolution_reason": null
+    }
+  ],
+  "resolved_critic_rules": [],
+  "recheck_changed_evidence_count": 1,
+  "termination_conditions": [
+    "finalize: evidence complete and Critic endorses or is not required",
+    "forced_abstain_critic_cycles: Critic\u2192recheck budget exhausted with unresolved objections",
+    "forced_abstain_max_steps: absolute step ceiling with unresolved objections/evidence",
+    "forced_abstain_safety: loop exited without finalize"
+  ],
+  "case_no": 6,
   "true_grade": 2,
-  "m6_route_trace": [
-    "rules:data_quality",
-    "rules:geomechanics_skipped",
-    "rules:predict",
-    "rules:uncertainty",
-    "rules:finalize"
-  ]
+  "true_intensity": "moderate",
+  "fold_index": 0,
+  "fold_model": "lightgbm__median",
+  "example_protocol": "routing_trace; rules FSM; relative paths only; fold=0"
 }

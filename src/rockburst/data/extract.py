@@ -60,7 +60,7 @@ def extract_table_from_pdf(pdf_path: Path | str) -> tuple[pd.DataFrame, dict[str
     pdf_path = Path(pdf_path)
     rows: dict[int, list[float]] = {}
     audit: dict[str, Any] = {
-        "source": str(pdf_path),
+        "source": pdf_path.name,
         "method": "pdfplumber+text",
         "fused_row_pairs_checked": [list(p) for p in FUSED_ROW_PAIRS],
         "warnings": [],

@@ -31,7 +31,12 @@ cv:
 
 tuning:
   # Slice 6 / M9: ≥50 Optuna trials per model family (equal budget)
+  # RM11: RF leaf/features + booster subsample/L2; SVM scaled+calibrated+balanced
   n_trials: 50
+
+ml:
+  # RM10: overwritten by train from mean-fold QWK compare (argmax | median)
+  decode_rule: argmax
 
 gemini:
   planner_model: gemini-3.5-flash
@@ -51,11 +56,15 @@ physics:
   d_range: [50.0, 2500.0]
   # Flag σc/σt above this (row 288 pattern); listed B1 may still look plausible
   b1_implausible_max: 200.0
+  # RM6: overburden σv≈γ·D; k-ratio span for σθ plausibility
+  overburden_mpa_per_m: 0.027
+  k_ratio_range: [0.3, 4.0]
+
 
 quality:
   iqr_factor: 3.0
   # Relative tolerance on raw measured inputs (σθ, σc, σt, Wet, D when present).
-  # 1% catches Table S1 ~0.1–0.2% σθ perturbations; see dup_sensitivity.json.
+  # Production 5% groups known near-copies; lower 0.5/1/2% values are sensitivity only.
   near_dup_rel_tol: 0.05
 
 uncertainty:
@@ -65,7 +74,13 @@ uncertainty:
   conformal_alpha: 0.1
 
 routing:
-  max_loops: 8
+  # Absolute step ceiling (safety). Ordinary routes are ~5–9 steps; must sit
+  # well above the longest legitimate path so missing-D extra_validation does
+  # not consume a shared step budget vs present-D (RC5).
+  max_loops: 24
+  # Primary non-convergence limit: completed Critic→recheck cycles (RC5).
+  # Forced abstain only when this budget is exhausted with unresolved objections.
+  max_critic_recheck_cycles: 3
   disagreement_threshold: 0.35
   large_set_size: 3
   # Design log (reports/design_decisions_log.md): extra validation when R_data < cut
@@ -86,3 +101,10 @@ fusion:
     - abstain
   # Confidence floor/ceiling after calibration (avoid exact 0/1 reporting)
   conf_eps: 0.001
+  # RC3: null → auto Platt / beta / smoothed_isotonic by n and uniqueness.
+  # Calibrator fits on full cross-fitted OOF raw scores (~344), not ~70 holdout.
+  calibration_method: null
+  # Decision bands: engineering_cost_utility (default) or set target_accept_rate
+  # under fusion.target_accept_rate for coverage targeting + sensitivity.
+  # target_accept_rate: null
+  min_band_gap: 0.05

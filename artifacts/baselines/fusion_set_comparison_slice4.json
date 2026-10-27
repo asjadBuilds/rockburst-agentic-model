@@ -4,13 +4,69 @@
       "features": [
         "r_model"
       ],
-      "area": 0.6714362658134407,
-      "ece": 0.13356984716679776,
-      "brier": 0.22752000532696517,
-      "mean_r_final": 0.650250174163786,
+      "area": 0.5996928833342082,
+      "ece": 0.058137531879347296,
+      "ece_ci": {
+        "ece": 0.07467811438740504,
+        "ci95": [
+          0.04721203926597631,
+          0.1149690520232921
+        ],
+        "n_boot": 100,
+        "reliability_diagram": [
+          {
+            "bin": [
+              0.30000000000000004,
+              0.4
+            ],
+            "mean_confidence": 0.3777290735103715,
+            "empirical_correct": 0.6363636363636364,
+            "n": 11
+          },
+          {
+            "bin": [
+              0.4,
+              0.5
+            ],
+            "mean_confidence": 0.4532787139046191,
+            "empirical_correct": 0.5,
+            "n": 56
+          },
+          {
+            "bin": [
+              0.5,
+              0.6000000000000001
+            ],
+            "mean_confidence": 0.5506937653182927,
+            "empirical_correct": 0.46534653465346537,
+            "n": 101
+          },
+          {
+            "bin": [
+              0.6000000000000001,
+              0.7000000000000001
+            ],
+            "mean_confidence": 0.6543734235430254,
+            "empirical_correct": 0.7207207207207207,
+            "n": 111
+          },
+          {
+            "bin": [
+              0.7000000000000001,
+              0.8
+            ],
+            "mean_confidence": 0.7422042900410516,
+            "empirical_correct": 0.676923076923077,
+            "n": 65
+          }
+        ]
+      },
+      "brier": 0.23598935592061318,
+      "mean_r_final": 0.598946008576641,
+      "calibration_n_protocol": "full_train_portion_oof_raw",
       "delta_vs_best_ci": [
-        -0.022679182582572403,
-        0.016500417393549748
+        -0.04130484544354737,
+        -0.00952972387165675
       ]
     },
     "B": {
@@ -18,13 +74,69 @@
         "r_model",
         "n_missing"
       ],
-      "area": 0.6671365562588598,
-      "ece": 0.11675436800066653,
-      "brier": 0.22276431338367803,
-      "mean_r_final": 0.6476499284683558,
+      "area": 0.5925812867740633,
+      "ece": 0.03418516570658579,
+      "ece_ci": {
+        "ece": 0.03430194413809094,
+        "ci95": [
+          0.022544526675451985,
+          0.07178795126118419
+        ],
+        "n_boot": 100,
+        "reliability_diagram": [
+          {
+            "bin": [
+              0.30000000000000004,
+              0.4
+            ],
+            "mean_confidence": 0.37687212880499665,
+            "empirical_correct": 0.5882352941176471,
+            "n": 17
+          },
+          {
+            "bin": [
+              0.4,
+              0.5
+            ],
+            "mean_confidence": 0.45602831716662734,
+            "empirical_correct": 0.5,
+            "n": 54
+          },
+          {
+            "bin": [
+              0.5,
+              0.6000000000000001
+            ],
+            "mean_confidence": 0.5488226873507953,
+            "empirical_correct": 0.5490196078431373,
+            "n": 102
+          },
+          {
+            "bin": [
+              0.6000000000000001,
+              0.7000000000000001
+            ],
+            "mean_confidence": 0.6520493657492805,
+            "empirical_correct": 0.6354166666666666,
+            "n": 96
+          },
+          {
+            "bin": [
+              0.7000000000000001,
+              0.8
+            ],
+            "mean_confidence": 0.7495386546404839,
+            "empirical_correct": 0.6933333333333334,
+            "n": 75
+          }
+        ]
+      },
+      "brier": 0.236037903534708,
+      "mean_r_final": 0.5983267663849743,
+      "calibration_n_protocol": "full_train_portion_oof_raw",
       "delta_vs_best_ci": [
-        -0.021005506663932347,
-        0.012763428472130292
+        -0.04635043316400525,
+        -0.009746249785885475
       ]
     },
     "C": {
@@ -36,10 +148,93 @@
         "r_stability",
         "n_missing"
       ],
-      "area": 0.6722087802634513,
-      "ece": 0.12284402662510335,
-      "brier": 0.2280937076732498,
-      "mean_r_final": 0.6534603673697641,
+      "area": 0.6251502972252261,
+      "ece": 0.06326617499476576,
+      "ece_ci": {
+        "ece": 0.07177384960089174,
+        "ci95": [
+          0.04956245352153262,
+          0.10658690718278299
+        ],
+        "n_boot": 100,
+        "reliability_diagram": [
+          {
+            "bin": [
+              0.2,
+              0.30000000000000004
+            ],
+            "mean_confidence": 0.2683399838731624,
+            "empirical_correct": 1.0,
+            "n": 2
+          },
+          {
+            "bin": [
+              0.30000000000000004,
+              0.4
+            ],
+            "mean_confidence": 0.37037071378467523,
+            "empirical_correct": 0.5625,
+            "n": 32
+          },
+          {
+            "bin": [
+              0.4,
+              0.5
+            ],
+            "mean_confidence": 0.45048727982757564,
+            "empirical_correct": 0.4943820224719101,
+            "n": 89
+          },
+          {
+            "bin": [
+              0.5,
+              0.6000000000000001
+            ],
+            "mean_confidence": 0.5463554457847029,
+            "empirical_correct": 0.4594594594594595,
+            "n": 74
+          },
+          {
+            "bin": [
+              0.6000000000000001,
+              0.7000000000000001
+            ],
+            "mean_confidence": 0.6497449424829088,
+            "empirical_correct": 0.6222222222222222,
+            "n": 45
+          },
+          {
+            "bin": [
+              0.7000000000000001,
+              0.8
+            ],
+            "mean_confidence": 0.75017625903872,
+            "empirical_correct": 0.7777777777777778,
+            "n": 54
+          },
+          {
+            "bin": [
+              0.8,
+              0.9
+            ],
+            "mean_confidence": 0.8458617698943679,
+            "empirical_correct": 0.7619047619047619,
+            "n": 42
+          },
+          {
+            "bin": [
+              0.9,
+              1.0
+            ],
+            "mean_confidence": 0.9188977951757593,
+            "empirical_correct": 1.0,
+            "n": 6
+          }
+        ]
+      },
+      "brier": 0.2300892578393062,
+      "mean_r_final": 0.5921506837442383,
+      "calibration_n_protocol": "full_train_portion_oof_raw",
       "delta_vs_best_ci": [
         0.0,
         0.0
@@ -55,36 +250,119 @@
         "n_missing",
         "d_observed"
       ],
-      "area": 0.6722087802634513,
-      "ece": 0.12283473208226015,
-      "brier": 0.22808115567501588,
-      "mean_r_final": 0.6534658279675059,
+      "area": 0.6251502972252261,
+      "ece": 0.06351507796333673,
+      "ece_ci": {
+        "ece": 0.07168879490785142,
+        "ci95": [
+          0.04438119648160939,
+          0.10651770595430757
+        ],
+        "n_boot": 100,
+        "reliability_diagram": [
+          {
+            "bin": [
+              0.2,
+              0.30000000000000004
+            ],
+            "mean_confidence": 0.2683433072778112,
+            "empirical_correct": 1.0,
+            "n": 2
+          },
+          {
+            "bin": [
+              0.30000000000000004,
+              0.4
+            ],
+            "mean_confidence": 0.36953406021261176,
+            "empirical_correct": 0.5483870967741935,
+            "n": 31
+          },
+          {
+            "bin": [
+              0.4,
+              0.5
+            ],
+            "mean_confidence": 0.45008045678515024,
+            "empirical_correct": 0.5,
+            "n": 90
+          },
+          {
+            "bin": [
+              0.5,
+              0.6000000000000001
+            ],
+            "mean_confidence": 0.5462032164042013,
+            "empirical_correct": 0.4657534246575342,
+            "n": 73
+          },
+          {
+            "bin": [
+              0.6000000000000001,
+              0.7000000000000001
+            ],
+            "mean_confidence": 0.648858416332722,
+            "empirical_correct": 0.6086956521739131,
+            "n": 46
+          },
+          {
+            "bin": [
+              0.7000000000000001,
+              0.8
+            ],
+            "mean_confidence": 0.7517429756582126,
+            "empirical_correct": 0.7777777777777778,
+            "n": 54
+          },
+          {
+            "bin": [
+              0.8,
+              0.9
+            ],
+            "mean_confidence": 0.8464353815947143,
+            "empirical_correct": 0.7619047619047619,
+            "n": 42
+          },
+          {
+            "bin": [
+              0.9,
+              1.0
+            ],
+            "mean_confidence": 0.9193430416892396,
+            "empirical_correct": 1.0,
+            "n": 6
+          }
+        ]
+      },
+      "brier": 0.2301079152115559,
+      "mean_r_final": 0.5926752049513923,
+      "calibration_n_protocol": "full_train_portion_oof_raw",
       "delta_vs_best_ci": [
-        0.0,
-        0.0
+        -0.0033394059227950775,
+        0.0038502743848112184
       ]
     }
   },
   "best_by_area": "C",
   "tied_with_best": [
-    "A",
-    "B",
     "C",
     "D"
   ],
-  "chosen_set": "A",
-  "locked_production_set": "A",
-  "selection_rule": "Among sets whose \u0394-area CI vs best contains 0, choose simplest (order ['A', 'B', 'C', 'D']).",
-  "agents_add_calibrated_reliability_signal": false,
-  "finding": "Still set A (r_model only): agent R_* channels add no calibrated ranking signal under the pre-registered rule.",
+  "chosen_set": "C",
+  "locked_production_set": "C",
+  "production_set_from_rule": "C",
+  "legacy_default_set": "A",
+  "selection_rule": "Among sets whose \u0394-area CI vs best contains 0, choose simplest (order ['A', 'B', 'C', 'D']). Keep A if it still wins (RM7).",
+  "agents_add_calibrated_reliability_signal": true,
+  "finding": "Chosen set C; multi-channel reliability contributes.",
   "coef_bootstrap_cis": {
     "coef_mean": [
-      0.0,
-      0.0,
-      5.174168808007318,
-      0.0,
-      0.0,
-      0.0,
+      5.9946227727935296e-05,
+      0.4281449286821381,
+      0.0186074853765516,
+      3.4253520683197394,
+      0.6649210846629795,
+      -0.22731780013115155,
       0.0
     ],
     "coef_ci": [
@@ -94,33 +372,33 @@
       ],
       [
         0.0,
-        0.0
-      ],
-      [
-        3.3522987297342315,
-        7.18876110749032
+        1.5609145935367355
       ],
       [
         0.0,
-        0.0
+        0.2569749760683947
+      ],
+      [
+        1.8735229945966783,
+        5.036982041192462
       ],
       [
         0.0,
-        0.0
+        1.847175477003023
       ],
       [
-        0.0,
-        0.0
+        -0.6921507165079728,
+        0.25020157037375196
       ],
       [
         0.0,
         0.0
       ]
     ],
-    "intercept_mean": -2.345142095971753,
+    "intercept_mean": -2.608718010756231,
     "intercept_ci": [
-      -3.297352942021422,
-      -1.3732523264661143
+      -4.224517316984281,
+      -1.370328619841713
     ],
     "names": [
       "r_data",
@@ -132,5 +410,133 @@
       "d_observed"
     ]
   },
-  "note": "OOF R matrix may predate Slice 3 physics changes; full train refreshes R."
+  "component_auroc": {
+    "per_component": {
+      "r_data": {
+        "auroc": 0.4239833966511889,
+        "ci95": [
+          0.3772698602676288,
+          0.46511923635662045
+        ],
+        "n_boot": 200
+      },
+      "r_physics": {
+        "auroc": 0.5696496411988181,
+        "ci95": [
+          0.5197083839599439,
+          0.6150041100533293
+        ],
+        "n_boot": 200
+      },
+      "r_model": {
+        "auroc": 0.6376283945405938,
+        "ci95": [
+          0.5878611313626723,
+          0.6893475383278642
+        ],
+        "n_boot": 200
+      },
+      "r_uncertainty": {
+        "auroc": 0.6715913887716336,
+        "ci95": [
+          0.6227409172225742,
+          0.723256082436895
+        ],
+        "n_boot": 200
+      },
+      "r_stability": {
+        "auroc": 0.657784578584494,
+        "ci95": [
+          0.6194696513500618,
+          0.6986071453893526
+        ],
+        "n_boot": 200
+      },
+      "n_missing": {
+        "auroc": 0.44283804699591955,
+        "ci95": [
+          0.4062496963661096,
+          0.48251233141858135
+        ],
+        "n_boot": 200
+      },
+      "d_observed": {
+        "auroc": 0.5571619530040804,
+        "ci95": [
+          0.5174876685814186,
+          0.5937503036338904
+        ],
+        "n_boot": 200
+      }
+    },
+    "note": "AUROC of raw R_* vs OOF correctness. A reliability channel whose grouped-bootstrap CI lies wholly below 0.5 is excluded if the declared set-selection rule would otherwise activate it."
+  },
+  "fold_coef_sensitivity": [
+    {
+      "fold": 0,
+      "coef": [
+        0.0,
+        0.0017037412780566642,
+        0.0,
+        4.1020395139459875,
+        0.9396086396551311,
+        -0.43385364428292716,
+        0.0
+      ],
+      "intercept": -2.739843261423264
+    },
+    {
+      "fold": 1,
+      "coef": [
+        0.0,
+        0.0,
+        0.0,
+        3.7790457920517118,
+        1.255934698577306,
+        -0.3986952423954085,
+        0.0
+      ],
+      "intercept": -2.992858884503005
+    },
+    {
+      "fold": 2,
+      "coef": [
+        0.0,
+        0.8344329164363214,
+        0.0,
+        3.4404454003449105,
+        0.34387375908090156,
+        -0.06730299416982118,
+        0.0
+      ],
+      "intercept": -2.6964396606907326
+    },
+    {
+      "fold": 3,
+      "coef": [
+        0.0,
+        0.4563649225546042,
+        0.0,
+        4.410650938526017,
+        0.0,
+        -0.13326801654191758,
+        0.0
+      ],
+      "intercept": -2.95580861988982
+    },
+    {
+      "fold": 4,
+      "coef": [
+        0.0,
+        0.40185328525273384,
+        0.0,
+        2.6545927916607734,
+        0.5606671042126955,
+        -0.24672267206772985,
+        0.0
+      ],
+      "intercept": -1.9527996438040893
+    }
+  ],
+  "component_constants_justification": "Production set C is selected by the declared risk-coverage rule; r_data/r_physics/r_uncertainty/r_stability are reported via component AUROC + fold coef sensitivity but do not enter R_final unless set compare selects B/C/D. Decision-band utilities are engineering-cost justified in stacker.DECISION_BAND_UTILITIES."
 }

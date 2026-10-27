@@ -34,6 +34,9 @@ def _case_frame(case: dict[str, Any]):
 
 def _predict_with_pipe(pipe: Any, case: dict[str, Any]) -> np.ndarray:
     X = _case_frame(case)
+    expected = getattr(pipe, "feature_names_in_", None)
+    if expected is not None:
+        X = X.reindex(columns=list(expected))
     if hasattr(pipe, "predict_proba"):
         return _pad_proba(pipe.predict_proba(X)[0])
     pred = int(pipe.predict(X)[0])
@@ -88,6 +91,11 @@ def physics_recheck_perturbed_tolerance(
         "issues_stated": list(stated.issues),
         "issues_tight": list(tight.issues),
         "low_physics": stated.r_physics < 0.6,
+        "criteria_consensus_grade": (
+            (stated.empirical_checks.get("criteria_as_given") or {}).get(
+                "consensus_grade"
+            )
+        ),
     }
 
 
@@ -100,17 +108,49 @@ def alt_imputer_reprediction(
     primary_imputer: str = "knn",
     primary_proba: np.ndarray | None = None,
     primary_grade: int | None = None,
+    primary_pipeline: Any | None = None,
+    missing_features: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Re-predict with the other fold-trained imputers; report spread and grade flips."""
+    """Compare imputers while holding the production estimator family fixed.
+
+    Complete cases are skipped because no imputation choice was made for them.
+    """
+    missing = list(missing_features or [])
+    if not missing:
+        missing = [
+            c
+            for c in FEATURE_COLS
+            if case.get(c) is None
+            or (
+                isinstance(case.get(c), (float, np.floating))
+                and not np.isfinite(float(case[c]))
+            )
+        ]
+    skipped = {
+        "tool": "alt_imputer_reprediction",
+        "skipped": True,
+        "missing_features": missing,
+        "large_spread": False,
+        "grade_flip": False,
+        "prob_spread": 0.0,
+        "probas": {},
+        "grades": {},
+        "primary_imputer": primary_imputer,
+        "primary_grade": primary_grade,
+    }
+    if not missing:
+        return {**skipped, "skip_reason": "complete_case_no_imputed_features"}
+    if primary_pipeline is None or not hasattr(primary_pipeline, "named_steps"):
+        return {**skipped, "skip_reason": "production_fold_pipeline_unavailable"}
+    production_model = primary_pipeline.named_steps.get("model")
+    if production_model is None:
+        raise ValueError("primary_pipeline must expose a 'model' step")
     kinds = ["median", "knn", "iterative"]
     cache = cfg.setdefault("_fold_alt_pipes", {})
     if not cache:
-        zoo = get_model_zoo(quick=True)
-        est_name = "rf" if "rf" in zoo else next(iter(zoo))
-        base = zoo[est_name]
         for kind in kinds:
             pipe = Pipeline(
-                [("prep", build_preprocess(kind)), ("model", clone(base))]
+                [("prep", build_preprocess(kind)), ("model", clone(production_model))]
             )
             pipe.fit(X_train, y_train)
             cache[kind] = pipe
@@ -134,6 +174,9 @@ def alt_imputer_reprediction(
     large_spread = prob_spread >= 0.15 or grade_flip
     return {
         "tool": "alt_imputer_reprediction",
+        "skipped": False,
+        "missing_features": missing,
+        "model_family": production_model.__class__.__name__,
         "imputers": kinds,
         "probas": probas,
         "grades": grades,
@@ -227,6 +270,54 @@ def cross_check_model_reprediction(
         "grade_disagree": disagree,
         "soft_disagreement": soft,
         "large_disagreement": disagree or soft >= 0.35,
+        "resolution_threshold": 0.35,
+    }
+
+
+def monotonic_tendency_recheck(
+    case: dict[str, Any],
+    *,
+    pipeline: Any,
+    primary_grade: int,
+    rel_increase: float = 0.10,
+) -> dict[str, Any]:
+    """TM3: increasing σθ (with SCF recomputed) or Wet must not lower grade."""
+    base = int(primary_grade)
+    violations: list[str] = []
+    details: list[dict[str, Any]] = []
+
+    def _grade(pc: dict[str, Any]) -> int:
+        return int(np.argmax(_predict_with_pipe(pipeline, pc)))
+
+    # Channel: increase σθ → recompute SCF
+    if case.get("sigma_theta") is not None and np.isfinite(float(case["sigma_theta"])):
+        pc = dict(case)
+        pc["sigma_theta"] = float(case["sigma_theta"]) * (1.0 + rel_increase)
+        if case.get("sigma_c") is not None and np.isfinite(float(case["sigma_c"])):
+            from rockburst.physics.relations import compute_scf
+
+            pc["scf"] = compute_scf(float(pc["sigma_theta"]), float(case["sigma_c"]))
+        g = _grade(pc)
+        details.append({"channel": "sigma_theta", "base": base, "perturbed": g})
+        if g < base:
+            violations.append("sigma_theta")
+
+    # Channel: increase Wet
+    if case.get("wet") is not None and np.isfinite(float(case["wet"])):
+        pc = dict(case)
+        pc["wet"] = float(case["wet"]) * (1.0 + rel_increase)
+        g = _grade(pc)
+        details.append({"channel": "wet", "base": base, "perturbed": g})
+        if g < base:
+            violations.append("wet")
+
+    return {
+        "tool": "monotonic_tendency_recheck",
+        "rel_increase": rel_increase,
+        "base_grade": base,
+        "violations": violations,
+        "details": details,
+        "monotonic_violation": bool(violations),
     }
 
 
@@ -247,6 +338,9 @@ def needs_extra_validation(
                 "inconsistency",
                 "implausible_sigma_c_over_sigma_t",
                 "suspected_row_shift",
+                "large_b1_identity_gap",
+                "sigma_t_ge_sigma_c",
+                "depth_stress_implausible",
             )
         ):
             return True
@@ -282,4 +376,7 @@ def validation_objections_from_rechecks(rechecks: dict[str, Any]) -> list[str]:
     cross = rechecks.get("cross_check")
     if cross and cross.get("large_disagreement"):
         objs.append("cross_check_disagreement")
+    mono = rechecks.get("monotonic_tendency")
+    if mono and mono.get("monotonic_violation"):
+        objs.append("monotonic_tendency_violation")
     return objs
