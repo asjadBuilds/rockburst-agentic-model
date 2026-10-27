@@ -18,6 +18,10 @@ def test_current_phase1_to_phase5_closure_baseline_is_unchanged():
     assert verify() == []
 
 
+def test_regeneration_mode_still_checks_protected_metrics_and_code():
+    assert verify(check_artifact_hashes=False) == []
+
+
 def test_closure_comparison_rejects_changed_headline_metric():
     expected = {"metrics": {"qwk": 0.669951155562134}, "fusion_set": "C"}
     changed = copy.deepcopy(expected)

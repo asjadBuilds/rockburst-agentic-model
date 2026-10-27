@@ -71,7 +71,12 @@ def compare_values(expected: Any, actual: Any, *, tolerance: float, path: str = 
     return [f"{path}: expected {expected!r}, got {actual!r}"]
 
 
-def verify(manifest_path: Path = DEFAULT_MANIFEST, root: Path = ROOT) -> list[str]:
+def verify(
+    manifest_path: Path = DEFAULT_MANIFEST,
+    root: Path = ROOT,
+    *,
+    check_artifact_hashes: bool = True,
+) -> list[str]:
     manifest = _load(manifest_path)
     differences: list[str] = []
 
@@ -82,12 +87,13 @@ def verify(manifest_path: Path = DEFAULT_MANIFEST, root: Path = ROOT) -> list[st
         elif _sha256(path) != expected_hash:
             differences.append(f"protected file changed: {relative}")
 
-    for relative, expected_hash in manifest["approved_artefacts_sha256"].items():
-        path = root / relative
-        if not path.is_file():
-            differences.append(f"approved artefact missing: {relative}")
-        elif _sha256(path) != expected_hash:
-            differences.append(f"approved artefact changed: {relative}")
+    if check_artifact_hashes:
+        for relative, expected_hash in manifest["approved_artefacts_sha256"].items():
+            path = root / relative
+            if not path.is_file():
+                differences.append(f"approved artefact missing: {relative}")
+            elif _sha256(path) != expected_hash:
+                differences.append(f"approved artefact changed: {relative}")
 
     cache: dict[str, dict[str, Any]] = {}
     actual_values: dict[str, Any] = {}
@@ -109,8 +115,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--root", type=Path, default=ROOT)
+    parser.add_argument(
+        "--allow-regenerated-artefacts",
+        action="store_true",
+        help="compare protected code and metric values but permit regenerated artefact hashes",
+    )
     args = parser.parse_args()
-    differences = verify(args.manifest.resolve(), args.root.resolve())
+    differences = verify(
+        args.manifest.resolve(),
+        args.root.resolve(),
+        check_artifact_hashes=not args.allow_regenerated_artefacts,
+    )
     if differences:
         print("Round-3 closure baseline FAILED:")
         for difference in differences:
