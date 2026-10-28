@@ -1,5 +1,5 @@
 {
-  "source": "/home/leviathan/Workspace/agentic-rockburst-model/sustainability-2534712-supplementary.pdf",
+  "source": "sustainability-2534712-supplementary.pdf",
   "method": "pdfplumber+text",
   "fused_row_pairs_checked": [
     [

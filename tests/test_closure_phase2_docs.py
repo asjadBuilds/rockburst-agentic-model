@@ -56,13 +56,14 @@ def test_near_duplicate_comment_and_value_are_consistent():
     assert "# 1% catches" not in config_text
 
 
-def test_round3_response_covers_every_finding_and_is_honest_about_open_figures():
+def test_round3_response_covers_every_finding_and_records_final_figure_inspection():
     response = _read("reports/feedback_response.md")
     for prefix, count in (("TC", 9), ("TM", 10), ("Tm", 8)):
         for index in range(1, count + 1):
             assert f"**{prefix}{index}**" in response
     for figure in ("F4", "F6", "F7", "F10", "F11", "F16"):
-        assert re.search(rf"\| \*\*{figure}\*\* \| \*\*Open\*\*", response)
+        assert re.search(rf"\| \*\*{figure}\*\* \| Regenerated and inspected", response)
+    assert "**Open**" not in response
 
 
 def test_every_required_figure_is_embedded_and_has_png_pdf_and_caption():

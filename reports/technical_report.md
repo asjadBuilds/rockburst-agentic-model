@@ -188,7 +188,7 @@ Pooled common-axis curves for M1, M4, and M7 with base accuracy. Served R_final 
 
 ![F11 reliability](../artifacts/figures/F11_reliability.png)
 
-Served fusion-set-C reliability bins with counts and ECE evidence (n=344). The current base panel reports M1 ECE but still lacks the requested real binned base curve; this is an open figure-content item.
+Real M1 max-probability and served fusion-set-C reliability bins with counts and ECE evidence (n=344).
 
 ### F12 — Conformal prediction
 

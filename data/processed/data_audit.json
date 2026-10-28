@@ -321,112 +321,115 @@
     }
   ],
   "label_noise_ceiling_note": "Conflicting labels are kept (not silently resolved). Groups stay in one fold via StratifiedGroupKFold. Conflicting pairs imply a label-noise ceiling on achievable accuracy of at least 43 disagreeing row-pairs.",
-  "n_cases_with_physics_issues": 22,
+  "n_cases_with_physics_issues": 103,
   "physics_issue_examples": [
+    {
+      "no": 1,
+      "issues": [
+        "depth_stress_implausible: sigma_theta=90 not in [10.8,59.4] for D=200 m"
+      ],
+      "r_physics": 0.6250000000000001
+    },
+    {
+      "no": 2,
+      "issues": [
+        "depth_stress_implausible: sigma_theta=90 not in [10.48,57.62] for D=194 m"
+      ],
+      "r_physics": 0.6250000000000001
+    },
+    {
+      "no": 7,
+      "issues": [
+        "depth_stress_implausible: sigma_theta=80 not in [13.5,74.25] for D=250 m"
+      ],
+      "r_physics": 0.6250000000000001
+    },
+    {
+      "no": 9,
+      "issues": [
+        "depth_stress_implausible: sigma_theta=98.6 not in [8.1,44.55] for D=150 m"
+      ],
+      "r_physics": 0.6250000000000001
+    },
     {
       "no": 20,
       "issues": [
-        "b1 inconsistency: observed=0.15, expected=14.73"
+        "b1 inconsistency: observed=0.15, expected=14.73",
+        "large_b1_identity_gap: listed B1 far from sigma_c/sigma_t"
       ],
-      "r_physics": 0.6166666666666666
+      "r_physics": 0.5249999999999999
     },
     {
       "no": 21,
       "issues": [
-        "b1 inconsistency: observed=0.15, expected=14.75"
+        "b1 inconsistency: observed=0.15, expected=14.75",
+        "large_b1_identity_gap: listed B1 far from sigma_c/sigma_t"
       ],
-      "r_physics": 0.6166666666666666
+      "r_physics": 0.8
     },
     {
       "no": 24,
       "issues": [
-        "b1 inconsistency: observed=11.4, expected=14.78"
+        "b1 inconsistency: observed=11.4, expected=14.78",
+        "large_b1_identity_gap: listed B1 far from sigma_c/sigma_t"
       ],
-      "r_physics": 0.6166666666666666
+      "r_physics": 0.8
     },
     {
-      "no": 96,
+      "no": 25,
       "issues": [
-        "b1 inconsistency: observed=31.4, expected=40.45"
+        "depth_stress_implausible: sigma_theta=91.23 not in [10.96,60.29] for D=203 m"
       ],
-      "r_physics": 0.6166666666666666
+      "r_physics": 0.9
     },
     {
-      "no": 97,
+      "no": 28,
       "issues": [
-        "b1 inconsistency: observed=28.1, expected=34.15"
+        "depth_stress_implausible: sigma_theta=35.82 not in [60.32,331.7] for D=1117 m"
       ],
-      "r_physics": 0.6166666666666666
+      "r_physics": 0.6250000000000001
     },
     {
-      "no": 98,
+      "no": 29,
       "issues": [
-        "b1 inconsistency: observed=27.9, expected=31.21"
+        "depth_stress_implausible: sigma_theta=21.5 not in [60.7,333.8] for D=1124 m"
       ],
-      "r_physics": 0.6166666666666666
+      "r_physics": 0.9
     },
     {
-      "no": 146,
+      "no": 30,
       "issues": [
-        "SCF OOD (> 2.0): 2.61"
+        "depth_stress_implausible: sigma_theta=18.32 not in [61.56,338.6] for D=1140 m"
       ],
-      "r_physics": 0.85
+      "r_physics": 0.9
     },
     {
-      "no": 147,
+      "no": 32,
       "issues": [
-        "SCF OOD (> 2.0): 3.69"
+        "depth_stress_implausible: sigma_theta=26.06 not in [46.06,253.3] for D=853 m"
       ],
-      "r_physics": 0.85
+      "r_physics": 0.9
     },
     {
-      "no": 148,
+      "no": 33,
       "issues": [
-        "SCF OOD (> 2.0): 2.27"
+        "depth_stress_implausible: sigma_theta=16.62 not in [34.78,191.3] for D=644 m"
       ],
-      "r_physics": 0.85
+      "r_physics": 0.35
     },
     {
-      "no": 149,
+      "no": 34,
       "issues": [
-        "SCF OOD (> 2.0): 2.47"
+        "depth_stress_implausible: sigma_theta=16.47 not in [37.37,205.5] for D=692 m"
       ],
-      "r_physics": 0.85
+      "r_physics": 0.35
     },
     {
-      "no": 150,
+      "no": 35,
       "issues": [
-        "SCF OOD (> 2.0): 3.18"
+        "depth_stress_implausible: sigma_theta=16.43 not in [52.38,288.1] for D=970 m"
       ],
-      "r_physics": 0.85
-    },
-    {
-      "no": 151,
-      "issues": [
-        "SCF OOD (> 2.0): 4.49"
-      ],
-      "r_physics": 0.85
-    },
-    {
-      "no": 152,
-      "issues": [
-        "SCF OOD (> 2.0): 2.77"
-      ],
-      "r_physics": 0.85
-    },
-    {
-      "no": 153,
-      "issues": [
-        "SCF OOD (> 2.0): 3"
-      ],
-      "r_physics": 0.85
-    },
-    {
-      "no": 154,
-      "issues": [
-        "SCF OOD (> 2.0): 3.45"
-      ],
-      "r_physics": 0.85
+      "r_physics": 0.35
     }
   ],
   "known_problem_rows": {

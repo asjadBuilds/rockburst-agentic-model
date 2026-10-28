@@ -20,7 +20,7 @@ Status vocabulary:
 | **TC6** Failure example and analysis inadequate | **Fixed and verified** | Accepted-wrong case **88**, true strong/predicted light, absolute error **2**, distinct abstention case **129**. `failure_case.json`, `heldout_failure_case_88.json`, `failure_analysis.md`, `c5_selection_summary.json`. |
 | **TC7** Stale/duplicate artefacts and absolute paths | **Fixed; delivery closure pending** | Stale outputs are archived and packaging excludes archive/development content. Repository-relative provenance and whole-delivery absolute-path scanning are finalized in closure Phases 3–5; this item is not closed until the clean package passes. |
 | **TC8** Explanation-cache and imputer defects | **Fixed and verified** | Per-case explanation state; production-family/fold-trained validation; complete cases cannot emit imputation objections. `ml/explain.py`, `agents/rechecks.py`, `graph/runner.py`, `test_phase1_rc2_rc5.py`. |
-| **TC9** Figures did not meet specifications | **Partly fixed; content closure pending** | F1–F17 exist as PNG/PDF and are now embedded in `technical_report.md`, but source inspection found remaining specification gaps in F4, F6, F7, F10, F11, and F16. In particular F11 still renders a base-curve placeholder. These figures must not be called accepted until their plotting code and regenerated outputs pass the original figure-by-figure requirements. |
+| **TC9** Figures did not meet specifications | **Fixed and verified** | F1–F17 exist as PNG/PDF and are embedded in `technical_report.md`. The final regeneration adds all-eight-feature F4, earlier/later F6, M1/M7 all/accepted F7, entropy and grouped-bootstrap bands in F10, real base/served bins in F11, and AUROC plus flagged/unflagged errors in F16. All were visually inspected after regeneration. |
 
 ## Major findings
 
@@ -46,7 +46,7 @@ Status vocabulary:
 | **Tm3** Missing hazard statement | **Fixed and verified** | Decision text derives hazard guidance from grade, conformal set, criteria, and disagreement. Example JSON and failure analysis show the rendered statement. |
 | **Tm4** Development files/missing Make targets | **Fixed; delivery closure pending** | Make targets cover preprocessing, training, evaluation, sensitivities, examples, figures, notebook, tests, archive, and package. Final removal/exclusion of every named development file remains a package-audit gate. |
 | **Tm5** Untraceable dirty runs | **Fixed; delivery closure pending** | Metadata code records dirty state and configuration/input hashes. A single clean committed full run is required in closure Phase 4. |
-| **Tm6** Figure formatting | **Partly fixed; content closure pending** | Most formatting was corrected, but F11 still contains placeholder text and remaining figure-specific corrections must be inspected after regeneration. |
+| **Tm6** Figure formatting | **Fixed and verified** | Final figures use formatted values, readable labels, integer ticks where applicable, no developer placeholders, and were visually inspected after regeneration. |
 | **Tm7** Missing methodology constants | **Fixed and verified** | Methodology documents fusion/calibration, thresholds, hard gates, and utility rationale; design decisions retain exact constants. |
 | **Tm8** Remaining labels/comments inconsistent | **Fixed and verified** | Production near-duplicate tolerance is consistently 5%; pooled risk–coverage is used; recheck counters are separately named; archived files are not evidence. |
 
@@ -57,23 +57,23 @@ Status vocabulary:
 | **F1** | Regenerated | Full data flow, agent tools, shared state, Critic/recheck loop, fusion/output. |
 | **F2** | Regenerated | Real state order, conditions, rechecks, and termination paths. |
 | **F3** | Regenerated | Fresh missingness, OOD, and actual Critic-recheck traces. |
-| **F4** | **Open** | Current implementation shows grade/missing-D/SCF summaries, not all eight features by grade. |
+| **F4** | Regenerated and inspected | All eight inputs shown by grade. |
 | **F5** | Regenerated | Readable SCF/B1/B2 consistency with flagged cases. |
-| **F6** | **Open** | Current right panel plots earlier case number versus grade shift, not earlier versus later case number colored by shift. |
-| **F7** | **Open** | Current output has M1 counts and normalized M1 only; M7 all/accepted matrices remain absent. |
+| **F6** | Regenerated and inspected | Earlier versus later case number colored by grade shift. |
+| **F7** | Regenerated and inspected | M1 all, M7 all, and M7 accepted matrices with count and row fraction. |
 | **F8** | Regenerated | Successful candidates, CIs, production and nested results. |
 | **F9** | Regenerated | QWK, severe error, and abstention evidence with CIs. |
 | **F9b** | Regenerated | Pooled areas and corrected same-coverage comparisons. |
-| **F10** | **Open** | Pooled M1/M4/M7 curves are present, but entropy and bootstrap bands requested by the review remain absent. |
-| **F11** | **Open** | Served-score bins are real, but the base panel still contains “Base bin curve not shipped” placeholder text. |
+| **F10** | Regenerated and inspected | Pooled M1/M4/M7 and entropy curves with duplicate-grouped bootstrap bands. |
+| **F11** | Regenerated and inspected | Real base max-probability and served-R_final bins with counts and ECE. |
 | **F12** | Regenerated | Method comparison, per-class coverage, and set sizes. |
 | **F13** | Regenerated | Robustness changes against baseline without internal notes. |
 | **F14** | Regenerated | Accuracy, confidence, abstention, CIs, and train/inference panel. |
 | **F15** | Regenerated | Model dependence and per-case explanation evidence. |
-| **F16** | **Open** | Current plotting path labels a generic detection-rate panel and does not reliably render the requested AUROC plus flagged/unflagged error comparison. |
+| **F16** | Regenerated and inspected | Rule fires, error AUROC, and flagged-versus-unflagged error rates. |
 | **F17** | Regenerated | Production set-C weights/CIs and confidence evidence. |
 
-All figures are embedded in `reports/technical_report.md`; source PNG/PDF files and generated captions are under `artifacts/figures/`. Embedding is complete, but the figures marked **Open** above still require content corrections and regeneration.
+All figures are embedded in `reports/technical_report.md`; source PNG/PDF files and generated captions are under `artifacts/figures/`.
 
 ## Honest limitations retained
 

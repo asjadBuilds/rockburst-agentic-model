@@ -205,9 +205,8 @@
   },
   "run_metadata_ablation": {
     "mode": "full",
-    "date_utc": "2026-10-27T15:49:06Z",
-    "git_hash": "3db99c9d5e6145a9590ccf7403ede1f74b608855",
-    "git_dirty": true,
+    "git_hash": "ef8cfe730a394e2495e2858451316dfc8f9473cd",
+    "git_dirty": false,
     "rockburst_version": "0.1.0",
     "package_versions": {
       "numpy": "2.5.3",
@@ -221,19 +220,22 @@
       "lightgbm": "4.7.0"
     },
     "command": "rockburst evaluate",
-    "configuration_sha256": "1cbce9eee44a70cbd90a5f088e48a663ca6b06538d8864ebe7d35085c1bc4ef1",
+    "configuration_sha256": "a40baeb5dbfe6743400ce14414837436bb9571cccf81820550764b4e8d307e8f",
     "input_sha256": {
-      "/home/leviathan/Workspace/agentic-rockburst-model/data/processed/rockburst_processed.csv": "5be436a3711623b2c40ceb0c7cb7be5e19ccc15bfb323d6fcb7f7197d797f54d"
+      "data/processed/rockburst_processed.csv": "5be436a3711623b2c40ceb0c7cb7be5e19ccc15bfb323d6fcb7f7197d797f54d"
     },
     "n_outer": 5,
     "n_repeats": 5,
     "n_cases": 344,
-    "m1_best": "lightgbm__median"
+    "m1_best": "lightgbm__median",
+    "started_date_utc": "2026-10-27T23:54:52Z",
+    "completed_date_utc": "2026-10-28T04:05:59Z",
+    "git_state_scope": "captured before generated artefacts were written"
   },
   "run_metadata_m1": {
     "mode": "full",
-    "date_utc": "2026-10-27T10:30:08Z",
-    "git_hash": "3db99c9d5e6145a9590ccf7403ede1f74b608855",
+    "git_hash": "b48325e17c103536c6fe0ebf3ba59d476d4420aa",
+    "git_dirty": false,
     "rockburst_version": "0.1.0",
     "package_versions": {
       "numpy": "2.5.3",
@@ -247,10 +249,17 @@
       "lightgbm": "4.7.0"
     },
     "command": "rockburst train",
+    "configuration_sha256": "a40baeb5dbfe6743400ce14414837436bb9571cccf81820550764b4e8d307e8f",
+    "input_sha256": {
+      "data/processed/rockburst_processed.csv": "5be436a3711623b2c40ceb0c7cb7be5e19ccc15bfb323d6fcb7f7197d797f54d"
+    },
     "n_outer": 5,
     "n_inner": 3,
     "n_trials": 50,
-    "best_model": "lightgbm__median"
+    "best_model": "lightgbm__median",
+    "started_date_utc": "2026-10-27T23:16:43Z",
+    "completed_date_utc": "2026-10-27T23:18:44Z",
+    "git_state_scope": "captured before generated artefacts were written"
   },
   "source_files": [
     "artifacts/baselines/m1_results.json",
