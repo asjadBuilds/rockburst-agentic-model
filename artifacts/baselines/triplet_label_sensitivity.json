@@ -1,9 +1,8 @@
 {
   "run_metadata": {
     "mode": "full",
-    "date_utc": "2026-10-27T19:48:38Z",
-    "git_hash": "3db99c9d5e6145a9590ccf7403ede1f74b608855",
-    "git_dirty": true,
+    "git_hash": "bab8cf871535251cf2874499f3efbefc62a292e1",
+    "git_dirty": false,
     "rockburst_version": "0.1.0",
     "package_versions": {
       "numpy": "2.5.3",
@@ -17,11 +16,14 @@
       "lightgbm": "4.7.0"
     },
     "command": "scripts/triplet_label_sensitivity.py",
-    "configuration_sha256": "1cbce9eee44a70cbd90a5f088e48a663ca6b06538d8864ebe7d35085c1bc4ef1",
+    "configuration_sha256": "a40baeb5dbfe6743400ce14414837436bb9571cccf81820550764b4e8d307e8f",
     "input_sha256": {
-      "/home/leviathan/Workspace/agentic-rockburst-model/data/processed/rockburst_processed.csv": "5be436a3711623b2c40ceb0c7cb7be5e19ccc15bfb323d6fcb7f7197d797f54d"
+      "data/processed/rockburst_processed.csv": "5be436a3711623b2c40ceb0c7cb7be5e19ccc15bfb323d6fcb7f7197d797f54d"
     },
-    "production_model": "lightgbm__median"
+    "production_model": "lightgbm__median",
+    "started_date_utc": "2026-10-28T10:24:09Z",
+    "completed_date_utc": "2026-10-28T12:44:00Z",
+    "git_state_scope": "captured before generated artefacts were written"
   },
   "rm12_triplet_grouping": {
     "inventory": {
