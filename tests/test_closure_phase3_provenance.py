@@ -110,6 +110,17 @@ def test_notebook_source_and_saved_outputs_have_no_local_home_path():
     assert all(output.get("output_type") != "error" for cell in notebook["cells"] for output in cell.get("outputs", []))
 
 
+def test_notebook_recomputes_and_value_checks_processed_data():
+    notebook = json.loads(
+        (ROOT / "notebooks" / "end_to_end_demo.ipynb").read_text(encoding="utf-8")
+    )
+    source = "\n".join(
+        "".join(cell.get("source", [])) for cell in notebook["cells"]
+    )
+    assert "process_raw(raw, cfg)" in source
+    assert "pd.testing.assert_frame_equal" in source
+
+
 def test_extract_audit_source_is_filename_not_host_path():
     source = (ROOT / "src" / "rockburst" / "data" / "extract.py").read_text(
         encoding="utf-8"
