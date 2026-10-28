@@ -4,8 +4,7 @@ This response maps the **Round-3 identifiers directly**. Numerical claims use fu
 
 Status vocabulary:
 
-- **Fixed and verified** — implementation, focused test, and regenerated evidence agree.
-- **Fixed; delivery closure pending** — substantive correction is complete, but clean-checkpoint provenance or final packaging is completed in the closure phases.
+- **Fixed and verified** — implementation, focused test, regenerated evidence, and final delivery validation agree.
 - **Documented limitation** — an unfavorable result is retained rather than presented as an improvement.
 
 ## Critical findings
@@ -18,7 +17,7 @@ Status vocabulary:
 | **TC4** Invalid matched coverage | **Fixed and verified** | Every M3–M7 system is compared at its own coverage against the same-size highest-confidence M1 subset on all 1,720 predictions, with paired grouped-bootstrap CIs. M7 Δ accuracy −0.032, CI [−0.054, −0.010]. `eval/metrics.py`, F9b/F10. |
 | **TC5** CatBoost failures hidden as zero results | **Fixed and verified** | CatBoost uses compatible bootstrap/subsample settings; required candidate/fold failures raise immediately. Smoke and fail-fast tests: `test_phase4_modelling.py`. |
 | **TC6** Failure example and analysis inadequate | **Fixed and verified** | Accepted-wrong case **88**, true strong/predicted light, absolute error **2**, distinct abstention case **129**. `failure_case.json`, `heldout_failure_case_88.json`, `failure_analysis.md`, `c5_selection_summary.json`. |
-| **TC7** Stale/duplicate artefacts and absolute paths | **Fixed; delivery closure pending** | Stale outputs are archived and packaging excludes archive/development content. Repository-relative provenance and whole-delivery absolute-path scanning are finalized in closure Phases 3–5; this item is not closed until the clean package passes. |
+| **TC7** Stale/duplicate artefacts and absolute paths | **Fixed and verified** | Stale outputs are archived and packaging excludes archive/development content. Repository-relative provenance and whole-delivery absolute-path scanning pass on both the worktree and staged package. |
 | **TC8** Explanation-cache and imputer defects | **Fixed and verified** | Per-case explanation state; production-family/fold-trained validation; complete cases cannot emit imputation objections. `ml/explain.py`, `agents/rechecks.py`, `graph/runner.py`, `test_phase1_rc2_rc5.py`. |
 | **TC9** Figures did not meet specifications | **Fixed and verified** | F1–F17 exist as PNG/PDF and are embedded in `technical_report.md`. The final regeneration adds all-eight-feature F4, earlier/later F6, M1/M7 all/accepted F7, entropy and grouped-bootstrap bands in F10, real base/served bins in F11, and AUROC plus flagged/unflagged errors in F16. All were visually inspected after regeneration. |
 
@@ -33,9 +32,9 @@ Status vocabulary:
 | **TM5** Unsupported robustness/missing conclusions | **Fixed and verified** | Full 1,720 assessments, CIs, CI-gated flags, M7 abstention/accepted accuracy/confidence/accuracy changes, and actual scenario sample sizes. `eval/ablation.py`, F13/F14. |
 | **TM6** Base overconfidence and missing-D shortcut | **Fixed and verified** | Post-hoc base calibration and observed-indicator/drop-row sensitivity are reported. `triplet_label_sensitivity.json`, technical report. |
 | **TM7** RM12/RM13 results not reported | **Fixed and verified** | Triplet grouping and three label policies are in `triplet_label_sensitivity.json` and the technical report. |
-| **TM8** Status/report claims overstated | **Fixed; delivery closure pending** | This response uses Round-3 IDs and distinguishes verified fixes, limitations, and remaining packaging/provenance closure. Final status is promoted only after clean-run/package gates pass. |
-| **TM9** Notebook omitted preprocessing/evaluation | **Fixed and verified** | The executed notebook processes raw data and performs real held-out outer-fold M1/M7 assessment. `notebooks/end_to_end_demo.ipynb`. Portable path cleanup remains a closure Phase-3 gate. |
-| **TM10** Tests missed defects/no transcript | **Fixed; delivery closure pending** | Tests cover objection resolution/non-repetition, train/serve equality, CatBoost smoke/fail-fast, complete-case imputation behavior, and artefact regeneration. A client-facing pytest transcript is added and packaged in closure Phase 5. |
+| **TM8** Status/report claims overstated | **Fixed and verified** | This response uses Round-3 IDs, distinguishes measured limitations from improvements, and promotes closure statuses only after clean-run and package gates pass. |
+| **TM9** Notebook omitted preprocessing/evaluation | **Fixed and verified** | The executed notebook recomputes processed data from raw input, checks it value-for-value, and performs a real held-out outer-fold M1/M7 assessment. `notebooks/end_to_end_demo.ipynb`. |
+| **TM10** Tests missed defects/no transcript | **Fixed and verified** | Tests cover objection resolution/non-repetition, train/serve equality, CatBoost smoke/fail-fast, complete-case imputation behavior, artefact regeneration, and notebook preprocessing. The final client-facing transcript is `artifacts/test_transcript.txt`. |
 
 ## Minor findings
 
@@ -44,8 +43,8 @@ Status vocabulary:
 | **Tm1** Stale coordinator description/default | **Fixed and verified** | `graph/runner.py` identifies the deterministic rules FSM and the optional fallback agrees with `configs/default.yaml` (`gemini-3.5-flash`). |
 | **Tm2** Ungraded disagreement | **Fixed and verified** | Output includes Low/Moderate/High level and named parties. `inter_agent_disagreement`, routing/output tests. |
 | **Tm3** Missing hazard statement | **Fixed and verified** | Decision text derives hazard guidance from grade, conformal set, criteria, and disagreement. Example JSON and failure analysis show the rendered statement. |
-| **Tm4** Development files/missing Make targets | **Fixed; delivery closure pending** | Make targets cover preprocessing, training, evaluation, sensitivities, examples, figures, notebook, tests, archive, and package. Final removal/exclusion of every named development file remains a package-audit gate. |
-| **Tm5** Untraceable dirty runs | **Fixed; delivery closure pending** | Metadata code records dirty state and configuration/input hashes. A single clean committed full run is required in closure Phase 4. |
+| **Tm4** Development files/missing Make targets | **Fixed and verified** | Make targets cover preprocessing, training, evaluation, sensitivities, examples, figures, notebook, tests, archive, and package; named development content is excluded and the staged-package audit passes. |
+| **Tm5** Untraceable dirty runs | **Fixed and verified** | Metadata records clean start-state commit, dirty state, configuration/input hashes, versions, seed, and command. The consolidated train/evaluate/sensitivity outputs were regenerated from clean committed checkpoints. |
 | **Tm6** Figure formatting | **Fixed and verified** | Final figures use formatted values, readable labels, integer ticks where applicable, no developer placeholders, and were visually inspected after regeneration. |
 | **Tm7** Missing methodology constants | **Fixed and verified** | Methodology documents fusion/calibration, thresholds, hard gates, and utility rationale; design decisions retain exact constants. |
 | **Tm8** Remaining labels/comments inconsistent | **Fixed and verified** | Production near-duplicate tolerance is consistently 5%; pooled risk–coverage is used; recheck counters are separately named; archived files are not evidence. |
@@ -81,4 +80,4 @@ All figures are embedded in `reports/technical_report.md`; source PNG/PDF files 
 - Served R_final does not outperform M1 max-probability on risk–coverage.
 - M7 accepted accuracy is below M1 thresholded to the same coverage in the consolidated evaluation.
 - Several Critic rules have only modest discrimination.
-- Clean-checkpoint provenance, portable paths, the packaged pytest transcript, and final ZIP audit remain explicit closure gates rather than being prematurely labelled complete.
+- The authoritative-label question and single-dataset sample size remain limitations; delivery provenance, portable paths, the test transcript, and ZIP audit are verified closure evidence rather than performance claims.

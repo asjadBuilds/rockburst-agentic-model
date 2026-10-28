@@ -20,7 +20,7 @@ Paths relative to repo root. Regenerate figures/examples from shipped **full-mod
 | Notebook | `notebooks/end_to_end_demo.ipynb` | `jupyter nbconvert --execute … --inplace` |
 | Saved models | `artifacts/models/*.joblib` | Git-ignored; from `train`; notebook pins sha256 |
 | Baseline / ablation / robustness | `artifacts/baselines/*.json`; **F8–F14** | `headline_snapshot.json` (full only) |
-| Example outputs | `artifacts/examples/heldout_*.json` (≥3) | Production showcases labelled in-sample |
+| Example outputs | `artifacts/examples/heldout_*.json` (≥3) | Outer-fold held-out assessments with fold/model provenance |
 | Technical report | `reports/technical_report.md` | Full-mode; history appendix |
 | Limitations / failures | technical report; `failure_analysis.md` | RC7 accepted-wrong |
 
@@ -34,7 +34,8 @@ Paths relative to repo root. Regenerate figures/examples from shipped **full-mod
 | Corrupt OOD | `case_corrupt_ood.json` | Real perturbation recorded |
 | Figures F1–F17 | `artifacts/figures/` + `captions.md` | `scripts/generate_figures.py` |
 | Feedback reply | `reports/feedback_response.md` | **TC1–TC9, TM1–TM10, Tm1–Tm8, F1–F17** |
-| Delivered planner | methodology; STALE LLM JSON | Headline = rules FSM |
+| Test transcript | `artifacts/test_transcript.txt` | Final full pytest result included in the package |
+| Delivered planner | `reports/methodology.md`; `src/rockburst/graph/runner.py` | Headline = deterministic rules FSM |
 
 ## Intentionally excluded from delivery zip
 
@@ -46,7 +47,7 @@ Paths relative to repo root. Regenerate figures/examples from shipped **full-mod
 | `artifacts/planner_cache/`, `artifacts/tuning_cache/`, `.venv/`, `logs/` | Ephemeral |
 | `artifacts/archive/` (optional) | RC8 stale dumps; keep if auditing history |
 
-## User regeneration (Phase 6)
+## User regeneration
 
 ```bash
 .venv/bin/python scripts/generate_examples.py

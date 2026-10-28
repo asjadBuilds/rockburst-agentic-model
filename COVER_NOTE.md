@@ -21,4 +21,6 @@ Honest findings: M5/M6/M7 **identical on grade QWK**; agents change routes and a
 
 Figures F1–F17: `artifacts/figures/`. Point-by-point Round-3 reply: `reports/feedback_response.md`.
 
+Delivery validation: the executed notebook, clean-run provenance, client-content path scan, full pytest transcript (`artifacts/test_transcript.txt`), and packaged manifest are included in the final closure.
+
 With more time: (1) confirm authoritative labels, (2) more data, (3) test agents on a second dataset.

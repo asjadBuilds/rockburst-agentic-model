@@ -49,6 +49,7 @@ Start here (same order as DELIVERABLES.md / COVER_NOTE.md):
   6. artifacts/figures/             (F1–F17, captions.md)
   7. notebooks/end_to_end_demo.ipynb
      Execute: jupyter nbconvert --to notebook --execute notebooks/end_to_end_demo.ipynb --inplace
+  8. artifacts/test_transcript.txt  (final full pytest result)
 
 Regenerate examples/figures from shipped models:
   .venv/bin/python scripts/generate_examples.py
